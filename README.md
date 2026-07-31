@@ -76,7 +76,11 @@ packages/      código (ainda não criado)
 
 **O físico existe para o social.** Fumaça bloqueia a testemunha. Sangue nas mãos é evidência. Uma tosse persistente vira assunto, medo e lei comunitária. Um sistema físico que a cognição não enxerga é custo sem retorno.
 
-**Rico na simulação, resumido no contexto.** O gargalo é token, não CPU: agente saudável e tile íntegro custam zero, e o corpo chega ao prompt como uma frase, não como uma tabela.
+**Rico na simulação, resumido no contexto.** O gargalo é token, não CPU. Odor = descritor de 1–5 palavras; poça = material dominante + descritor; integridade unificada absorve desgaste.
+
+**Promoção generalizada.** Improviso do GM vira regra provisória cross-domain (`generalization` com `domain` + vocabulário fechado), revisável no painel. Portão: registro de plausibilidade do cenário.
+
+**Pipeline de 2 chamadas.** Pensamento embute intenção; GM só quando affordance não cobre. Profundidade por consciência (B-014), sem roteador LLM.
 
 **Prompts não são código.** Vivem em arquivos Markdown editáveis, com modelo configurável por menu. Ajustar comportamento durante teste não deve exigir recompilar nada.
 

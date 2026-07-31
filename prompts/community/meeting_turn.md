@@ -1,31 +1,45 @@
-# community.meeting_turn
-
-## Metadados
-
-| **ID** | `community.meeting_turn` |
-| **Role** | ROLE_REASONING |
-| **Modelo** | gemini-2.0-pro |
-
-## Variáveis
-
-`{{agent_context}}`, `{{meeting_type}}`, `{{meeting_transcript}}`, `{{community_laws}}`, `{{colony_state}}`
-
----
-
-## System
-
-{{include:_shared/system_rules.md}}
-
-Turno de fala em reunião comunitária. Posição clara, argumentos baseados no que ESTE agente sabe (pode mentir/omitir sobre estoque, produção, etc.).
-
----
-
-## User Template
-
-Você: {{agent_context}}
-Tipo: {{meeting_type}}
-Leis: {{community_laws}}
-Estado: {{colony_state}}
-Transcript: {{meeting_transcript}}
-
-Retorne JSON schema `conversation_turn_response` (dialogue_text obrigatório).
+# community.meeting_turn
+
+## Metadados
+
+| Campo | Valor |
+|-------|-------|
+| **ID** | `community.meeting_turn` |
+| **Tier** | `narrative` |
+| **Schema** | `conversation_turn_response` |
+
+## Variáveis
+
+- `{{agentContext}}`
+- `{{meetingType}}`
+- `{{meetingTranscript}}`
+- `{{communityLaws}}`
+- `{{colonyState}}`
+
+---
+
+## System
+
+{{include:_shared/rules_universal.md}}
+{{include:_shared/rules_agent.md}}
+
+Turno de fala em reunião comunitária. Posição clara, argumentos baseados no que ESTE agente sabe (pode mentir/omitir sobre estoque, produção, etc.).
+
+---
+
+## User Template
+
+Você: {{agentContext}}
+Tipo: {{meetingType}}
+Leis: {{communityLaws}}
+Estado: {{colonyState}}
+Transcript: {{meetingTranscript}}
+
+Retorne JSON schema `conversation_turn_response` (`dialogueText` obrigatório).
+
+---
+
+## Notas de teste
+
+- Posições genéricas → injetar opiniões e metas no agentContext.
+

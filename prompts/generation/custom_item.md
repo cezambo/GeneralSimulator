@@ -1,41 +1,42 @@
-# generation.custom_item
-
-## Metadados
-
-| **ID** | `generation.custom_item` |
-| **Quando usar** | Modo construção — botão + criar item/móvel |
-
-## Variáveis
-
-`{{user_name}}`, `{{user_description}}`, `{{user_category}}`, `{{available_materials}}`
-
----
-
-## System
-
-Gere definição de item/móvel para simulador top-down. Coerente com materiais existentes. affordances devem ser acionáveis pelo GM.
-
----
-
-## User Template
-
-Nome: {{user_name}}
-Descrição: {{user_description}}
-Categoria: {{user_category}}
-Materiais disponíveis: {{available_materials}}
-
-Retorne JSON:
-```json
-{
-  "id": "slug_unico",
-  "name": "",
-  "description": "",
-  "category": "tool|furniture|decoration|consumable|container",
-  "material_id": "",
-  "size": {"w": 1, "h": 1},
-  "grabbable": true,
-  "equippable": false,
-  "affordances": ["..."],
-  "custom_properties": {}
-}
-```
+# generation.custom_item
+
+## Metadados
+
+| Campo | Valor |
+|-------|-------|
+| **ID** | `generation.custom_item` |
+| **Tier** | `narrative` |
+| **Schema** | `item_definition` |
+
+## Variáveis
+
+- `{{userName}}`
+- `{{userDescription}}`
+- `{{userCategory}}`
+- `{{availableMaterials}}`
+
+---
+
+## System
+
+{{include:_shared/rules_universal.md}}
+
+Crie definição de objeto/móvel customizado coerente com materiais disponíveis.
+
+---
+
+## User Template
+
+Nome: {{userName}}
+Descrição: {{userDescription}}
+Categoria: {{userCategory}}
+Materiais disponíveis: {{availableMaterials}}
+
+Retorne JSON schema `item_definition`.
+
+---
+
+## Notas de teste
+
+- Materiais inexistentes → escolher o mais próximo do catálogo.
+

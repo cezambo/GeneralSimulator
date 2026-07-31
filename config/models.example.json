@@ -1,79 +1,65 @@
-{
-  "version": 1,
-  "activePreset": "teste-barato",
-
-  "providers": {
-    "openrouter": {
-      "type": "openrouter",
-      "baseUrl": "https://openrouter.ai/api/v1",
-      "apiKeyEnv": "OPENROUTER_API_KEY",
-      "headers": {
-        "X-Title": "Simulador de Interacoes"
-      }
-    }
-  },
-
-  "presets": {
-    "teste-barato": {
-      "description": "Open-weights gratuitos. Para iterar em prompts sem custo.",
-      "bindings": {
-        "utility":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",                "temperature": 0.2,  "maxTokens": 300 },
-        "instinct":  { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",                "temperature": 1.0,  "maxTokens": 400 },
-        "standard":  { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free",         "temperature": 0.85, "maxTokens": 800 },
-        "deep":      { "provider": "openrouter", "model": "nvidia/nemotron-3-super-120b-a12b:free", "temperature": 0.8,  "maxTokens": 2000, "reasoningEffort": "medium" },
-        "archivist": { "provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free", "temperature": 0.6,  "maxTokens": 1500 },
-        "gm_fast":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",                "temperature": 0.3,  "maxTokens": 500 },
-        "gm_deep":   { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free",         "temperature": 0.5,  "maxTokens": 1200 },
-        "builder":   { "provider": "openrouter", "model": "openai/gpt-oss-20b",                     "temperature": 0.7,  "maxTokens": 1500 }
-      }
-    },
-
-    "equilibrado": {
-      "description": "Barato onde o volume e alto, forte onde a narrativa importa.",
-      "bindings": {
-        "utility":   { "provider": "openrouter", "model": "inclusionai/ling-2.6-flash", "temperature": 0.2,  "maxTokens": 300 },
-        "instinct":  { "provider": "openrouter", "model": "openai/gpt-oss-20b",         "temperature": 1.0,  "maxTokens": 400 },
-        "standard":  { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.85, "maxTokens": 800 },
-        "deep":      { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.8,  "maxTokens": 2000, "reasoningEffort": "high" },
-        "archivist": { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.6,  "maxTokens": 1500 },
-        "gm_fast":   { "provider": "openrouter", "model": "openai/gpt-oss-20b",         "temperature": 0.3,  "maxTokens": 500 },
-        "gm_deep":   { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.5,  "maxTokens": 1200 },
-        "builder":   { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.7,  "maxTokens": 1500 }
-      }
-    },
-
-    "qualidade": {
-      "description": "Rodadas de avaliacao narrativa. Caro, usar em sessoes curtas.",
-      "bindings": {
-        "utility":   { "provider": "openrouter", "model": "openai/gpt-oss-20b",     "temperature": 0.2,  "maxTokens": 300 },
-        "instinct":  { "provider": "openrouter", "model": "qwen/qwen3.7-flash",     "temperature": 1.0,  "maxTokens": 400 },
-        "standard":  { "provider": "openrouter", "model": "anthropic/claude-opus-5", "temperature": 0.85, "maxTokens": 800 },
-        "deep":      { "provider": "openrouter", "model": "anthropic/claude-opus-5", "temperature": 0.8,  "maxTokens": 3000, "reasoningEffort": "high" },
-        "archivist": { "provider": "openrouter", "model": "anthropic/claude-opus-5", "temperature": 0.6,  "maxTokens": 2000 },
-        "gm_fast":   { "provider": "openrouter", "model": "qwen/qwen3.7-flash",     "temperature": 0.3,  "maxTokens": 500 },
-        "gm_deep":   { "provider": "openrouter", "model": "anthropic/claude-opus-5", "temperature": 0.5,  "maxTokens": 1500 },
-        "builder":   { "provider": "openrouter", "model": "anthropic/claude-opus-5", "temperature": 0.7,  "maxTokens": 2000 }
-      }
-    }
-  },
-
-  "overrides": {},
-
-  "routing": {
-    "providerOrder": [],
-    "allowFallbacks": true,
-    "requireStructuredOutputs": true,
-    "catalogCacheMinutes": 60
-  },
-
-  "budget": {
-    "dailyUsdLimit": 5.0,
-    "perAgentPerSimDayCallLimit": 20,
-    "onExceed": "degrade"
-  },
-
-  "cassettes": {
-    "mode": "hybrid",
-    "directory": "cassettes"
-  }
-}
+{
+  "version": 2,
+  "activePreset": "teste-barato",
+
+  "providers": {
+    "openrouter": {
+      "type": "openrouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyEnv": "OPENROUTER_API_KEY",
+      "headers": {
+        "X-Title": "Simulador de Interacoes"
+      }
+    }
+  },
+
+  "presets": {
+    "teste-barato": {
+      "description": "Open-weights gratuitos. Para iterar em prompts sem custo.",
+      "bindings": {
+        "compact":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",                "temperature": 0.2,  "maxTokens": 400 },
+        "narrative": { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free",         "temperature": 0.85, "maxTokens": 1200, "reasoningEffort": "medium" },
+        "longform":  { "provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free", "temperature": 0.6,  "maxTokens": 2000 }
+      }
+    },
+
+    "equilibrado": {
+      "description": "Barato onde o volume e alto, forte onde a narrativa importa.",
+      "bindings": {
+        "compact":   { "provider": "openrouter", "model": "inclusionai/ling-2.6-flash", "temperature": 0.2,  "maxTokens": 400 },
+        "narrative": { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.85, "maxTokens": 1200, "reasoningEffort": "high" },
+        "longform":  { "provider": "openrouter", "model": "qwen/qwen3.7-flash",         "temperature": 0.6,  "maxTokens": 2000 }
+      }
+    },
+
+    "qualidade": {
+      "description": "Rodadas de avaliacao narrativa. Caro, usar em sessoes curtas.",
+      "bindings": {
+        "compact":   { "provider": "openrouter", "model": "openai/gpt-oss-20b",          "temperature": 0.2,  "maxTokens": 400 },
+        "narrative": { "provider": "openrouter", "model": "anthropic/claude-opus-5",     "temperature": 0.85, "maxTokens": 1500, "reasoningEffort": "high" },
+        "longform":  { "provider": "openrouter", "model": "anthropic/claude-opus-5",     "temperature": 0.6,  "maxTokens": 2500 }
+      }
+    }
+  },
+
+  "overrides": {},
+
+  "routing": {
+    "providerOrder": [],
+    "allowFallbacks": true,
+    "requireStructuredOutputs": true,
+    "catalogCacheMinutes": 60
+  },
+
+  "budget": {
+    "dailyUsdLimit": 5.0,
+    "perAgentPerSimDayCallLimit": 20,
+    "onExceed": "degrade"
+  },
+
+  "cassettes": {
+    "mode": "hybrid",
+    "directory": "cassettes"
+  }
+}
+

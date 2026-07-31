@@ -552,14 +552,12 @@ Duas camadas, e elas fazem coisas diferentes. Operação **fora** do registro é
 
 **Aceite:** com o registro padrão, uma invocação de `transmute_part` é rejeitada antes de tocar o estado e a rejeição aparece no painel com o motivo; com o registro sobrenatural, a mesma invocação passa, mas só a partir do tier alto e com justificativa preenchida.
 
-### B-045 — Invocação recorrente é dívida de matriz
+### B-045 — Promoção generalizada (corpo)
 `P1` · `V5` · derivado de R-046 · dep: B-040, X-006
 
-Toda invocação biológica é registrada com o método descrito pelo agente e a operação escolhida. Quando o mesmo par se repete além do limiar, a observabilidade o reporta como candidato a virar linha da matriz de lesão.
+Extensão do mecanismo único de R-046 ao domínio `body`. Toda invocação biológica registra método + operação; `generalization` na saída do GM segue o mesmo contrato. Repetição além do limiar → candidato a linha em `config/conditions.json`.
 
-O mesmo laço de R-046, e a mesma direção desejada: com o tempo, o corpo precisa cada vez menos do GM.
-
-**Aceite:** o painel lista os métodos improvisados mais frequentes com a regra sugerida em formato colável em `config/conditions.json`.
+**Aceite:** painel lista métodos improvisados com regra sugerida colável; regra provisória entra viva e é revisável.
 
 ---
 

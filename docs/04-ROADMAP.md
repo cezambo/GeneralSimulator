@@ -87,19 +87,16 @@ O primeiro entregável que é genuinamente utilizável.
 
 Primeira LLM no laço principal da simulação.
 
-- Protocolo intenção → GM → mutações de mundo
-- `gm.evaluate_low` com cache, `gm.evaluate_high` com mutações
-- Verdicts `executed` / `partial` / `reinterpreted` / `denied`
-- Inventário funcional
-- ActivityLog e ShortTermBuffer
+- Pipeline colapsado: pensamento → GM único (`gm.evaluate_high`); affordance-first sem LLM (W-031)
+- Verdicts `executed` / `partial` / `reinterpreted` / `denied` + `generalization` cross-domain
 - Exposição do substrato ao GM e resumo da matriz em linguagem natural
 - Mutação `engine_effect` com regra de não-duplicação
-- **Validador de causa contra derivado**: mutação que aponte para campo marcado como derivado é rejeitada antes de tocar o estado, com sugestão de qual condição produz o efeito
-- Registro de plausibilidade do cenário limitando quais operações o GM pode invocar
-- Painel de invocações recorrentes, que aponta dívida de matriz
+- Validador de causa contra derivado
+- Registro de plausibilidade do cenário
+- Promoção generalizada: regras provisórias por domínio, revisáveis no painel
 - UI de instruções do usuário ao GM
 
-**Pronto quando:** um agente tenta forçar uma porta trancada, o GM devolve consequência parcial com dano na mão, e o mundo reflete a mutação — e, no mesmo cenário, arremessar uma tocha num monte de palha não gera nenhuma chamada ao GM.
+**Pronto quando:** ação com affordance resolve sem GM; ação criativa passa por `evaluate_high` com `generalization`; arremesso de tocha em palha gera zero invocação.
 
 ---
 
@@ -107,20 +104,13 @@ Primeira LLM no laço principal da simulação.
 
 Aqui entra o motor mental completo.
 
-- Roteador de tipo de pensamento e seletor de tier
+- Profundidade determinística: consciência (B-014) + `requestedDeepThinking` — sem `thought_router`
 - Pensamento nos três níveis, com gatilhos reativo, contemplativo, espontâneo e agendado
-- **Substrato biológico**: árvore de partes sobre o catálogo de materiais de V1, condições unificadas com estágios, capacidades derivadas, matriz de lesão escrita em propriedade de material, dor, sangramento e necessidades como escalares com limiar
-- Exposição do corpo ao GM: partes com material corrente, condições, capacidades e operações invocáveis — incluindo `transmute_part`, atrás do registro de plausibilidade
-- Consciência selecionando o tier de LLM, e capacidade perdida invalidando objetivo
-- Corpo entrando no prompt como prosa curta, dentro de orçamento de tokens
-- Substâncias com payload e os quatro vetores de entrada, incluindo efeito cognitivo
-- Efeitos do ambiente sobre o corpo, e o substrato inteiro chegando à percepção como fato descrito
-- Personalidade
-- Waterfall de memória: marcantes, diária, sazonal
-- **Classificador de dissonância**, ruptura de opinião, reavaliação reativa de metas
-- Hierarquia de objetivos e caprichos
-- Painel do agente com as abas de leitura e edição
-- Budget de chamadas por agente
+- Substrato biológico comprimido: catálogo único, capacidades derivadas, odor/descritores
+- Exposição do corpo ao GM com `transmute_part` atrás do registro de plausibilidade
+- `cognition.goal_revise` parametrizado (substitui metas separadas por período)
+- Classificador de dissonância, ruptura com `stance`, reavaliação de metas
+- Waterfall de memória: marcantes, diária, sazonal, `longterm_summary` parametrizado
 
 **Pronto quando:** 3 agentes vivem 7 dias simulados autonomamente e ao menos uma opinião sofre ruptura que muda comportamento observável — e um agente que quebra o braço abandona sozinho o objetivo que dependia das mãos.
 
@@ -131,14 +121,10 @@ Aqui entra o motor mental completo.
 ## V6 — Social
 
 - Handshake, ConversationInstance, turnos e limites
-- Realocação espacial com votação
-- Extensões dramáticas
-- Payload pós-conversa alimentando o classificador de dissonância
-- Relato verbal vs. ActivityLog (mentira e omissão)
-- Corroboração cruzada entre agentes
-- Coberturas e sinais corporais como evidência: sangue, cicatriz, tosse e mancar entram na formação de impressão
-- Infecção como corrida, qualidade de tratamento, dependência de cuidado e contágio
-- Transcrição visível na UI
+- Payload pós-conversa alimentando classificador de dissonância (lote)
+- Relato coberto por `conversation_turn` + ActivityLog — sem prompt `report_vs_log`
+- Grito de combate: fato perceptível + viés A-029, sem LLM extra
+- Coberturas e sinais corporais como evidência
 
 **Pronto quando:** dois agentes conversam, um mente sobre o que fez no dia, e um terceiro que estava no mesmo setor confronta a versão depois — ou nota o sangue que o primeiro não lavou.
 
@@ -147,11 +133,8 @@ Aqui entra o motor mental completo.
 ## V7 — Escala e extremos
 
 - N agentes com performance aceitável
-- Combate: opções táticas pré-calculadas, escolha da LLM, gritos semânticos
 - Reuniões comunitárias e leis
-- Estados mentais extremos via cognição livre
-- Memória e consolidação do GM
-- Camadas longas da waterfall (anual, quinquenal, decadal, era)
+- Camadas longas via `memory.longterm_summary` parametrizado
 - Deriva de personalidade
 - Timeline, minimap, exportação de log narrativo
 

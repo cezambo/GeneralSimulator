@@ -22,20 +22,41 @@ Trocar o modelo de todos os pensamentos corriqueiros é editar um campo num menu
 
 ## 2. Tiers (níveis de pensamento)
 
-Cada tier é uma linha no menu de configuração, com seu próprio modelo.
+Três tiers substituem os oito anteriores. Cada prompt declara tier + `temperature`/`maxTokens` opcionais no registry.
 
 | Tier | Papel | Capacidades exigidas | Perfil desejado |
 |------|-------|---------------------|-----------------|
-| `instinct` | ROLE_BASE_LOW — dor, pânico, consciência < 0.70 | JSON estruturado | ultra-rápido e barato; qualidade baixa é aceitável e até desejável |
-| `standard` | ROLE_BASE_HIGH — rotina, social casual | JSON estruturado | coerência de persona; o cavalo de batalha, maior volume de chamadas |
-| `deep` | ROLE_REASONING — reuniões, dilemas morais, ações irreversíveis | JSON estruturado + reasoning | raciocínio longo; volume baixo |
-| `archivist` | ROLE_SUMMARIZER — waterfall de memória | JSON estruturado + contexto ≥ 128k | síntese e abstração; roda em lote noturno |
-| `gm_fast` | GM em ações triviais | JSON estruturado | latência mínima; altíssimo volume |
-| `gm_deep` | GM em combate, sabotagem, consequências | JSON estruturado | consistência causal |
-| `builder` | geração agentica do mundo | JSON estruturado + tool calling | só no pré-jogo |
-| `utility` | classificadores e roteadores (dissonância, tipo de pensamento, marcantes) | JSON estruturado, saída curta | o mais barato possível; volume altíssimo |
+| `compact` | Classificadores, pensamento instintivo (B-014), utilitários | JSON estruturado, saída curta | ultra-rápido e barato; maior volume |
+| `narrative` | Pensamento corriqueiro e profundo, social, GM único | JSON estruturado (+ reasoning quando necessário) | coerência de persona; cavalo de batalha |
+| `longform` | Waterfall de memória, construção agentica do mundo | JSON estruturado + contexto ≥ 128k (+ tools no builder) | síntese; roda em lote ou pré-jogo |
 
-`utility` é o tier de maior volume do sistema inteiro — classificação de dissonância roda a cada impressão de cada agente. Tratar como tier separado do `instinct` é o que permite otimizar custo sem degradar comportamento.
+### Profundidade determinística (sem thought_router)
+
+A escolha entre `agent.thought.base_low`, `base_high` e `reasoning` é **100% determinística**:
+
+1. **Consciência** (`biology.capacities.consciousness`, B-014): `< 0.70` → `base_low` (tier `compact`); `≥ 0.70` → `base_high` (tier `narrative`).
+2. **Escalada:** se `meta.requestedDeepThinking === true` no gatilho anterior, ou gatilho grave (`meeting`, `moral_dilemma`, `irreversible_action`, `crisis`) → `reasoning` (tier `narrative` com `reasoningEffort`).
+3. **Sem chamada extra** de roteamento — economia de ~1 LLM por pensamento.
+
+### Pipeline colapsado (2 chamadas por ação)
+
+```
+affordance match?  ──sim──► engine executa (zero LLM)
+       │
+       não
+       ▼
+agent.thought.*  ──► decision (intentDescription + actionType)  [1 chamada]
+       │
+       GM necessário?
+       ▼
+gm.evaluate_high  ──► verdict + mutations + generalization  [0–1 chamada]
+```
+
+- **Removidos:** `thought_router`, `action_intent`, `gm.evaluate_low`, `combat.*`, `memory.report_vs_log`, `gm.memory_consolidation`.
+- **GM trivial:** affordance declarada resolve na engine (W-031) — sem LLM.
+- **Metas:** um prompt `cognition.goal_revise` parametrizado por nível e gatilho.
+- **Grito de combate:** fato perceptível registrado pela engine; viés de relação via A-029, sem prompt dedicado.
+- **Relato verbal:** coberto por `social.conversation_turn` + ActivityLog (R-048 é grátis).
 
 ---
 
@@ -54,7 +75,7 @@ Campos relevantes de cada modelo:
 ```
 id                      → slug usado na chamada  (ex: "openai/gpt-oss-20b")
 name                    → nome de exibição
-context_length          → filtro para o tier archivist
+context_length          → filtro para o tier longform (≥ 128k)
 pricing.prompt          → US$ por token de entrada
 pricing.completion      → US$ por token de saída
 pricing.input_cache_read → leitura de cache (relevante: system prompt é repetido)
@@ -95,7 +116,7 @@ Amostra real do catálogo, ordenada por preço, já filtrada por `structured_out
 | `nex-agi/nex-n2-mini` | 0,025 | 0,10 | 262k |
 | `openai/gpt-oss-20b` | 0,03 | 0,13 | 131k |
 
-Existe também `nvidia/nemotron-3-ultra-550b-a55b:free` com 1M de contexto — candidato ao tier `archivist` em testes.
+Existe também `nvidia/nemotron-3-ultra-550b-a55b:free` com 1M de contexto — candidato ao tier `longform` em testes.
 
 Preços mudam; o número exibido na UI vem sempre do catálogo ao vivo, nunca de tabela fixa.
 
@@ -126,14 +147,9 @@ Preços mudam; o número exibido na UI vem sempre do catálogo ao vivo, nunca de
     "teste-barato": {
       "description": "Tudo em open-weights gratuitos ou quase.",
       "bindings": {
-        "utility":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",        "temperature": 0.2, "maxTokens": 300 },
-        "instinct":  { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",        "temperature": 1.0, "maxTokens": 400 },
-        "standard":  { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free", "temperature": 0.85, "maxTokens": 800 },
-        "deep":      { "provider": "openrouter", "model": "nvidia/nemotron-3-super-120b-a12b:free", "temperature": 0.8, "maxTokens": 2000, "reasoningEffort": "medium" },
-        "archivist": { "provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free", "temperature": 0.6, "maxTokens": 1500 },
-        "gm_fast":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",        "temperature": 0.3, "maxTokens": 500 },
-        "gm_deep":   { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free", "temperature": 0.5, "maxTokens": 1200 },
-        "builder":   { "provider": "openrouter", "model": "openai/gpt-oss-20b",             "temperature": 0.7, "maxTokens": 1500 }
+        "compact":   { "provider": "openrouter", "model": "openai/gpt-oss-20b:free",        "temperature": 0.2, "maxTokens": 400 },
+        "narrative": { "provider": "openrouter", "model": "google/gemma-4-26b-a4b-it:free", "temperature": 0.85, "maxTokens": 1200 },
+        "longform":  { "provider": "openrouter", "model": "nvidia/nemotron-3-ultra-550b-a55b:free", "temperature": 0.6, "maxTokens": 2000 }
       }
     },
 
@@ -164,8 +180,7 @@ Preços mudam; o número exibido na UI vem sempre do catálogo ao vivo, nunca de
 
 Três níveis de resolução, do mais específico ao mais geral: `overrides[prompt_id]` → `presets[ativo].bindings[tier]` → erro de configuração.
 
-**Presets** são o recurso mais útil no dia a dia: alternar a simulação inteira entre "teste barato" e "qualidade" num clique, sem reconfigurar oito campos.
-
+**Presets** alternam a simulação inteira entre "teste barato" e "qualidade" num clique — três tiers em vez de oito.
 ---
 
 ## 6. UI — menu de configuração de modelos
@@ -179,14 +194,9 @@ Três níveis de resolução, do mais específico ao mais geral: `overrides[prom
 │  ┌───────────┬──────────────────────────┬──────────┬───────┬───────┐ │
 │  │ Tier      │ Modelo                   │ Provedor │ Temp  │ US$/M │ │
 │  ├───────────┼──────────────────────────┼──────────┼───────┼───────┤ │
-│  │ utility   │ [gpt-oss-20b:free    ▼]  │ [auto ▼] │ 0.2   │ 0,00  │ │
-│  │ instinct  │ [gpt-oss-20b:free    ▼]  │ [auto ▼] │ 1.0   │ 0,00  │ │
-│  │ standard  │ [gemma-4-26b:free    ▼]  │ [auto ▼] │ 0.85  │ 0,00  │ │
-│  │ deep      │ [nemotron-3-super    ▼]  │ [auto ▼] │ 0.8   │ 0,00  │ │
-│  │ archivist │ [nemotron-3-ultra    ▼]  │ [auto ▼] │ 0.6   │ 0,00  │ │
-│  │ gm_fast   │ [gpt-oss-20b:free    ▼]  │ [auto ▼] │ 0.3   │ 0,00  │ │
-│  │ gm_deep   │ [gemma-4-26b:free    ▼]  │ [auto ▼] │ 0.5   │ 0,00  │ │
-│  │ builder   │ [gpt-oss-20b         ▼]  │ [auto ▼] │ 0.7   │ 0,03  │ │
+│  │ compact   │ [gpt-oss-20b:free    ▼]  │ [auto ▼] │ 0.2   │ 0,00  │ │
+│  │ narrative │ [gemma-4-26b:free    ▼]  │ [auto ▼] │ 0.85  │ 0,00  │ │
+│  │ longform  │ [nemotron-3-ultra    ▼]  │ [auto ▼] │ 0.6   │ 0,00  │ │
 │  └───────────┴──────────────────────────┴──────────┴───────┴───────┘ │
 │                                                                       │
 │  Custo projetado: US$ 0,00 / dia simulado  (10 agentes)              │
@@ -201,7 +211,7 @@ Três níveis de resolução, do mais específico ao mais geral: `overrides[prom
 Ao abrir o dropdown de um tier:
 
 1. Busca `/api/v1/models` (cache de 1h, botão de atualizar).
-2. Filtra pelas capacidades exigidas por aquele tier — `deep` só mostra modelos com `reasoning`; `archivist` só mostra contexto ≥ 128k; `builder` só com `tools`.
+2. Filtra pelas capacidades exigidas — `longform` exige contexto ≥ 128k; `narrative` pode usar `reasoning`; `world_builder` exige `tools`.
 3. Ordena por preço crescente por padrão, com alternância para nome ou contexto.
 4. Cada linha mostra: nome, preço de entrada/saída por milhão, contexto, ícones de capacidade.
 5. Campo de busca por texto livre.
@@ -290,17 +300,25 @@ Isso é o que torna possível responder "por que o agente fez aquilo no dia 7" e
 
 ## 10. Controle de custo
 
-Com preço vindo do catálogo, dá para estimar antes de rodar. O cálculo por dia simulado é dominado por três termos:
+Com pipeline colapsado, o custo por ação típica cai de 3–4 chamadas para 1–2:
 
 ```
-custo_dia ≈  agentes × chamadas_pensamento_por_dia × custo(standard)
-           + eventos_sociais × turnos × participantes × custo(standard)
-           + impressões × custo(utility)
-           + agentes × custo(archivist)
+custo_dia ≈  agentes × pensamentos_por_dia × custo(narrative)
+           + ações_sem_affordance × custo(narrative)   # GM
+           + eventos_sociais × (turnos × participantes + pós-conversa) × custo(narrative)
+           + impressões × custo(compact)               # dissonância, lote
+           + agentes × custo(longform)                 # sumarização noturna
 ```
 
-O termo social é o que explode: uma conversa de 5 turnos entre 3 agentes gera 15 chamadas de turno, 3 pós-conversa e 3 classificações de dissonância — 21 chamadas para um único evento.
+Estimativa conservadora (10 agentes, preset gratuito):
 
-Mitigações, em ordem de aplicação: cache de leitura no system prompt (o catálogo expõe `input_cache_read`, tipicamente 10× mais barato), classificação de dissonância em lote (uma chamada por agente por evento, não uma por par), sumarização noturna agrupada, teto de chamadas por agente por dia, e degradação para heurística quando o teto estoura.
+| Componente | Chamadas/agente/dia | Total/dia (10 agentes) |
+|------------|---------------------|------------------------|
+| Pensamentos (8/dia, 70% affordance → sem GM) | 8 thought + 2.4 GM ≈ **10.4** | 104 |
+| Social (1 conversa, 3 turnos × 2 agentes) | +6 turn + 2 pós + 2 dissonância ≈ **10** | 100 |
+| Noturno (marcantes + diária + dissonância lote) | +3 compact/longform | 30 |
+| **Total** | **~23** | **~234 chamadas/dia simulado** |
+
+Antes do colapso (~35 prompts, router + intent + gm_low): ~35–40 chamadas/agente/dia → **~350–400** total. Redução ~35–40%.
 
 O painel mostra custo acumulado da sessão, custo por dia simulado e projeção — sempre em dólar real, calculado a partir do preço vigente do modelo escolhido.

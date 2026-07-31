@@ -39,7 +39,12 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Efeito nomeado** | `effectId` | Transição de estado do vocabulário fechado, invocável por identificador tanto pela matriz quanto pelo GM. |
 | **Transmutação** | `transmute` | Trocar o material de um alvo preservando identidade e estado. Vale para tile, objeto e parte de corpo. |
 | **Causação nova** | — | Método plausível de criar um estado que nenhuma regra modela. É a **única** coisa que o GM faz no substrato. |
-| **Dívida de matriz** | — | Método improvisado que o GM repete com frequência, e que por isso é candidato a virar regra determinística. |
+| **Dívida de matriz** | — | Método improvisado que o GM repete com frequência, candidato a virar regra determinística. |
+| **Promoção generalizada** | `generalization` | Mecanismo único cross-domain: improviso vira regra provisória com `domain` + vocabulário fechado. |
+| **Regra provisória** | — | Regra emitida pelo GM com `verdict: systemic`; entra viva, revisável no painel. |
+| **Registro de plausibilidade** | — | Conjunto de operações que o GM pode invocar num cenário (B-044). Portão da promoção. |
+| **Stance** | — | Viés relacional comprimido (`trust`, `distrust`, …) em opiniões; pré-filtro por `topic`. |
+| **Domain** | — | Domínio da promoção: `substrate`, `body`, `social`, `cognition`, `community`. |
 
 ## Corpo
 
@@ -84,8 +89,8 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | Termo | Código | Significado |
 |-------|--------|-------------|
 | **Pensamento** | `Thought` | Monólogo interior gerado por LLM. |
-| **Pensamento corriqueiro** | — | Rotineiro. Roda no tier `standard`, ou `instinct` se debilitado. |
-| **Pensamento aprofundado** | — | Deliberação longa. Roda no tier `deep`. |
+| **Pensamento corriqueiro** | — | Rotineiro. Roda no tier `narrative`, ou `compact` se debilitado (consciência < 0.70). |
+| **Pensamento aprofundado** | — | Deliberação longa. Roda em `agent.thought.reasoning` quando `requestedDeepThinking` ou gatilho grave. |
 | **Gatilho** | `ThoughtTrigger` | O que provocou o pensamento: reativo, contemplativo, espontâneo, agendado, pós-interação, pós-veredito. |
 | **Intenção** | `Intent` | O que o agente quer fazer, enviado ao GM. Não é ação ainda. |
 | **Log de atividades** | `ActivityLog` | Cronologia factual e privada do que o agente de fato fez. Fonte da verdade contra a qual mentiras são comparadas. |

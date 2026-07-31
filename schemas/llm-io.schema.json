@@ -40,29 +40,6 @@
       "additionalProperties": false
     },
 
-    "thought_router_response": {
-      "description": "C-002. Decide profundidade antes de gastar tier caro.",
-      "type": "object",
-      "required": ["depth"],
-      "properties": {
-        "depth": { "type": "string", "enum": ["corriqueiro", "aprofundado"] },
-        "reason": { "type": "string", "maxLength": 200 }
-      },
-      "additionalProperties": false
-    },
-
-    "action_intent_response": {
-      "type": "object",
-      "required": ["intentDescription", "actionType"],
-      "properties": {
-        "actionType": { "type": "string" },
-        "targetId": { "type": ["string", "null"] },
-        "intentDescription": { "type": "string" },
-        "parameters": { "type": "object", "additionalProperties": true }
-      },
-      "additionalProperties": false
-    },
-
     "personality_drift_response": {
       "description": "A-021. Deltas pequenos. O texto só muda se algum traço cruzar limiar.",
       "type": "object",
@@ -131,18 +108,6 @@
       "additionalProperties": false
     },
 
-    "verbal_report_response": {
-      "description": "C-019. O agente pode mentir; o log real fica intocado.",
-      "type": "object",
-      "required": ["reportText", "truthfulness"],
-      "properties": {
-        "reportText": { "type": "string" },
-        "truthfulness": { "type": "string", "enum": ["verdade", "omissao", "mentira"] },
-        "omittedOrInvented": { "type": "array", "items": { "type": "string" } }
-      },
-      "additionalProperties": false
-    },
-
     "dissonance_classification_response": {
       "description": "C-025. Uma chamada cobre todas as impressões contra todas as opiniões. Pares sem relação são omitidos.",
       "type": "object",
@@ -169,9 +134,15 @@
 
     "opinion_burst_response": {
       "type": "object",
-      "required": ["newNuanceDescription"],
+      "required": ["newNuanceDescription", "stance"],
       "properties": {
         "newNuanceDescription": { "type": "string", "description": "1 a 3 frases atemporais." },
+        "stance": {
+          "type": "string",
+          "enum": ["trust", "distrust", "admire", "pity", "resent", "indifferent", "fear", "desire", "neutral"],
+          "description": "Compressão da nuance — viés relacional canônico."
+        },
+        "topic": { "type": "string", "description": "Tópico canônico para pré-filtro downstream." },
         "emotionalTone": { "type": "string" },
         "severity": { "type": "string", "enum": ["nuance_shift", "inversao"] }
       },
@@ -364,34 +335,31 @@
       "additionalProperties": false
     },
 
-    "tactical_choice_response": {
-      "description": "S-033. A engine já calculou as opções; aqui só se escolhe.",
+    "generalization": {
+      "description": "Promoção generalizada cross-domain (R-046, B-045). Regra provisória entra viva imediatamente.",
       "type": "object",
-      "required": ["selectedOptionId"],
+      "required": ["verdict", "reasoning"],
       "properties": {
-        "selectedOptionId": { "type": "string" },
-        "shout": { "type": ["string", "null"], "maxLength": 120 },
-        "reason": { "type": "string", "maxLength": 200 }
-      },
-      "additionalProperties": false
-    },
-
-    "shout_semantic_response": {
-      "description": "S-036. Traduz grito ouvido em viés para o ouvinte.",
-      "type": "object",
-      "required": ["understood", "bias"],
-      "properties": {
-        "understood": { "type": "string", "description": "O que o ouvinte entendeu." },
-        "bias": { "type": "string", "enum": ["obedecer", "ignorar", "contrariar"] },
-        "biasStrength": { "type": "integer", "minimum": 0, "maximum": 3 }
+        "verdict": { "type": "string", "enum": ["systemic", "one_off"] },
+        "domain": {
+          "type": "string",
+          "enum": ["substrate", "body", "social", "cognition", "community"],
+          "description": "Obrigatório quando verdict é systemic."
+        },
+        "rule": {
+          "type": "object",
+          "description": "Presente só se verdict==systemic. Forma depende do domain — vocabulário fechado.",
+          "additionalProperties": true
+        },
+        "reasoning": { "type": "string", "maxLength": 400 }
       },
       "additionalProperties": false
     },
 
     "gm_response": {
-      "description": "G-004 e G-005. Postura permissiva: denied é último recurso.",
+      "description": "G-004 e G-005. Postura permissiva: denied é último recurso. Emite generalization quando aplicável.",
       "type": "object",
-      "required": ["verdict", "narrative", "worldMutations", "agentFeedback"],
+      "required": ["verdict", "narrative", "worldMutations", "agentFeedback", "generalization"],
       "properties": {
         "verdict": { "type": "string", "enum": ["executed", "partial", "reinterpreted", "denied"] },
         "narrative": { "type": "string", "description": "Terceira pessoa, para timeline e memória do GM." },
@@ -400,21 +368,10 @@
           "items": { "$ref": "domain.schema.json#/$defs/WorldMutation" }
         },
         "agentFeedback": { "type": "string", "description": "Sensorial e diegético. Nunca linguagem de sistema." },
+        "generalization": { "$ref": "#/$defs/generalization" },
         "followUpAffordances": { "type": "array", "items": { "type": "string" } },
         "isMarcanteCandidate": { "type": "boolean", "description": "G-019. Falha crítica em momento de vida ou morte." },
         "witnessIds": { "type": "array", "items": { "type": "string" } }
-      },
-      "additionalProperties": false
-    },
-
-    "gm_consolidation_response": {
-      "description": "G-012. Lote noturno para manter coerência entre dias.",
-      "type": "object",
-      "required": ["consistencyNotes"],
-      "properties": {
-        "consistencyNotes": { "type": "array", "items": { "type": "string" } },
-        "worldStateSummary": { "type": "string" },
-        "emergingTensions": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
     },

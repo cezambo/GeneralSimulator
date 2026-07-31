@@ -155,9 +155,11 @@ Instâncias com posição, rotação, integridade e estados transientes próprio
 ### W-031 — Affordances declaradas
 `P1` · `V4` · derivado de PDF 103-104 · dep: W-029, C-008
 
-Cada objeto declara as ações que suporta. Alimenta as opções apresentadas ao agente e o contexto do GM.
+Cada objeto declara as ações que suporta. Alimenta as opções apresentadas ao agente.
 
-**Aceite:** o contexto de um agente perto de uma cama inclui `dormir`.
+**Affordance-first (determinístico):** se a intenção do agente mapeia a uma affordance declarada, a **engine executa sem LLM de GM**. O GM só entra quando não há affordance que cubra a ação.
+
+**Aceite:** sentar numa cadeira com affordance `sentar` resolve na engine; contexto do agente inclui affordances disponíveis.
 
 ### W-032 — Containers
 `P1` · `V2` · derivado · dep: W-030

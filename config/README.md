@@ -10,7 +10,7 @@ Os arquivos `*.example.json` são referência comentada e são versionados. Os a
 | `reactions.example.json` | matriz de reação e vocabulário de efeitos | [SPEC-R](../docs/spec/SPEC-R-substrato.md) |
 | `body.example.json` | árvore de partes do corpo | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
 | `conditions.example.json` | condições e matriz de lesão | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
-| `models.example.json` | provedor e modelo por tier de pensamento | [03-CAMADA-LLM](../docs/03-CAMADA-LLM.md) |
+| `models.example.json` | provedor e modelo por tier (`compact` / `narrative` / `longform`) | [03-CAMADA-LLM](../docs/03-CAMADA-LLM.md) |
 | `tuning.json` | todos os números ajustáveis | ainda não escrito |
 
 Tudo é validado contra [`schemas/domain.schema.json`](../schemas/domain.schema.json) no carregamento. Chaves iniciadas por `_` são comentário e a engine ignora.
@@ -44,3 +44,12 @@ Toda entrada declara `category`: **material** é matéria estável, **elemento**
 Nenhuma regra, em nenhum arquivo, referencia um material pelo identificador. Sempre por etiqueta. É o que faz um material inventado em tempo de execução participar de todos os sistemas no instante em que recebe suas etiquetas.
 
 Toda regra carrega um campo `porque`. Ele não é comentário: é dele que se gera o resumo em linguagem natural entregue ao GM, que é como o GM sabe quando **não** agir.
+
+## Compressão de representação
+
+- **Odor:** `odorDescriptor` (1–5 palavras), não grid de difusão (R-036).
+- **Poça:** `dominantMaterialId` + `descriptor` opcional; volumes internos só para simulação (R-021).
+- **Integridade:** campo único absorve desgaste (R-028); `wear` aposentado.
+- **Gatilhos de lesão:** `injuryTriggers` separados do vocabulário R-015 (`damage`/`fall` não são efeitos de substrato).
+
+Validação: `node scripts/validate-contracts.mjs` na raiz do projeto.

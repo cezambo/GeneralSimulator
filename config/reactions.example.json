@@ -98,25 +98,25 @@
       "propagates": "wholeLiquidBody",
       "porque": "Uma poca energizada eletrifica por inteiro, nao so o ponto de contato."
     },
+  "injuryTriggers": [
     {
       "id": "shock-on-entry",
       "when": "entry",
       "in": ["electrified", "#creature"],
-      "effect": "damage",
-      "chance": 1.0,
-      "payload": { "damageType": "electric", "severity": 40, "condition": "choque" },
-      "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia."
+      "injury": { "damageType": "electric", "severity": 40, "condition": "choque" },
+      "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia. Fora do vocabulario R-015 — e gatilho de matriz de lesao (B-022)."
     },
     {
       "id": "slip-on-entry",
       "when": "entry",
       "in": ["#slippery", "#creature"],
-      "effect": "fall",
-      "chance": 0.25,
+      "injury": { "damageType": "blunt", "severity": 25, "condition": "queda" },
       "modifiedBy": { "hurry": 0.5, "carryingWeight": 0.2 },
-      "porque": "Superficie escorregadia derruba quem passa, com risco proporcional a pressa e ao peso carregado."
-    },
-    {
+      "porque": "Superficie escorregadia derruba quem passa. Fora do vocabulario R-015 — e gatilho de matriz de lesao (B-022)."
+    }
+  ],
+
+  "reactions": [
       "id": "impact-shatter",
       "when": "contact",
       "in": ["#impact", "#fragile"],
@@ -193,7 +193,7 @@
       "into": "remains",
       "chancePerTick": 0.001,
       "modifiedBy": { "temperature": 0.02 },
-      "emits": { "odor": 60 },
+      "emits": { "odorDescriptor": "carne podre" },
       "porque": "Cadaver se decompoe e emite odor detectavel antes de ser encontrado."
     }
   ]

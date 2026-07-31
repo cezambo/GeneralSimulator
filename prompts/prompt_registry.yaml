@@ -1,29 +1,37 @@
 # Registro central de prompts.
 #
-# MUDANCA IMPORTANTE (31/07/2026): modelo nao e mais declarado aqui.
-# Cada prompt declara apenas o TIER e as CAPACIDADES exigidas.
-# O binding tier -> modelo/provedor vive em config/models.json e e editavel pela UI.
-# Ver docs/03-CAMADA-LLM.md.
+# MUDANCA (31/07/2026): pipeline colapsado — profundidade por consciencia (B-014)
+# + escalada por requestedDeepThinking. Roteador e intent removidos.
+# GM unico (gm.evaluate_high). Metas unificadas em cognition.goal_revise.
 #
-# status: ok       = arquivo existe e foi revisado
-#         rascunho = arquivo existe, precisa de revisao
-#         falta    = declarado, arquivo NAO existe ainda
+# Modelo nao e declarado aqui — apenas tier e capacidades.
+# Binding tier -> modelo vive em config/models.json. Ver docs/03-CAMADA-LLM.md.
 
-version: "2.0"
+version: "3.0"
 
 shared:
-  system_rules: "_shared/system_rules.md"
+  rules_universal: "_shared/rules_universal.md"
+  rules_agent: "_shared/rules_agent.md"
+  rules_gm: "_shared/rules_gm.md"
   schemas_dir: "../schemas"
 
 tiers:
-  utility:   { desc: "Classificadores e roteadores. Volume altissimo, saida curta.", caps: [structured_outputs] }
-  instinct:  { desc: "Pensamento instintivo, debilitado, panico.",                   caps: [structured_outputs] }
-  standard:  { desc: "Pensamento corriqueiro. Cavalo de batalha.",                   caps: [structured_outputs] }
-  deep:      { desc: "Deliberacao profunda, reunioes, dilemas.",                     caps: [structured_outputs, reasoning] }
-  archivist: { desc: "Sumarizacao da waterfall de memoria.",                         caps: [structured_outputs], min_context: 128000 }
-  gm_fast:   { desc: "GM em acoes triviais.",                                        caps: [structured_outputs] }
-  gm_deep:   { desc: "GM em acoes complexas com mutacao de mundo.",                  caps: [structured_outputs] }
-  builder:   { desc: "Construcao agentica do mundo no pre-jogo.",                    caps: [structured_outputs, tools] }
+  compact:
+    desc: "Classificadores, instinto, saida curta. Volume altissimo."
+    caps: [structured_outputs]
+    defaultTemperature: 0.2
+    defaultMaxTokens: 400
+  narrative:
+    desc: "Pensamento, social, GM. Cavalo de batalha."
+    caps: [structured_outputs, reasoning]
+    defaultTemperature: 0.85
+    defaultMaxTokens: 1200
+  longform:
+    desc: "Sumarizacao, construcao agentica. Contexto longo."
+    caps: [structured_outputs, tools]
+    min_context: 128000
+    defaultTemperature: 0.6
+    defaultMaxTokens: 2000
 
 prompts:
 
@@ -31,326 +39,252 @@ prompts:
 
   generation.scenario_to_terrain:
     file: "generation/scenario_to_terrain.md"
-    tier: builder
+    tier: compact
+    temperature: 0.3
+    maxTokens: 600
     schema: terrain_params_response
     status: ok
-    origem_pdf: "linhas 3-13"
     description: "Interpreta descricao do usuario -> TerrainParams"
-    variables: [user_scenario, num_agents, map_size_default]
+    variables: [userScenario, numAgents, mapSizeDefault]
 
   generation.world_builder:
     file: "generation/world_builder.md"
-    tier: builder
-    schema: null   # tool calling, sem schema de resposta unico
+    tier: longform
+    temperature: 0.7
+    maxTokens: 2000
+    schema: null
     status: ok
-    origem_pdf: "linhas 14-18"
     description: "Loop agentico com tool calls para construir a cidade"
-    variables: [terrain_summary, required_locations, num_agents, tool_results]
+    variables: [terrainSummary, requiredLocations, numAgents, toolResults]
 
   generation.agent_profile:
     file: "generation/agent_profile.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 1200
     schema: agent_profile_response
-    status: rascunho   # define JSON inline, migrar para schemas/
-    origem_pdf: "linhas 3-5, 38-63"
+    status: rascunho
     description: "Gera perfil inicial de agente coerente com o cenario"
-    variables: [world_summary, existing_agents_summary, slot_index, user_scenario]
+    variables: [worldSummary, existingAgentsSummary, slotIndex, userScenario]
 
   generation.custom_item:
     file: "generation/custom_item.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.7
+    maxTokens: 800
     schema: item_definition
-    status: rascunho   # define JSON inline
-    origem_pdf: "linhas 105-107"
+    status: rascunho
     description: "Item/movel customizado criado no modo construcao"
-    variables: [user_name, user_description, user_category, available_materials]
+    variables: [userName, userDescription, userCategory, availableMaterials]
 
   # ── COGNICAO DO AGENTE ───────────────────────────────────────────────
 
-  agent.thought_router:
-    file: "agent/thought_router.md"
-    tier: utility
-    schema: thought_router_response
-    status: falta
-    origem_pdf: "linhas 74-79 (LLM menor decide o tipo de pensamento)"
-    description: "Decide se o pensamento e corriqueiro ou aprofundado"
-    variables: [agent_state_brief, trigger_type, trigger_detail]
-    nota: "O PDF exige que essa decisao seja de LLM, nao so estatica. O seletor estatico de consciencia continua valendo como override."
-
   agent.thought.base_low:
     file: "agent/thought_base_low.md"
-    tier: instinct
+    tier: compact
+    temperature: 1.0
+    maxTokens: 400
     schema: agent_thought_response
     status: ok
-    origem_pdf: "secao 1.1.2"
-    variables: [agent_context, trigger_type, trigger_detail, affordances, recent_denials]
+    description: "Pensamento instintivo — consciencia < 0.70 (B-014)"
+    variables: [agentContext, triggerType, triggerDetail, affordances, recentDenials]
 
   agent.thought.base_high:
     file: "agent/thought_base_high.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 800
     schema: agent_thought_response
     status: ok
-    origem_pdf: "secao 1.1.3"
-    variables: [agent_context, trigger_type, trigger_detail, affordances, goals_summary]
+    description: "Pensamento corriqueiro — consciencia >= 0.70 (B-014)"
+    variables: [agentContext, triggerType, triggerDetail, affordances, goalsSummary]
 
   agent.thought.reasoning:
     file: "agent/thought_reasoning.md"
-    tier: deep
+    tier: narrative
+    temperature: 0.8
+    maxTokens: 2000
+    reasoningEffort: medium
     schema: agent_thought_response
     status: ok
-    origem_pdf: "secao 1.1.4"
-    variables: [agent_context, trigger_type, trigger_detail, affordances, goals_summary, meeting_context]
-
-  agent.action_intent:
-    file: "agent/action_intent.md"
-    tier: standard
-    schema: action_intent_response
-    status: falta
-    origem_pdf: "secao 9.1"
-    description: "Converte pensamento em intencao estruturada para o GM"
-    variables: [agent_context, current_thought, nearby_entities, inventory]
-    nota: "Avaliar se pode ser fundido na mesma call do pensamento para economizar 50% das chamadas."
+    description: "Deliberacao profunda — requestedDeepThinking ou gatilho grave"
+    variables: [agentContext, triggerType, triggerDetail, affordances, goalsSummary, meetingContext]
 
   agent.personality_drift:
     file: "agent/personality_drift.md"
-    tier: archivist
+    tier: longform
+    temperature: 0.6
+    maxTokens: 1000
     schema: personality_drift_response
     status: falta
-    origem_pdf: "linhas 57-59"
-    description: "Ajusta tracos apos experiencias significativas ou repetidas"
-    variables: [agent_context, personality, significant_events, period]
+    description: "Ajusta tracos apos experiencias significativas"
+    variables: [agentContext, personality, significantEvents, period]
 
   # ── MEMORIA ──────────────────────────────────────────────────────────
 
   memory.marcantes_selection:
     file: "memory/marcantes_selection.md"
-    tier: utility
+    tier: compact
+    temperature: 0.2
+    maxTokens: 400
     schema: marcantes_response
     status: falta
-    origem_pdf: "secao 2.1.2"
     description: "Escolhe 0 a 5 eventos marcantes do dia"
-    variables: [agent_name, personality, day_events]
+    variables: [agentName, personality, dayEvents]
 
   memory.daily_summary:
     file: "memory/daily_summary.md"
-    tier: archivist
+    tier: longform
+    temperature: 0.6
+    maxTokens: 1500
     schema: memory_summary_response
     status: ok
-    origem_pdf: "secao 2.1.3"
-    variables: [agent_name, activity_log, buffer_marcantes, personality, opinions_summary]
+    variables: [agentName, activityLog, bufferMarcantes, personality, opinionsSummary]
 
   memory.seasonal_summary:
     file: "memory/seasonal_summary.md"
-    tier: archivist
+    tier: longform
+    temperature: 0.6
+    maxTokens: 1500
     schema: memory_summary_response
-    status: rascunho   # tabela malformada, sem notas de teste
-    origem_pdf: "secao 2.1.4"
-    variables: [agent_name, daily_memories_block, preserved_marcantes, personality]
+    status: rascunho
+    variables: [agentName, dailyMemoriesBlock, preservedMarcantes, personality]
 
   memory.longterm_summary:
     file: "memory/longterm_summary.md"
-    tier: archivist
+    tier: longform
+    temperature: 0.6
+    maxTokens: 2000
     schema: longterm_memory_response
-    status: rascunho   # existe como annual_summary.md; generalizar para niveis 3-6
-    origem_pdf: "secao 2.1.5 (anual, quinquenal, decadal, era)"
-    description: "Resumo acumulativo parametrizado por nivel"
-    variables: [agent_name, level, source_memories_block, personality, relationships_summary]
-    nota: "Substitui memory.annual_summary. O nivel vira variavel em vez de 4 prompts quase identicos."
-
-  memory.report_vs_log:
-    file: "memory/report_vs_log.md"
-    tier: standard
-    schema: verbal_report_response
-    status: falta
-    origem_pdf: "secao 2.2"
-    description: "Agente relata o que fez; pode mentir ou omitir conforme personalidade"
-    variables: [agent_context, activity_log_today, question, asker_context]
+    status: rascunho
+    description: "Resumo acumulativo parametrizado por nivel (anual a era)"
+    variables: [agentName, level, sourceMemoriesBlock, personality, relationshipsSummary]
 
   # ── OPINIOES ─────────────────────────────────────────────────────────
 
   cognition.dissonance_classifier:
     file: "cognition/dissonance_classifier.md"
-    tier: utility
+    tier: compact
+    temperature: 0.2
+    maxTokens: 600
     schema: dissonance_classification_response
     status: falta
     prioridade: P0
-    origem_pdf: "secao 3.2 passos 1 e 2"
-    description: "Classifica impressoes novas como conflito ou sinergia contra as opinioes existentes"
-    variables: [agent_context, existing_opinions, new_impressions]
-    nota: >
-      BLOQUEADOR. Sem este prompt o buffer de dissonancia nunca enche, a ruptura nunca
-      dispara e a reavaliacao reativa de metas nunca acontece. Tres sistemas encadeados
-      ficam inertes.
-      Deve processar TODAS as opinioes contra TODAS as impressoes em UMA chamada -
-      classificar par a par multiplica o custo por N*M.
+    description: "Classifica impressoes contra opiniões — uma chamada por evento"
+    variables: [agentContext, existingOpinions, newImpressions, topicFilter]
 
   cognition.opinion_burst:
     file: "cognition/opinion_burst.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.9
+    maxTokens: 600
     schema: opinion_burst_response
-    status: rascunho   # corrigir vazamento de ingles no exemplo
-    origem_pdf: "secao 3.2 passo 3"
-    variables: [agent_context, old_opinion, dissonance_buffer, personality]
+    status: rascunho
+    variables: [agentContext, oldOpinion, dissonanceBuffer, personality]
 
   cognition.nightly_reflection:
     file: "cognition/nightly_reflection.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 800
     schema: nightly_reflection_response
     status: falta
-    origem_pdf: "secao 3.3"
-    description: "Lote noturno de opinioes gerais antes de dormir"
-    variables: [agent_context, day_summary, general_opinions, community_events]
+    description: "Lote noturno de opiniões gerais"
+    variables: [agentContext, daySummary, generalOpinions, communityEvents]
 
   # ── OBJETIVOS ────────────────────────────────────────────────────────
 
-  cognition.goal_daily:
-    file: "cognition/goal_daily.md"
-    tier: standard
-    schema: goal_response
-    status: ok
-    origem_pdf: "secao 4.2.A"
-    variables: [agent_context, primary_goal, secondary_goal, deprecated_goal, world_alerts]
-
-  cognition.goal_seasonal:
-    file: "cognition/goal_seasonal.md"
-    tier: standard
-    schema: goal_response
+  cognition.goal_revise:
+    file: "cognition/goal_revise.md"
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 600
+    schema: goal_revise_response
     status: falta
-    origem_pdf: "secao 4.2.A"
-    variables: [agent_context, primary_goal, seasonal_memories, community_goals]
-
-  cognition.goal_annual:
-    file: "cognition/goal_annual.md"
-    tier: deep
-    schema: goal_response
-    status: falta
-    origem_pdf: "secao 4.2.A"
-    variables: [agent_context, annual_memories, life_events, community_state]
-
-  cognition.goal_reactive:
-    file: "cognition/goal_reactive.md"
-    tier: standard
-    schema: goal_reactive_response
-    status: rascunho   # JSON inline, sem notas de teste
-    origem_pdf: "secao 4.2.B"
-    variables: [agent_context, trigger_event, current_goals, deprecated_goal]
+    description: "Revisao unificada de meta — qualquer nivel e gatilho"
+    variables: [agentContext, goalLevel, triggerKind, currentGoals, triggerEvent, memoriesBlock, communityState, deprecatedGoal]
 
   cognition.whim_generation:
     file: "cognition/whim_generation.md"
-    tier: utility
+    tier: compact
+    temperature: 0.7
+    maxTokens: 300
     schema: whim_response
     status: falta
-    origem_pdf: "secao 4.1.4"
-    description: "Capricho: impulso de minutos que interrompe a rotina"
-    variables: [agent_context, personality, boredom_level, nearby_affordances]
-    nota: "Validacao de seguranca aborta se em combate, ferido critico ou emergencia medica."
+    description: "Capricho: impulso de minutos"
+    variables: [agentContext, personality, boredomLevel, nearbyAffordances]
 
   # ── SOCIAL ───────────────────────────────────────────────────────────
 
   social.handshake:
     file: "social/handshake.md"
-    tier: utility
+    tier: compact
+    temperature: 0.2
+    maxTokens: 300
     schema: handshake_response
     status: falta
-    origem_pdf: "secao 5.1"
-    description: "Checa disponibilidade e disposicao para iniciar conversa"
-    variables: [initiator_context, target_context, spatial_context]
+    description: "Checa disponibilidade para conversa"
+    variables: [initiatorContext, targetContext, spatialContext]
 
   social.conversation_turn:
     file: "social/conversation_turn.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 800
     schema: conversation_turn_response
     status: ok
-    origem_pdf: "secao 5.2 e 5.3"
-    variables: [agent_context, conversation_transcript, participants, turn_budget, spatial_context]
+    variables: [agentContext, conversationTranscript, participants, turnBudget, spatialContext]
 
   social.relocation_vote:
     file: "social/relocation_vote.md"
-    tier: utility
+    tier: compact
+    temperature: 0.3
+    maxTokens: 300
     schema: relocation_vote_response
     status: falta
-    origem_pdf: "secao 5.2.3"
-    variables: [agent_context, proposal, current_location, target_location]
+    variables: [agentContext, proposal, currentLocation, targetLocation]
 
   social.post_conversation:
     file: "social/post_conversation.md"
-    tier: standard
+    tier: narrative
+    temperature: 0.85
+    maxTokens: 600
     schema: post_conversation_response
     status: ok
-    origem_pdf: "secao 5.4"
-    variables: [agent_context, conversation_transcript, participants]
+    variables: [agentContext, conversationTranscript, participants]
 
   # ── COMUNIDADE ───────────────────────────────────────────────────────
 
   community.meeting_turn:
     file: "community/meeting_turn.md"
-    tier: deep
+    tier: narrative
+    temperature: 0.8
+    maxTokens: 1200
+    reasoningEffort: medium
     schema: conversation_turn_response
-    status: rascunho   # sem notas de teste
-    origem_pdf: "secao 8.2"
-    variables: [agent_context, meeting_type, meeting_transcript, community_laws, colony_state]
+    status: rascunho
+    variables: [agentContext, meetingType, meetingTranscript, communityLaws, colonyState]
 
   community.meeting_verdict:
     file: "community/meeting_verdict.md"
-    tier: deep
+    tier: narrative
+    temperature: 0.7
+    maxTokens: 1500
+    reasoningEffort: medium
     schema: meeting_verdict_response
     status: ok
-    origem_pdf: "secao 8.2"
-    variables: [meeting_type, meeting_transcript, participants, colony_state]
-
-  # ── COMBATE E CRISE ──────────────────────────────────────────────────
-
-  combat.tactical_choice:
-    file: "combat/tactical_choice.md"
-    tier: instinct
-    schema: tactical_choice_response
-    status: falta
-    origem_pdf: "secao 6.2 e 6.3"
-    description: "Agente escolhe entre opcoes taticas pre-calculadas e emite grito semantico"
-    variables: [agent_context, tactical_options, combat_context, community_doctrine, heard_shouts]
-    nota: "A engine calcula geometria e pathfinding. A LLM so escolhe e grita."
-
-  combat.shout_propagation:
-    file: "combat/shout_propagation.md"
-    tier: utility
-    schema: shout_semantic_response
-    status: falta
-    origem_pdf: "secao 6.3"
-    description: "Traduz grito ouvido em vies tatico para o ouvinte"
-    variables: [listener_context, shout_text, shouter_relationship, distance]
+    variables: [meetingType, meetingTranscript, participants, colonyState]
 
   # ── GAME MASTER ──────────────────────────────────────────────────────
-
-  gm.evaluate_low:
-    file: "gm/evaluate_low.md"
-    tier: gm_fast
-    schema: gm_response
-    status: ok
-    origem_pdf: "secao 9, linhas 87-89"
-    variables: [intent, agent_snapshot, target_snapshot, world_snapshot, user_instructions]
+  # GM trivial: affordance declarada resolve na engine — sem LLM.
+  # Grito de combate: fato perceptivel + viés de relação (A-029), sem prompt extra.
 
   gm.evaluate_high:
     file: "gm/evaluate_high.md"
-    tier: gm_deep
+    tier: narrative
+    temperature: 0.5
+    maxTokens: 1500
     schema: gm_response
     status: ok
-    origem_pdf: "secao 9 + revisao GM permissivo + SPEC-R + SPEC-B"
-    variables: [intent, agent_snapshot, target_snapshot, world_snapshot, user_instructions, substrate_snapshot, matrix_summary, body_snapshot, injury_summary, allowed_operations]
-
-  gm.tactical_narration:
-    file: "gm/tactical_narration.md"
-    tier: gm_fast
-    schema: gm_response
-    status: falta
-    origem_pdf: "secao 6.2"
-    description: "Narra e materializa o resultado da opcao tatica escolhida"
-    variables: [agent_snapshot, selected_option, combat_context, shout_text]
-
-  gm.memory_consolidation:
-    file: "gm/memory_consolidation.md"
-    tier: archivist
-    schema: gm_consolidation_response
-    status: falta
-    origem_pdf: "linhas 93-94"
-    description: "Consolida a memoria de mundo do GM para manter consistencia entre dias"
-    variables: [validated_actions_log, denied_actions_log, global_events, community_laws]
+    description: "Unico GM — emite generalization cross-domain"
+    variables: [intent, agentSnapshot, targetSnapshot, worldSnapshot, userInstructions, substrateSnapshot, matrixSummary, bodySnapshot, injurySummary, allowedOperations, plausibilityRegistry]

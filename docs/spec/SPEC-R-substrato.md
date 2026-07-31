@@ -58,11 +58,11 @@ Estado **persiste** onde está até que uma regra o mude ou sua duração acabe.
 ### R-005 — Campo calculado
 `P0` · `V2` · derivado · dep: R-004
 
-Distinto de estado. Um campo não tem memória: é recalculado a cada tick a partir de seus emissores e atenuado por distância e oclusão. Luz, som e odor são campos.
+Distinto de estado. Um campo não tem memória persistente própria: é **derivado** de emissores e atenuado por distância e oclusão. Luz, som e odor entram aqui.
 
-A distinção existe porque o custo e a semântica são diferentes — estado se guarda e se propaga, campo se recomputa e se descarta.
+**Invalidação, não recálculo global (R-049):** campos só são recomputados quando emissores, oclusores ou entidades em escopo mudam — nunca varrem o grid inteiro a cada tick. Remover a fonte de luz apaga o campo no tick seguinte para os tiles afetados, sem varrer o mapa.
 
-**Aceite:** remover a fonte de luz apaga o campo no tick seguinte sem que nada precise limpar estado.
+**Aceite:** remover a fonte de luz apaga o campo no tick seguinte sem varrer tiles sem emissor; perfil de CPU não escala com tamanho total do mapa quando poucos emissores mudam.
 
 ### R-006 — Escalar antes de regra
 `P0` · `V1` · decisão de DF · dep: R-004
@@ -250,9 +250,9 @@ Líquido é medido em volume, não em presença. Uma poça tem quantidade, escor
 ### R-021 — Mistura de líquidos
 `P2` · `V3` · decisão de Qud · dep: R-020
 
-Uma poça pode ser composta. Cada componente evapora conforme sua própria volatilidade, o que faz misturas convergirem para o componente menos volátil. As propriedades da poça são ponderadas pela composição.
+Poça comprimida: **material dominante** (maior volume) + **descritor** opcional de 1–3 palavras quando a mistura importa narrativamente ("óleo na água"). Componentes internos existem para simulação, mas o que entra em percepção e no GM é dominante + descritor — não lista de volumes.
 
-**Aceite:** água misturada com óleo, deixada em repouso, termina como óleo puro.
+**Aceite:** água misturada com óleo, deixada em repouso, termina como óleo puro na representação perceptível; poça composta aparece como "poça de óleo" ou "poça de água com óleo", nunca como tabela de volumes.
 
 ### R-022 — Absorção
 `P1` · `V2` · derivado · dep: R-020
@@ -300,12 +300,14 @@ Tiles e objetos têm integridade de 0 a 100. Zero destrói e substitui pelo esco
 
 **Aceite:** uma parede de madeira queima até zero e vira escombro atravessável.
 
-### R-028 — Desgaste e qualidade
+### R-028 — Integridade unificada
 `P2` · `V3` · derivado · dep: R-027
 
-Objetos acumulam desgaste com uso e perdem eficácia antes de quebrar. Qualidade de fabricação modula desgaste e eficácia.
+Tiles e objetos têm **integridade** de 0 a 100, que absorve tanto dano estrutural quanto desgaste por uso. Qualidade de fabricação modula a taxa de perda. Zero destrói e substitui pelo escombro declarado no material.
 
-**Aceite:** uma ferramenta muito usada realiza sua tarefa mais devagar que uma nova.
+⚑ `wear` como campo separado foi **aposentado** — desgaste incrementa integridade negativamente ou reduz eficácia via limiar, não via segundo escalar.
+
+**Aceite:** ferramenta muito usada realiza tarefa mais devagar antes de quebrar; objeto com integridade zero perde affordances.
 
 ---
 
@@ -377,12 +379,12 @@ Grito, quebra de vidro, batida e desabamento são eventos audíveis — e o que 
 
 **Aceite:** vidro quebrado num cômodo faz agentes de cômodos vizinhos registrarem um som e sua direção aproximada.
 
-### R-036 — Campo de odor
-`P2` · `V3` · derivado de DF · dep: R-005
+### R-036 — Odor derivado
+`P2` · `V3` · derivado de DF · dep: R-005, R-025
 
-Substâncias, coberturas e matéria em decomposição emitem odor, que se difunde e decai. Odor é percebido sem visão e persiste depois que a fonte sai.
+Odor **não** é campo de difusão simulado tile a tile. Fontes (coberturas, decomposição, substâncias) marcam entidades com **`odorDescriptor`**: string de 1–5 palavras ("carne podre", "perfume doce"). Percepção combina descritor + distância + oclusão — sem grid de concentração.
 
-**Aceite:** um cadáver não descoberto produz odor detectável em cômodos adjacentes antes de ser visto.
+**Aceite:** cadáver produz descritor detectável em cômodos adjacentes antes de ser visto; nenhuma estrutura de "campo de odor" persiste no save.
 
 ### R-037 — Tudo isto é perceptível
 `P0` · `V2` · decisão · dep: A-006
@@ -476,14 +478,32 @@ O GM nunca simula física. Decide apenas *se* um efeito começa, e só quando ne
 
 **Aceite:** existe teste para cada linha da tabela.
 
-### R-046 — Invocação recorrente é dívida de matriz
-`P1` · `V4` · decisão · dep: R-043, X-006
+### R-046 — Promoção generalizada
+`P1` · `V4` · decisão · dep: R-043, B-045, X-006
 
-Toda invocação do GM é registrada com o método descrito pelo agente e o efeito escolhido. Quando o mesmo par método-efeito se repete além de um limiar configurável, a ferramenta de observabilidade o reporta como **candidato a virar regra**.
+Mecanismo **único** para improviso que vira regra — vale para substrato, corpo, social, cognição e comunidade. Contrato na saída do GM (`generalization`):
 
-É o laço que fecha o desenho: improviso de LLM vira, com o tempo, comportamento determinístico, testável e gratuito. Quanto mais completo o substrato, menos o GM é chamado, e essa é a direção desejada.
+```json
+{
+  "verdict": "systemic" | "one_off",
+  "domain": "substrate" | "body" | "social" | "cognition" | "community",
+  "rule": { /* só se verdict==systemic; vocabulário fechado do domínio */ },
+  "reasoning": "..."
+}
+```
 
-**Aceite:** o painel lista os métodos improvisados mais frequentes, ordenados por contagem, com a regra sugerida em formato colável em `config/reactions.json`.
+**Vocabulários fechados por domínio:**
+| Domínio | Forma de `rule` |
+|---------|-----------------|
+| `substrate` | `{ when, in, effect, chance }` — mesmas ocasiões e efeitos de R-013/R-015 |
+| `body` | `{ operation, conditionId?, partSelector? }` — operações B-037 |
+| `social` | `{ perceptTemplate, relationBias }` — fato perceptível + viés A-029 |
+| `cognition` | `{ topic, stance }` — mínimo expressável em opinião |
+| `community` | `{ lawTemplate, mechanicTarget? }` — proposta de lei ou mecânica |
+
+Regra provisória entra **viva imediatamente**, revisável no painel (R-046/B-045). Se não expressável no vocabulário fechado → forçar `one_off`. Portão: registro de plausibilidade do cenário (B-044).
+
+**Aceite:** invocação com `verdict: systemic` persiste regra provisória no domínio correto; terceira repetição do mesmo par método-efeito aparece como candidato a promoção permanente.
 
 ---
 
@@ -506,11 +526,11 @@ Sem isso, uma cadeia de seis passos é indistinguível de um bug.
 **Aceite:** dado um tile queimado, é possível reconstruir a cadeia completa até a causa inicial.
 
 ### R-049 — Orçamento de custo por tick
-`P1` · `V3` · derivado de X-008 · dep: R-014
+`P1` · `V3` · derivado de X-008 · dep: R-014, R-005
 
-O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação é restrita a entidades com estado ativo, nunca ao grid inteiro. Campos são recalculados só quando emissores ou oclusores mudam.
+O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação restrita a entidades com estado ativo. **Campos calculados (R-005) invalidam e recomputam só tiles em escopo** — nunca o grid inteiro por tick.
 
-**Aceite:** com cem tiles em estado ativo simultâneo, o tick permanece dentro do orçamento declarado em `config/tuning.json`.
+**Aceite:** com cem tiles em estado ativo simultâneo, o tick permanece dentro do orçamento declarado em `config/tuning.json`; alterar um emissor de luz não dispara recomputação global de odor/som/luz.
 
 ### R-050 — Tudo em dado
 `P0` · `V1` · decisão · dep: R-001

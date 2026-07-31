@@ -224,9 +224,11 @@
         },
         "liquid": {
           "type": "object",
-          "description": "Poça sobre o tile, medida em volume e possivelmente composta. R-020, R-021.",
+          "description": "Poça comprimida. R-020, R-021.",
           "properties": {
-            "totalVolume": { "type": "number", "minimum": 0 },
+            "dominantMaterialId": { "type": "string", "description": "Material de maior volume — representação perceptível." },
+            "descriptor": { "type": "string", "maxLength": 40, "description": "1–3 palavras quando mistura importa ('água com óleo')." },
+            "totalVolume": { "type": "number", "minimum": 0, "description": "Simulação interna; não vai cru ao prompt." },
             "components": {
               "type": "array",
               "items": {
@@ -241,6 +243,11 @@
             }
           },
           "additionalProperties": false
+        },
+        "odorDescriptor": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "1–5 palavras derivadas de fontes locais. R-036. Não é campo de difusão."
         },
         "gas": {
           "type": "object",
@@ -297,13 +304,13 @@
         "defId": { "type": "string" },
         "pos": { "$ref": "#/$defs/Vec2" },
         "rotation": { "type": "number" },
-        "integrity": { "type": "number", "minimum": 0, "maximum": 100 },
+        "integrity": { "type": "number", "minimum": 0, "maximum": 100, "description": "Integridade unificada: dano estrutural + desgaste. R-027, R-028." },
         "containedBy": { "type": ["string", "null"], "description": "id de container ou de agente que carrega." },
         "contents": { "type": "array", "items": { "type": "string" } },
         "temperature": { "type": "number", "description": "R-007." },
         "states": { "type": "array", "items": { "$ref": "#/$defs/TransientState" }, "description": "R-004." },
         "coverings": { "type": "array", "items": { "$ref": "#/$defs/Covering" }, "description": "R-025." },
-        "wear": { "type": "number", "minimum": 0, "maximum": 100, "description": "Desgaste acumulado por uso, distinto de integridade. R-028." },
+        "odorDescriptor": { "type": "string", "maxLength": 40, "description": "R-036." },
         "state": { "type": "object", "additionalProperties": true }
       },
       "additionalProperties": false
@@ -322,10 +329,8 @@
           "properties": {
             "hunger": { "type": "number", "minimum": 0, "maximum": 100 },
             "thirst": { "type": "number", "minimum": 0, "maximum": 100 },
-            "energy": { "type": "number", "minimum": 0, "maximum": 100 },
+            "energy": { "type": "number", "minimum": 0, "maximum": 100, "description": "Inclui conforto/fadiga — bladder fundido aqui como pressão que gera condição, não escalar separado. B-019." },
             "hygiene": { "type": "number", "minimum": 0, "maximum": 100 },
-            "bladder": { "type": "number", "minimum": 0, "maximum": 100 },
-            "comfort": { "type": "number", "minimum": 0, "maximum": 100 },
             "social": { "type": "number", "minimum": 0, "maximum": 100 }
           },
           "additionalProperties": false
@@ -408,6 +413,8 @@
         "moving": { "type": "number", "minimum": 0 },
         "manipulation": { "type": "number", "minimum": 0 },
         "talking": { "type": "number", "minimum": 0 },
+        "smell": { "type": "number", "minimum": 0, "description": "Derivada de nariz e condições. B-012." },
+        "eating": { "type": "number", "minimum": 0, "description": "Derivada de mandíbula e condições. B-012." },
         "breathing": { "type": "number", "minimum": 0, "description": "Vital." },
         "bloodPumping": { "type": "number", "minimum": 0, "description": "Vital." },
         "bloodFiltration": { "type": "number", "minimum": 0, "description": "Vital. Governa a velocidade de ganho de imunidade. B-024." },
@@ -468,6 +475,12 @@
         "kind": { "type": "string", "enum": ["general", "social"] },
         "targetId": { "type": "string", "description": "Conceito ou id de agente." },
         "targetLabel": { "type": "string" },
+        "stance": {
+          "type": "string",
+          "enum": ["trust", "distrust", "admire", "pity", "resent", "indifferent", "fear", "desire", "neutral"],
+          "description": "Viés relacional comprimido. Pré-filtro por topic."
+        },
+        "topic": { "type": "string", "description": "Tópico canônico para pré-filtro de dissonância." },
         "nuanceDescription": { "type": "string", "description": "1 a 3 frases ATEMPORAIS. C-024." },
         "dissonanceBuffer": {
           "type": "array",

@@ -181,7 +181,9 @@ Papel declarado — ferreiro, curandeiro, agricultor — que orienta metas e ele
 
 Valor de −100 a +100 por par de agentes, distinto da opinião social textual e vinculado a ela.
 
-**Aceite:** `sentimentDelta` de uma conversa altera o número imediatamente, e a opinião textual segue seu próprio ciclo mais lento.
+**Grito de combate:** sem prompt LLM dedicado. A engine registra grito como **fato perceptível** (R-037); ouvintes aplicam **viés de relação** conforme sentimento com quem gritou (`obedecer` / `ignorar` / `contrariar` proporcional ao sentiment).
+
+**Aceite:** `sentimentDelta` de conversa altera o número imediatamente; grito ouvido modula disposição tática sem chamada extra.
 
 ### A-030 — Geração de perfil inicial
 `P1` · `V3` · PDF 3-5 · dep: A-020, A-022 · prompt: `generation.agent_profile`
