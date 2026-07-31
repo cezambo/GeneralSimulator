@@ -93,7 +93,11 @@ A cada tick a entidade move sua temperatura em direção à do ambiente e à das
 
 Calor específico alto significa mudar devagar. Pedra demora; ar não.
 
-**Aceite:** dois materiais com calor específico diferente, expostos à mesma fonte, atingem o mesmo limiar em números de ticks proporcionalmente diferentes.
+**"A cada tick" vale para entidade com gradiente, não para o mapa inteiro.** Tile em equilíbrio com a temperatura ambiente não guarda temperatura própria e não entra no laço: ele *é* o ambiente, e ler sua temperatura devolve a ambiente. Ele só passa a existir como entidade térmica quando alguma coisa cria diferença ali — fogo, poça, corpo, vizinho já divergente —, e volta a sumir quando reconverge dentro da tolerância declarada em `tuning.json`.
+
+Sem esta frase, `R-007` e `R-008` lidos ao pé da letra mandam converger 262 mil floats por tick por grid, o que sozinho estoura o orçamento de `R-049` com o mapa vazio e dez agentes parados — e contradiz `X-013`, que é a regra que faz o mundo de 512 caber. O campo de temperatura é esparso com padrão igual ao ambiente, como pressão (`W-068`) e gravidade (`W-065`), e pela mesma razão: quase todo o mapa, quase sempre, não tem nada a dizer.
+
+**Aceite:** dois materiais com calor específico diferente, expostos à mesma fonte, atingem o mesmo limiar em números de ticks proporcionalmente diferentes; e num mapa 512×512 sem nenhuma fonte de calor, o número de entidades visitadas pelo laço térmico por tick é zero.
 
 ### R-009 — Limiares térmicos por material
 `P0` · `V1` · decisão de DF · dep: R-008
@@ -539,7 +543,9 @@ Sem isso, uma cadeia de seis passos é indistinguível de um bug.
 
 O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação restrita a entidades com estado ativo. **Campos calculados (R-005) invalidam e recomputam só tiles em escopo** — nunca um grid inteiro por tick, e nunca um grid em que nada mudou.
 
-**Aceite:** com cem tiles em estado ativo simultâneo, o tick permanece dentro do orçamento declarado em `config/tuning.json`; alterar um emissor de luz não dispara recomputação global de odor/som/luz.
+**Aceite:** com o número de tiles ativos no teto declarado em `tuning.json` (`substrato.maxTilesAtivosSimultaneos`), o tick permanece dentro do orçamento também declarado ali; alterar um emissor de luz não dispara recomputação global de odor/som/luz.
+
+⚑ Este aceite dizia "com cem tiles", número que ficou para trás quando o teto virou 512. Um aceite que testa abaixo do teto que o sistema permite não prova nada sobre o pior caso permitido — e o pior caso é justamente o incêndio, que é quando o orçamento importa. Aceite que cita número de comportamento em prosa contraria `X-008`; aqui ele passa a citar o parâmetro.
 
 ### R-050 — Tudo em dado
 `P0` · `V1` · decisão · dep: R-001

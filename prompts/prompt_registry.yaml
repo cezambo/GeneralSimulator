@@ -228,7 +228,7 @@ prompts:
     temperature: 0.85
     maxTokens: 600
     schema: goal_revise_response
-    status: falta
+    status: rascunho
     description: "Revisao unificada de meta — qualquer nivel e gatilho"
     variables: [agentContext, goalLevel, triggerKind, currentGoals, triggerEvent, memoriesBlock, communityState, deprecatedGoal]
 

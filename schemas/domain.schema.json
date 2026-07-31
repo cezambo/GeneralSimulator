@@ -309,7 +309,7 @@
     "ObjectDef": {
       "type": "object",
       "description": "Molde reutilizável de objeto. O que é constante ao tipo vive aqui; o que varia por exemplar vive em WorldObject. W-030.",
-      "required": ["id", "name", "description", "category", "materialId", "size", "affordances", "weight", "volume", "packingEfficiency"],
+      "required": ["id", "name", "description", "category", "materialId", "size", "affordances", "weight", "volume", "packingEfficiency", "sensoryDescription", "functionalDescription"],
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },

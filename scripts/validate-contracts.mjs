@@ -175,6 +175,15 @@ for (const p of prompts) {
     continue;
   }
 
+  // A direção inversa: status "falta" com arquivo presente é metadado velho, e
+  // mente para o lado caro. cognition.goal_revise ficou assim, e como C-041 é
+  // P0, uma auditoria concluiu que um prompt pronto era bloqueador do primeiro
+  // dia simulado. Status que subestima o que existe manda trabalhar de novo no
+  // que já está feito.
+  if (p.status === 'falta') {
+    fail(`${p.id}: status "falta" mas ${p.file} existe — atualize para rascunho ou ok`);
+  }
+
   const content = read(filePath);
 
   for (const v of p.variables) {
