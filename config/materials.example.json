@@ -1,0 +1,295 @@
+{
+  "version": 1,
+
+  "_leiaMe": [
+    "CATALOGO UNICO. Materiais do mundo e tecidos do corpo vivem aqui juntos, no mesmo formato.",
+    "Nao existe tabela separada de tecidos: 'osso' e uma entrada so, e serve tanto para um porrete",
+    "quanto para o esqueleto de alguem (W-011, B-003).",
+    "",
+    "Consequencia direta: o GM pode transmutar o material de uma parte do corpo (B-038), e todo o",
+    "substrato reage sozinho. Osso virando vidro fica mais fragil e para de cicatrizar porque perdeu",
+    "a etiqueta 'living', nao porque alguem escreveu uma regra para ossos de vidro.",
+    "",
+    "A CHAVE DO MAPA E O 'id' do material. O carregador a injeta no objeto ao ler o arquivo.",
+    "'category' e obrigatoria (R-002): material e materia estavel, elemento e condicao instavel.",
+    "A matriz de reacao so admite elemento->material e elemento->elemento (R-003).",
+    "Temperaturas em Celsius. Densidade em g/cm3.",
+    "",
+    "Etiquetas biologicas relevantes:",
+    "  living   - tecido vivo. Cicatriza (B-023) e apodrece. Perder esta etiqueta congela a cura.",
+    "  vascular - contem sangue. Sangra quando ferido (B-017) e aceita o vetor de injecao (R-030).",
+    "  tissue   - pode compor uma parte do corpo. Quem nao tem so entra por transmutacao."
+  ],
+
+  "materials": {
+
+    "carvalho": {
+      "name": "carvalho", "category": "material",
+      "description": "Madeira densa e teimosa. Demora a pegar, mas quando pega queima por muito tempo.",
+      "tags": ["wood", "buildable", "carvable"],
+      "properties": { "inflammable": true, "organic": true, "insulating": true },
+      "numeric": { "hardness": 5, "density": 0.75, "specificHeat": 420, "decayRate": 0.02, "flammabilitySpeed": 0.6 },
+      "thermal": { "ignitePoint": 300, "heatDamagePoint": 200 },
+      "damageResistance": { "impact": 0.4, "cut": 0.3, "fire": 0.1, "corrosion": 0.3, "electric": 0.9 },
+      "burnsTo": "carvao", "rubbleMaterialId": "lascas"
+    },
+
+    "pinho": {
+      "name": "pinho", "category": "material",
+      "description": "Madeira leve e resinosa. Pega fogo com facilidade e cheira bem ao queimar.",
+      "tags": ["wood", "buildable", "carvable"],
+      "properties": { "inflammable": true, "organic": true, "insulating": true },
+      "numeric": { "hardness": 3, "density": 0.5, "specificHeat": 380, "decayRate": 0.04, "flammabilitySpeed": 1.1 },
+      "thermal": { "ignitePoint": 240, "heatDamagePoint": 160 },
+      "damageResistance": { "impact": 0.25, "cut": 0.15, "fire": 0.0, "corrosion": 0.2, "electric": 0.9 },
+      "burnsTo": "carvao", "rubbleMaterialId": "lascas"
+    },
+
+    "palha": {
+      "name": "palha", "category": "material",
+      "description": "Seca e oca. A coisa mais perigosa de se ter perto de uma chama.",
+      "tags": ["fibrous"],
+      "properties": { "inflammable": true, "organic": true, "absorbent": true, "insulating": true },
+      "numeric": { "hardness": 0.5, "density": 0.08, "specificHeat": 200, "decayRate": 0.15, "flammabilitySpeed": 3.5 },
+      "thermal": { "ignitePoint": 150 },
+      "damageResistance": { "impact": 0.0, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.5 },
+      "burnsTo": "cinza"
+    },
+
+    "pedra": {
+      "name": "pedra", "category": "material",
+      "description": "Fria, pesada e indiferente. Nao queima, nao apodrece, nao cede.",
+      "tags": ["stone", "buildable"],
+      "properties": {},
+      "numeric": { "hardness": 8, "density": 2.6, "specificHeat": 840 },
+      "thermal": { "meltPoint": 1200 },
+      "damageResistance": { "impact": 0.7, "cut": 0.9, "fire": 1.0, "corrosion": 0.6, "electric": 0.8 },
+      "rubbleMaterialId": "entulho"
+    },
+
+    "ferro": {
+      "name": "ferro", "category": "material",
+      "description": "Duro, pesado e condutivo. Conduz corrente e calor com a mesma facilidade.",
+      "tags": ["metal", "buildable", "forgeable"],
+      "properties": { "conductive": true, "magnetic": true },
+      "numeric": { "hardness": 9, "density": 7.8, "specificHeat": 450 },
+      "thermal": { "meltPoint": 1538 },
+      "damageResistance": { "impact": 0.8, "cut": 0.85, "fire": 0.9, "corrosion": 0.2, "electric": 0.0 },
+      "rubbleMaterialId": "sucata"
+    },
+
+    "cobre": {
+      "name": "cobre", "category": "material",
+      "description": "Macio para um metal, e o melhor condutor que se encontra por aqui.",
+      "tags": ["metal", "forgeable"],
+      "properties": { "conductive": true },
+      "numeric": { "hardness": 5, "density": 8.9, "specificHeat": 385 },
+      "thermal": { "meltPoint": 1085 },
+      "damageResistance": { "impact": 0.6, "cut": 0.6, "fire": 0.9, "corrosion": 0.4, "electric": 0.0 },
+      "rubbleMaterialId": "sucata"
+    },
+
+    "vidro": {
+      "name": "vidro", "category": "material",
+      "description": "Deixa passar a luz e nao perdoa uma pancada.",
+      "tags": ["buildable"],
+      "properties": { "fragile": true, "transparent": true, "sharp": true },
+      "numeric": { "hardness": 6, "density": 2.5, "specificHeat": 840 },
+      "thermal": { "meltPoint": 1400, "brittlePoint": -40 },
+      "damageResistance": { "impact": 0.0, "cut": 0.8, "fire": 0.8, "corrosion": 0.7, "electric": 0.95 },
+      "rubbleMaterialId": "cacos"
+    },
+
+    "ceramica": {
+      "name": "ceramica", "category": "material",
+      "description": "Barro que passou pelo fogo. Duro e quebradico na mesma medida.",
+      "tags": ["buildable"],
+      "properties": { "fragile": true, "insulating": true },
+      "numeric": { "hardness": 6, "density": 2.3, "specificHeat": 850 },
+      "damageResistance": { "impact": 0.1, "cut": 0.7, "fire": 0.9, "corrosion": 0.5, "electric": 0.9 },
+      "rubbleMaterialId": "cacos"
+    },
+
+    "pano": {
+      "name": "pano", "category": "material",
+      "description": "Absorve tudo: agua, sangue, fumaca, cheiro.",
+      "tags": ["fibrous", "wearable"],
+      "properties": { "inflammable": true, "organic": true, "absorbent": true, "insulating": true },
+      "numeric": { "hardness": 1, "density": 0.3, "specificHeat": 1300, "decayRate": 0.05, "flammabilitySpeed": 1.4 },
+      "thermal": { "ignitePoint": 210 },
+      "damageResistance": { "impact": 0.1, "cut": 0.0, "fire": 0.0, "corrosion": 0.1, "electric": 0.7 },
+      "burnsTo": "cinza"
+    },
+
+    "couro": {
+      "name": "couro", "category": "material",
+      "description": "Pele curtida. Ja foi tecido vivo, e nao e mais.",
+      "tags": ["wearable", "leather"],
+      "properties": { "inflammable": true, "organic": true, "insulating": true },
+      "numeric": { "hardness": 2, "density": 0.9, "specificHeat": 1500, "decayRate": 0.03, "flammabilitySpeed": 0.5 },
+      "thermal": { "ignitePoint": 280 },
+      "damageResistance": { "impact": 0.3, "cut": 0.3, "fire": 0.2, "corrosion": 0.2, "electric": 0.6 }
+    },
+
+    "terra":    { "name": "terra",    "category": "material", "description": "Chao comum.", "tags": ["ground", "fertile"],
+                  "properties": { "organic": true, "absorbent": true },
+                  "numeric": { "hardness": 1, "density": 1.5, "specificHeat": 800 },
+                  "damageResistance": { "impact": 0.6, "cut": 0.8, "fire": 1.0, "corrosion": 0.8, "electric": 0.4 } },
+
+    "grama":    { "name": "grama",    "category": "material", "description": "Cresce sozinha onde ha umidade e luz.", "tags": ["ground", "fibrous", "growable"],
+                  "properties": { "inflammable": true, "organic": true },
+                  "numeric": { "hardness": 0.2, "density": 0.2, "specificHeat": 900, "decayRate": 0.1, "flammabilitySpeed": 2.0, "nutritionValue": 1 },
+                  "thermal": { "ignitePoint": 180 },
+                  "damageResistance": { "impact": 0.5, "cut": 0.0, "fire": 0.0, "corrosion": 0.3, "electric": 0.5 },
+                  "burnsTo": "cinza" },
+
+    "concreto": { "name": "concreto", "category": "material", "description": "Pedra fabricada.", "tags": ["stone", "buildable"],
+                  "properties": {},
+                  "numeric": { "hardness": 8, "density": 2.4, "specificHeat": 880 },
+                  "damageResistance": { "impact": 0.75, "cut": 0.9, "fire": 0.95, "corrosion": 0.4, "electric": 0.8 },
+                  "rubbleMaterialId": "entulho" },
+
+    "cinza":    { "name": "cinza",    "category": "material", "description": "O que sobra.", "tags": ["powder", "staining"],
+                  "properties": { "organic": true },
+                  "numeric": { "hardness": 0.1, "density": 0.4, "specificHeat": 800 },
+                  "damageResistance": { "impact": 1.0, "cut": 1.0, "fire": 1.0, "corrosion": 1.0, "electric": 0.5 } },
+
+    "_nota_residuos": "Alvos de 'rubbleMaterialId' e 'burnsTo'. Toda referencia precisa existir no catalogo.",
+
+    "carvao":   { "name": "carvao",   "category": "material", "description": "Madeira que ja queimou e ainda guarda calor.", "tags": ["powder", "fuel"],
+                  "properties": { "inflammable": true, "organic": true },
+                  "numeric": { "hardness": 1, "density": 0.5, "specificHeat": 700, "flammabilitySpeed": 0.3 },
+                  "thermal": { "ignitePoint": 400 },
+                  "damageResistance": { "impact": 0.2, "cut": 0.2, "fire": 0.3, "corrosion": 0.5, "electric": 0.4 },
+                  "burnsTo": "cinza" },
+
+    "lascas":   { "name": "lascas",   "category": "material", "description": "Restos de madeira partida. Pegam fogo com facilidade e cortam o pe descalco.", "tags": ["debris", "wood"],
+                  "properties": { "inflammable": true, "organic": true, "sharp": true },
+                  "numeric": { "hardness": 2, "density": 0.4, "specificHeat": 400, "decayRate": 0.06, "flammabilitySpeed": 2.2 },
+                  "thermal": { "ignitePoint": 220 },
+                  "damageResistance": { "impact": 0.9, "cut": 0.5, "fire": 0.0, "corrosion": 0.2, "electric": 0.9 },
+                  "burnsTo": "cinza" },
+
+    "entulho":  { "name": "entulho",  "category": "material", "description": "Pedra quebrada. Atrapalha a passagem e nao serve para mais nada.", "tags": ["debris", "stone"],
+                  "properties": {},
+                  "numeric": { "hardness": 6, "density": 2.2, "specificHeat": 840 },
+                  "damageResistance": { "impact": 0.9, "cut": 0.9, "fire": 1.0, "corrosion": 0.6, "electric": 0.8 } },
+
+    "sucata":   { "name": "sucata",   "category": "material", "description": "Metal retorcido. Ainda conduz, ainda pesa, ja nao serve.", "tags": ["debris", "metal"],
+                  "properties": { "conductive": true, "sharp": true },
+                  "numeric": { "hardness": 7, "density": 7.0, "specificHeat": 450 },
+                  "damageResistance": { "impact": 0.9, "cut": 0.8, "fire": 0.9, "corrosion": 0.2, "electric": 0.0 } },
+
+    "cacos":    { "name": "cacos",    "category": "material", "description": "Estilhacos. Cortam quem pisa e denunciam pelo barulho.", "tags": ["debris", "sharp"],
+                  "properties": { "sharp": true, "transparent": true, "fragile": true },
+                  "numeric": { "hardness": 6, "density": 2.4, "specificHeat": 840 },
+                  "damageResistance": { "impact": 0.9, "cut": 0.8, "fire": 0.8, "corrosion": 0.7, "electric": 0.95 } },
+
+    "fragmentos_osso": { "name": "fragmentos de osso", "category": "material", "description": "O que sobra de um osso que cedeu.", "tags": ["debris", "sharp", "organic"],
+                  "properties": { "organic": true, "sharp": true, "fragile": true },
+                  "numeric": { "hardness": 5, "density": 1.8, "specificHeat": 1300, "decayRate": 0.02 },
+                  "damageResistance": { "impact": 0.9, "cut": 0.6, "fire": 0.5, "corrosion": 0.4, "electric": 0.6 } },
+
+    "_nota_biologia": "Daqui para baixo, tecidos. Mesmo formato, mesmo catalogo, mesmas regras.",
+
+    "pele": {
+      "name": "pele", "category": "material",
+      "description": "A fronteira entre a pessoa e o mundo. E o que queima primeiro e o que suja.",
+      "tags": ["tissue", "living", "vascular", "staining"],
+      "properties": { "inflammable": true, "organic": true, "absorbent": true },
+      "numeric": { "hardness": 1, "density": 1.1, "specificHeat": 3500, "decayRate": 0.3, "flammabilitySpeed": 0.4, "bleedFactor": 0.6 },
+      "thermal": { "ignitePoint": 250, "heatDamagePoint": 45, "coldDamagePoint": 0 },
+      "damageResistance": { "impact": 0.2, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.3 }
+    },
+
+    "musculo": {
+      "name": "musculo", "category": "material",
+      "description": "Carne. Faz a forca e paga o preco dela.",
+      "tags": ["tissue", "living", "vascular"],
+      "properties": { "inflammable": true, "organic": true, "edible": true },
+      "numeric": { "hardness": 1.5, "density": 1.06, "specificHeat": 3600, "decayRate": 0.4, "flammabilitySpeed": 0.3, "nutritionValue": 40, "bleedFactor": 1.0 },
+      "thermal": { "heatDamagePoint": 45, "coldDamagePoint": -2 },
+      "damageResistance": { "impact": 0.4, "cut": 0.1, "fire": 0.1, "corrosion": 0.1, "electric": 0.2 }
+    },
+
+    "osso": {
+      "name": "osso", "category": "material",
+      "description": "Duro e quebradico ao mesmo tempo. Aguenta peso, nao aguenta torcao.",
+      "_nota": "ENTRADA UNICA. Serve para o esqueleto de uma pessoa e para um porrete de osso. E o exemplo canonico da unificacao do catalogo.",
+      "tags": ["tissue", "living", "carvable", "forgeable"],
+      "properties": { "organic": true, "fragile": true },
+      "numeric": { "hardness": 7, "density": 1.9, "specificHeat": 1300, "decayRate": 0.02, "bleedFactor": 0.3 },
+      "thermal": { "ignitePoint": 500, "heatDamagePoint": 60 },
+      "damageResistance": { "impact": 0.1, "cut": 0.6, "fire": 0.5, "corrosion": 0.4, "electric": 0.6 },
+      "rubbleMaterialId": "fragmentos_osso"
+    },
+
+    "orgao": {
+      "name": "orgao", "category": "material",
+      "description": "Mole, encharcado e insubstituivel.",
+      "tags": ["tissue", "living", "vascular", "vital"],
+      "properties": { "organic": true, "edible": true },
+      "numeric": { "hardness": 0.5, "density": 1.05, "specificHeat": 3700, "decayRate": 0.6, "nutritionValue": 60, "bleedFactor": 2.0 },
+      "thermal": { "heatDamagePoint": 43, "coldDamagePoint": 0 },
+      "damageResistance": { "impact": 0.1, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.1 }
+    },
+
+    "nervo": {
+      "name": "nervo", "category": "material",
+      "description": "Fio vivo. Conduz o que o corpo sente, e conduz tambem o que nao devia.",
+      "tags": ["tissue", "living"],
+      "properties": { "organic": true, "conductive": true },
+      "numeric": { "hardness": 0.3, "density": 1.04, "specificHeat": 3600, "decayRate": 0.5, "bleedFactor": 0.1 },
+      "thermal": { "heatDamagePoint": 42 },
+      "damageResistance": { "impact": 0.3, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.0 }
+    },
+
+    "gordura": {
+      "name": "gordura", "category": "material",
+      "description": "Reserva e isolamento. Tambem e o que faz um corpo continuar queimando.",
+      "tags": ["tissue", "living"],
+      "properties": { "inflammable": true, "organic": true, "edible": true, "insulating": true },
+      "numeric": { "hardness": 0.3, "density": 0.9, "specificHeat": 2300, "decayRate": 0.35, "flammabilitySpeed": 1.6, "nutritionValue": 90, "bleedFactor": 0.4 },
+      "thermal": { "ignitePoint": 190, "meltPoint": 40, "heatDamagePoint": 45 },
+      "damageResistance": { "impact": 0.5, "cut": 0.1, "fire": 0.0, "corrosion": 0.1, "electric": 0.4 }
+    }
+  },
+
+  "elements": {
+    "agua":  { "name": "agua",  "category": "element", "description": "Apaga, molha, conduz e escorre.",
+               "tags": ["liquid", "potable"],
+               "properties": { "potable": true, "conductive": true, "slippery": true },
+               "numeric": { "density": 1.0, "specificHeat": 4180 },
+               "thermal": { "freezePoint": 0, "boilPoint": 100 },
+               "freezesTo": "gelo", "boilsTo": "vapor" },
+
+    "gelo":  { "name": "gelo",  "category": "element", "description": "Agua parada e teimosa.",
+               "tags": ["solid_liquid"],
+               "properties": { "fragile": true, "slippery": true, "transparent": true },
+               "numeric": { "hardness": 2, "density": 0.92, "specificHeat": 2100 },
+               "thermal": { "meltPoint": 0 },
+               "meltsTo": "agua" },
+
+    "vapor": { "name": "vapor", "category": "element", "description": "Agua que virou gas e queima ao encostar.",
+               "tags": ["gas"], "properties": {},
+               "numeric": { "density": 0.0006, "specificHeat": 2000 } },
+
+    "oleo":  { "name": "oleo",  "category": "element", "description": "Escorre e pega fogo com uma facilidade indecente.",
+               "tags": ["liquid", "oily", "staining"],
+               "properties": { "inflammable": true, "slippery": true, "organic": true },
+               "numeric": { "density": 0.9, "specificHeat": 2000, "flammabilitySpeed": 3.0 },
+               "thermal": { "ignitePoint": 120 } },
+
+    "sangue": { "name": "sangue", "category": "element",
+                "description": "Dentro, mantem a pessoa viva. Fora, conta o que aconteceu.",
+                "_nota": "E o liquido que os tecidos com etiqueta 'vascular' perdem ao sangrar (B-017), e a cobertura que fica no chao e nas maos (R-025).",
+                "tags": ["liquid", "staining", "organic"],
+                "properties": { "organic": true, "slippery": true, "conductive": true },
+                "numeric": { "density": 1.06, "specificHeat": 3800, "decayRate": 0.8 },
+                "thermal": { "freezePoint": -0.5 } },
+
+    "fumaca": { "name": "fumaca", "category": "element", "description": "Esconde, sufoca e sobe.",
+                "tags": ["gas", "occluding"], "properties": { "toxic": true },
+                "numeric": { "density": 0.001, "toxicity": 2 } }
+  }
+}

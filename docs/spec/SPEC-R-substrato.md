@@ -1,0 +1,528 @@
+# SPEC-R — Substrato reativo
+
+A engine base do simulador: o conjunto de sistemas que produz consequência física, química, perceptual e fisiológica **sozinho**, sem consultar LLM, e cujo vocabulário fica inteiramente exposto ao GM.
+
+Fundamentação e origem das escolhas em [07-REFERENCIAS-SISTEMICAS.md](../07-REFERENCIAS-SISTEMICAS.md).
+
+Este documento absorve e substitui o que eram os requisitos `W-015` a `W-028`. Aquelas faixas de identificador ficam aposentadas em SPEC-W e não devem ser reutilizadas.
+
+**O critério que decide o que entra aqui:** o sistema produz fato que um agente pode perceber e sobre o qual vale a pena pensar. Fumaça entra, porque esconde. Sangue entra, porque acusa. Estequiometria não entra.
+
+---
+
+## Fundamentos
+
+### R-001 — Etiquetas como unidade de classe
+`P0` · `V1` · decisão · dep: —
+
+Todo material, objeto, tile e criatura carrega um conjunto de etiquetas (`inflamável`, `condutivo`, `líquido`, `orgânico`, `frágil`, `respirável`). **Nenhuma regra do substrato referencia um identificador específico** — todas referenciam etiquetas.
+
+Consequência que justifica a regra: um objeto inventado pelo usuário em tempo de execução (W-034) participa de todos os sistemas no instante em que recebe suas etiquetas, sem que ninguém escreva uma linha de regra para ele.
+
+**Aceite:** criar um material novo com a etiqueta `inflamável` e nenhuma outra configuração faz com que ele pegue fogo por todos os caminhos que qualquer inflamável pega.
+
+### R-002 — Distinção entre elemento e material
+`P0` · `V1` · decisão · dep: R-001
+
+Duas categorias, exclusivas:
+
+- **Material** — identidade estável da matéria. Madeira, pedra, pano, carne, óleo. Não muda por conta própria.
+- **Elemento** — condição instável que ocupa um tile ou objeto. Fogo, água, gelo, eletricidade, fumaça, veneno.
+
+**Aceite:** o catálogo classifica cada entrada em exatamente uma das duas categorias, e a validação recusa entradas ambíguas.
+
+### R-003 — A regra dos três
+`P0` · `V1` · decisão de BOTW · dep: R-002
+
+A matriz de reação admite exatamente três formas, e nenhuma outra:
+
+1. Elemento altera estado de material.
+2. Elemento altera estado de elemento.
+3. **Material não altera estado de material.**
+
+A terceira é a que impede a explosão combinatória: sem ela, o espaço de regras é quadrático no número de materiais.
+
+Isto **não** proíbe que dois objetos interajam. Pedra ainda quebra vidro. Interação mecânica — impacto, peso, atrito, corte — é física resolvida por escalares (R-006), não química resolvida pela matriz. A proibição é específica: dois materiais não reagem *quimicamente* entre si sem um elemento no meio.
+
+**Aceite:** o validador de `config/reactions.json` rejeita, com erro nomeado, qualquer regra cujos dois lados sejam materiais.
+
+### R-004 — Estado transiente
+`P0` · `V1` · decisão · dep: R-002
+
+Tiles, objetos e criaturas carregam um conjunto de estados, cada um com tipo, intensidade de 0 a 100, e duração restante. Vários coexistem: um tile pode estar simultaneamente molhado, gelado e manchado.
+
+Estado **persiste** onde está até que uma regra o mude ou sua duração acabe.
+
+**Aceite:** o mesmo tile aceita três estados ativos e cada um decai no seu próprio ritmo.
+
+### R-005 — Campo calculado
+`P0` · `V2` · derivado · dep: R-004
+
+Distinto de estado. Um campo não tem memória: é recalculado a cada tick a partir de seus emissores e atenuado por distância e oclusão. Luz, som e odor são campos.
+
+A distinção existe porque o custo e a semântica são diferentes — estado se guarda e se propaga, campo se recomputa e se descarta.
+
+**Aceite:** remover a fonte de luz apaga o campo no tick seguinte sem que nada precise limpar estado.
+
+### R-006 — Escalar antes de regra
+`P0` · `V1` · decisão de DF · dep: R-004
+
+Regra de desenho, verificada em revisão e não em teste: **antes de escrever uma reação discreta, verificar se ela não é um limiar sobre um escalar que já existe.**
+
+Escalares do substrato: temperatura, saturação, integridade, carga elétrica, frescor.
+
+Cada material declara seus limiares sobre cada escalar e sua resistência à mudança. Derreter, congelar, ferver, incendiar e sofrer dano por calor deixam de ser cinco regras e passam a ser cinco números.
+
+**Aceite:** a matriz não contém nenhuma reação que poderia ser expressa como limiar sobre escalar existente. Verificado na revisão de `config/reactions.json`.
+
+---
+
+## Temperatura
+
+### R-007 — Temperatura como escalar por entidade
+`P0` · `V1` · decisão de DF e Qud · dep: R-006
+
+Todo tile, objeto e criatura tem uma temperatura. O mundo tem uma temperatura ambiente que varia com hora, estação e clima (W-054, W-055).
+
+**Aceite:** inspecionar qualquer entidade mostra sua temperatura corrente.
+
+### R-008 — Convergência com resistência por material
+`P0` · `V1` · decisão de DF · dep: R-007
+
+A cada tick a entidade move sua temperatura em direção à do ambiente e à das entidades em contato, pela diferença dividida pelo **calor específico** do material.
+
+Calor específico alto significa mudar devagar. Pedra demora; ar não.
+
+**Aceite:** dois materiais com calor específico diferente, expostos à mesma fonte, atingem o mesmo limiar em números de ticks proporcionalmente diferentes.
+
+### R-009 — Limiares térmicos por material
+`P0` · `V1` · decisão de DF · dep: R-008
+
+Cada material declara, cada um opcional: ponto de fragilização, congelamento, fusão, ebulição, ignição, dano por calor e dano por frio.
+
+Cruzar um limiar dispara a transição correspondente automaticamente. Não há regra na matriz para isso — é aritmética.
+
+**Aceite:** gelo aquecido acima do ponto de fusão vira água sem que exista reação declarada ligando fogo a gelo.
+
+### R-010 — Fontes de calor e frio
+`P0` · `V1` · derivado · dep: R-008
+
+Entidades com o estado `queimando`, materiais de temperatura base alta como lava, e o clima elevam a temperatura da vizinhança; corpos d'água, gelo e noite a reduzem.
+
+Uma entidade pode ter temperatura fixa, imune à convergência, para casos deliberados.
+
+**Aceite:** uma fogueira aquece progressivamente os tiles vizinhos, com intensidade decrescente pela distância.
+
+### R-011 — Consequência derivada, não declarada
+`P0` · `V1` · decisão de Qud · dep: R-009
+
+Quando uma consequência puder emergir de propriedades, ela **não** é escrita como regra. Lava não tem regra "lava destrói recipiente": lava tem temperatura base alta, o recipiente aquece, cruza seu ponto de dano por calor, e se destrói.
+
+**Aceite:** nenhum caso especial nomeado para lava, magma ou fonte de calor extremo existe em código ou em dado.
+
+---
+
+## Matriz de reação
+
+### R-012 — Reação como regra de reescrita
+`P0` · `V1` · decisão de Noita · dep: R-003 · dados: `config/reactions.json`
+
+Uma reação é: duas entradas, duas saídas, uma probabilidade e uma ocasião. Entradas e saídas são etiquetas ou identificadores; a probabilidade **é** a taxa, sem sistema de velocidade separado.
+
+```json
+{
+  "id": "ignition-by-contact",
+  "when": "contact",
+  "in": ["#ignitionSource", "#inflammable"],
+  "effect": "ignite",
+  "chance": 0.9,
+  "modifiedBy": { "wet": -0.8, "flammabilitySpeed": 0.2 },
+  "porque": "Chama desprotegida encostando em material que queima acende o material."
+}
+```
+
+Identificadores em inglês, como no resto dos contratos de dado. O campo `porque` é a exceção deliberada: é prosa, e é obrigatório, porque tem dois leitores — o humano que ajusta e o GM, que recebe a matriz resumida em linguagem natural (R-042).
+
+Exemplo completo em [`config/reactions.example.json`](../../config/reactions.example.json).
+
+**Aceite:** acrescentar uma entrada ao arquivo passa a valer sem recompilar, e o validador recusa entrada sem `porque`.
+
+### R-013 — Ocasiões de avaliação
+`P0` · `V1` · decisão · dep: R-012
+
+Cinco ocasiões, e a regra declara em qual vale:
+
+| Ocasião | Quando avalia | Exemplo |
+|---------|---------------|---------|
+| **contínua** | a cada tick sobre a entidade com o estado | tile em chamas perde integridade |
+| **vizinhança** | a cada tick entre células adjacentes | fogo salta para o vizinho inflamável |
+| **contato** | no instante em que duas entidades se encostam, colidem, ou uma é arremessada contra a outra | tocha encosta na cortina |
+| **imersão** | quando uma entidade entra ou é posta dentro de outra | item cai no rio |
+| **ingresso** | quando uma criatura pisa ou entra no tile | pisa na poça eletrificada |
+
+A ocasião de **contato** é a que garante que ações físicas óbvias não precisem do GM. Encostar, derrubar, arremessar, empurrar contra e mergulhar são caminhos causais modelados — o GM não é consultado para nenhum deles.
+
+**Aceite:** uma reação de contato dispara no mesmo tick da colisão, e arremessar objeto em chamas contra tile inflamável acende sem nenhuma chamada de LLM.
+
+### R-014 — Execução autônoma
+`P0` · `V1` · decisão · dep: R-013
+
+A engine avalia a matriz a cada tick sobre as entidades com estado ativo. Nenhuma consulta a modelo, em nenhuma circunstância.
+
+**Aceite:** um incêndio completo, do início à extinção, ocorre com zero chamadas de LLM.
+
+### R-015 — Vocabulário de efeitos nomeados
+`P0` · `V1` · decisão · dep: R-004
+
+Conjunto fechado de transições de estado, implementadas uma vez na engine e invocáveis por identificador:
+
+`ignite` · `extinguish` · `wet` · `dry` · `freeze` · `melt` · `electrify` · `shatter` · `stain` · `contaminate` · `illuminate` · `emit_gas` · `smother` · `corrode` · `rot` · `transmute`
+
+Cada um carrega também um nome em português, usado na exibição e na descrição entregue ao GM.
+
+Todo efeito aceita **três espécies de alvo**: tile, objeto e parte de corpo. Não há vocabulário separado para corpo, porque o corpo é feito dos mesmos materiais (B-003). Molhar funciona nos três, corroer funciona nos três, e `transmute` — trocar o material do alvo preservando sua identidade e seu estado — é o que permite ao GM transformar tanto uma parede quanto um fêmur.
+
+Tanto a matriz quanto o GM invocam pelo mesmo identificador e obtêm exatamente o mesmo comportamento.
+
+**Aceite:** o mesmo efeito invocado pelos dois caminhos produz estado idêntico, e o mesmo efeito aplicado a um tile e a uma parte de corpo do mesmo material produz a mesma transição.
+
+### R-016 — Propagação espacial
+`P0` · `V1` · decisão · dep: R-014
+
+Quatro modos, cada um com sua regra: fogo salta entre vizinhos inflamáveis com chance modulada por saturação e vento; líquido escorre para células de elevação igual ou menor; gás se difunde por células livres perdendo densidade; eletricidade percorre cadeias contíguas de material condutivo.
+
+**Aceite:** óleo derramado escorre morro abaixo e, aceso numa ponta, queima ao longo de toda a poça.
+
+### R-017 — Cadeias emergentes
+`P0` · `V1` · decisão · dep: R-016
+
+Efeitos disparam reações que disparam outros efeitos, sem profundidade máxima além de um teto de segurança por tick contra laço infinito. Nenhum caso especial escrito à mão.
+
+**Aceite:** água derramada sobre piso condutivo com cabo energizado eletrifica a poça inteira e fere quem estiver nela, sem que nenhuma regra descreva esse cenário.
+
+### R-018 — Catálogo inicial de reações
+`P0` · `V1` · decisão · dep: R-012
+
+**Fonte de ignição** é qualquer entidade com chama desprotegida. Toda a família de ações de contato resolve pela mesma regra, sem depender do verbo usado.
+
+| Condição | Ocasião | Efeito |
+|----------|---------|--------|
+| fonte de ignição encosta em inflamável | contato | `ignite` — cobre arremesso, encosto e queda |
+| inflamável com chama adjacente | vizinhança | `ignite`, chance por velocidade de combustão e vento |
+| chama + molhado | contato | `extinguish`, gera vapor |
+| chama + orgânico por cima | contato | `smother` lento, gera fumaça densa |
+| chama + óleo | contato | `ignite` imediato, alta propagação |
+| condutivo + eletrificado adjacente | vizinhança | `electrify` em cadeia |
+| molhado + eletrificado | contato | `electrify` da poça inteira |
+| eletrificado + criatura | ingresso | dano e condição de choque |
+| escorregadio + criatura em movimento | ingresso | risco de queda proporcional à pressa |
+| frágil + impacto acima da dureza | contato | `shatter` |
+| corrosivo + qualquer | contínua | perda de integridade |
+| tóxico + líquido | contato | `contaminate` propagando pelo fluxo |
+| qualquer + imersão em líquido | imersão | `wet` total |
+| absorvente + líquido | contato | satura e deixa de escorrer |
+| sangue, tinta ou fuligem + superfície | contato | `stain`, vestígio persistente |
+
+Congelar, derreter, ferver e queimar por calor **não estão nesta tabela** por serem limiares térmicos (R-009).
+
+**Aceite:** cada linha tem teste automatizado que verifica a transição.
+
+### R-019 — Promoção
+`P1` · `V2` · decisão de Brogue · dep: R-004
+
+Um tipo de tile ou objeto declara em que se transforma, com que chance por tick, e sob quais gatilhos: por tempo, ao ser pisado, ao ser aceso, ao secar, ao apodrecer.
+
+É a forma mais barata de cobrir crescimento de vegetação, cinza que assenta, poça que evapora, mofo que se espalha e cadáver que se decompõe — uma coluna a mais na tabela, não um sistema novo.
+
+**Aceite:** grama num tile fértil se espalha para vizinhos ao longo de dias sem nenhum sistema de vegetação dedicado.
+
+---
+
+## Matéria
+
+### R-020 — Líquidos como volume
+`P1` · `V2` · decisão de Qud · dep: R-016
+
+Líquido é medido em volume, não em presença. Uma poça tem quantidade, escorre conforme sua fluidez, e some quando o volume chega a zero.
+
+**Aceite:** derramar dobro de volume produz poça que cobre mais tiles e demora mais para evaporar.
+
+### R-021 — Mistura de líquidos
+`P2` · `V3` · decisão de Qud · dep: R-020
+
+Uma poça pode ser composta. Cada componente evapora conforme sua própria volatilidade, o que faz misturas convergirem para o componente menos volátil. As propriedades da poça são ponderadas pela composição.
+
+**Aceite:** água misturada com óleo, deixada em repouso, termina como óleo puro.
+
+### R-022 — Absorção
+`P1` · `V2` · derivado · dep: R-020
+
+Materiais absorventes retêm líquido em vez de deixá-lo escorrer, ficam saturados, e liberam ao secar. Roupa molhada pesa mais, esfria quem a veste, e não pega fogo.
+
+**Aceite:** pano encharcado exposto a chama não acende até secar.
+
+### R-023 — Gases
+`P1` · `V2` · derivado de Brogue e CDDA · dep: R-016
+
+Gases ocupam a camada superior da célula, têm densidade, difundem-se para células livres, sobem ou descem conforme a densidade, e dissipam com o tempo. Fumaça, vapor, gás tóxico e poeira.
+
+**Aceite:** fumaça de uma fogueira em ambiente fechado preenche o cômodo e escapa pela abertura.
+
+### R-024 — Gás bloqueia percepção
+`P0` · `V2` · derivado · dep: R-023, A-006
+
+Gás denso reduz alcance de visão proporcionalmente à densidade.
+
+Este requisito é pequeno e importante: é o que transforma fumaça de efeito visual em **fato social**. Sem visão não há testemunha.
+
+**Aceite:** um agente do outro lado de fumaça densa não registra o que aconteceu ali.
+
+### R-025 — Coberturas
+`P0` · `V2` · decisão de DF · dep: R-001
+
+Qualquer substância pode cobrir qualquer tile, objeto ou parte de corpo. A cobertura tem substância, quantidade e frescor, persiste até ser removida, e é **descrita textualmente** onde quer que a entidade seja inspecionada.
+
+Sangue nas mãos, fuligem no rosto, lama nas botas, vinho na túnica.
+
+**Aceite:** inspecionar um agente lista suas coberturas em linguagem natural.
+
+### R-026 — Remoção de cobertura
+`P1` · `V2` · derivado · dep: R-025
+
+Coberturas saem por lavagem, chuva, fricção ou tempo, cada substância no seu ritmo. Algumas nunca saem por completo.
+
+**Aceite:** lavar as mãos remove sangue fresco; sangue seco exige mais de uma tentativa.
+
+### R-027 — Integridade e destruição
+`P1` · `V1` · derivado · dep: R-006
+
+Tiles e objetos têm integridade de 0 a 100. Zero destrói e substitui pelo escombro declarado no material. Dano vem de fogo, corrosão, impacto, degradação e mutação do GM, e cada material tem resistência própria por tipo de dano.
+
+**Aceite:** uma parede de madeira queima até zero e vira escombro atravessável.
+
+### R-028 — Desgaste e qualidade
+`P2` · `V3` · derivado · dep: R-027
+
+Objetos acumulam desgaste com uso e perdem eficácia antes de quebrar. Qualidade de fabricação modula desgaste e eficácia.
+
+**Aceite:** uma ferramenta muito usada realiza sua tarefa mais devagar que uma nova.
+
+---
+
+## Corpo
+
+### R-029 — Substância com payload
+`P0` · `V5` · decisão de DF · dep: R-025
+
+Uma substância pode carregar um pacote de efeitos sobre um corpo, com atraso, duração e severidade. Um mecanismo, e dele saem veneno, peçonha, álcool, remédio, droga, alergia, doença e fumaça inalada.
+
+**Aceite:** definir uma substância nova com payload não exige código, só dado.
+
+### R-030 — Vetores de entrada
+`P0` · `V5` · decisão de DF · dep: R-029
+
+Quatro caminhos, declarados por substância:
+
+| Vetor | Como entra |
+|-------|-----------|
+| **contato** | cobre pele exposta — respingo, poça pisada descalço, chuva, contato com quem está contaminado, ser golpeado por item sujo |
+| **inalação** | está em estado gasoso e foi respirada |
+| **ingestão** | foi comida ou bebida, **inclusive como ingrediente de algo preparado** |
+| **injeção** | entrou por ferida ou arma contaminada |
+
+A cláusula da ingestão é a que faz a substância viajar pela cadeia de produção sozinha: ninguém precisa escrever "torta envenenada".
+
+**Aceite:** envenenar um ingrediente e cozinhar com ele transmite a substância a quem come o prato, sem regra específica para o prato.
+
+### R-031 — Efeito cognitivo de substância
+`P0` · `V5` · decisão · dep: R-029, C-001
+
+O payload pode alterar **cognição**, não só fisiologia: reduzir inibição, embotar dor, induzir sonolência, distorcer percepção, alterar humor.
+
+É a extensão que importa para este projeto. Álcool não é um número de saúde — é um agente que decide diferente, e o estado alterado entra no contexto que vai ao modelo.
+
+**Aceite:** um agente embriagado recebe, no prompt, a descrição do seu estado alterado, e o efeito é observável nas decisões ao longo de uma amostra.
+
+### R-032 — Contágio
+`P2` · `V6` · derivado · dep: R-030
+
+Substâncias marcadas como contagiosas passam entre corpos por proximidade e contato, com probabilidade e período de incubação.
+
+**Aceite:** uma doença introduzida em um agente atinge outros ao longo de dias sem intervenção.
+
+### R-033 — Efeitos do ambiente sobre o corpo
+`P0` · `V5` · decisão · dep: R-018, B-020
+
+Estado de tile afeta quem está sobre ele: chama causa dor, dano e propaga o estado para o corpo; eletrificado causa choque e possível inconsciência; escorregadio derruba; contaminado adoece; fumaça reduz visão e consciência; frio e calor extremos causam dano progressivo.
+
+**Aceite:** um agente que atravessa tile em chamas passa a queimar e sofre dano contínuo até ser apagado.
+
+---
+
+## Percepção
+
+### R-034 — Campo de luz
+`P0` · `V2` · derivado · dep: R-005
+
+Emissores iluminam num raio; oclusores bloqueiam. O nível de luz de um tile determina o alcance de visão de quem está nele.
+
+**Aceite:** apagar a única fonte de luz de um cômodo reduz o alcance de visão de todos os presentes.
+
+### R-035 — Campo de som
+`P1` · `V2` · derivado · dep: R-005
+
+Eventos emitem som com intensidade; o som atenua por distância e é amortecido por paredes. Quem está no alcance percebe, mesmo sem linha de visão, com precisão de localização decrescente.
+
+Grito, quebra de vidro, batida e desabamento são eventos audíveis — e o que faz um agente aparecer onde não estava.
+
+**Aceite:** vidro quebrado num cômodo faz agentes de cômodos vizinhos registrarem um som e sua direção aproximada.
+
+### R-036 — Campo de odor
+`P2` · `V3` · derivado de DF · dep: R-005
+
+Substâncias, coberturas e matéria em decomposição emitem odor, que se difunde e decai. Odor é percebido sem visão e persiste depois que a fonte sai.
+
+**Aceite:** um cadáver não descoberto produz odor detectável em cômodos adjacentes antes de ser visto.
+
+### R-037 — Tudo isto é perceptível
+`P0` · `V2` · decisão · dep: A-006
+
+Todo produto do substrato — estado, cobertura, campo, dano, mudança — entra na percepção do agente como fato observável, descrito em linguagem natural, sujeito a alcance, oclusão, luz e atenção.
+
+Este é o requisito que justifica a existência de todos os outros. Um sistema físico que a cognição não enxerga é custo sem retorno.
+
+**Aceite:** para cada sistema deste documento existe pelo menos um fato correspondente que aparece no relato de percepção de um agente.
+
+---
+
+## Tempo e ambiente
+
+### R-038 — Decomposição
+`P1` · `V3` · derivado · dep: R-019
+
+Matéria orgânica perde frescor com o tempo, mais rápido no calor e mais devagar no frio. Comida estraga, cadáver apodrece, e a decomposição emite odor e pode gerar substância nociva.
+
+**Aceite:** comida deixada ao sol estraga em menos tempo que a mesma comida guardada em local frio.
+
+### R-039 — Crescimento
+`P2` · `V3` · derivado de Brogue · dep: R-019
+
+Vegetação e mofo se espalham por promoção, condicionados a umidade, luz e fertilidade.
+
+**Aceite:** um canto úmido e escuro desenvolve mofo ao longo de semanas.
+
+### R-040 — Clima como motor do substrato
+`P1` · `V3` · derivado · dep: W-055, R-007
+
+Clima não é decoração. Chuva molha tudo o que está exposto, apaga fogo desprotegido, encharca roupas e enche poças. Vento modula propagação de fogo, gás e odor. Frio congela líquidos parados e causa dano por exposição. Calor acelera evaporação e decomposição.
+
+**Aceite:** uma chuva apaga uma fogueira ao ar livre e satura os tiles descobertos, sem que exista regra específica ligando chuva a fogueira.
+
+---
+
+## Fronteira com o GM
+
+### R-041 — O substrato é exposto por inteiro
+`P0` · `V4` · decisão · dep: R-015, G-005
+
+O contexto do GM inclui, para tudo em escopo: material e propriedades, estados ativos com intensidade, coberturas, temperatura, integridade, affordances, e **a lista de efeitos invocáveis sobre aquele alvo**.
+
+"Tudo em escopo" inclui os corpos dos agentes presentes, pelas mesmas regras e no mesmo formato — a exposição biológica está detalhada em B-034, e não é um canal à parte.
+
+Sem o display, o GM não sabe que alavancas existem.
+
+**Aceite:** ao mediar uma ação perto de uma cortina, o prompt do GM mostra que a cortina é inflamável e que `ignite` é invocável sobre ela.
+
+### R-042 — Resumo da matriz em linguagem natural
+`P1` · `V4` · derivado · dep: R-012, R-041
+
+O GM recebe também um resumo do que a matriz já resolve sozinha, gerado a partir do campo `porque` das regras aplicáveis ao escopo.
+
+É o que permite ao GM saber quando **não** agir.
+
+**Aceite:** o resumo é gerado a partir do arquivo de reações e acompanha qualquer alteração dele sem edição manual do prompt.
+
+### R-043 — Invocação de efeito pelo GM
+`P0` · `V4` · decisão · dep: R-041
+
+O GM pode acionar qualquer efeito do vocabulário como mutação de tipo `engine_effect`. A partir da invocação **a engine assume**: o GM acende, e quem propaga, consome e apaga é a matriz.
+
+O papel é preciso: o GM é a fonte de **causação nova**. A matriz sabe o que acontece dado que um estado existe; ela não sabe enumerar todas as maneiras que uma pessoa pode inventar de criar aquele estado. É essa lacuna, e só ela, que o GM preenche.
+
+**Invocação legítima:** um agente diz que está esfregando gravetos com força e velocidade. Não existe chama em lugar nenhum e nenhuma regra liga atrito a fogo. O GM julga o método plausível, invoca `ignite` com intensidade baixa nos gravetos, e daí em diante a matriz cuida de tudo.
+
+**Contraexemplo, onde o GM não invoca nada:** um agente arremessa uma lamparina acesa contra uma cortina. Existe fonte de ignição, alvo inflamável e contato. A matriz resolve sozinha (R-018). O GM apenas autoriza o arremesso.
+
+**Aceite:** `engine_effect` com `ignite` produz comportamento subsequente idêntico ao de uma ignição disparada pela matriz.
+
+### R-044 — Não-duplicação
+`P0` · `V4` · decisão · dep: R-043
+
+Antes de invocar, o GM verifica se já existe caminho causal modelado para o resultado. Havendo, ele não invoca — autoriza a ação e deixa a matriz agir. Invocar sobre algo que a matriz já resolveria aplica o efeito duas vezes.
+
+**Aceite:** arremessar objeto aceso contra inflamável não gera nenhuma invocação do GM em uma amostra de execuções.
+
+### R-045 — A fronteira, enunciada
+`P0` · `V4` · PDF 116-118 refinado por decisão · dep: R-014, R-043
+
+| | Quem resolve |
+|---|---|
+| Dado que um estado existe, o que acontece | matriz |
+| Métodos **modelados** de criar um estado — contato, impacto, imersão, ingresso, adjacência | matriz |
+| Métodos **não modelados** de criar um estado — atrito, lente e sol, improviso | GM invoca, matriz continua |
+| Simular a consequência depois que o estado existe | matriz, sempre |
+
+O GM nunca simula física. Decide apenas *se* um efeito começa, e só quando nenhuma regra já responderia isso.
+
+**Aceite:** existe teste para cada linha da tabela.
+
+### R-046 — Invocação recorrente é dívida de matriz
+`P1` · `V4` · decisão · dep: R-043, X-006
+
+Toda invocação do GM é registrada com o método descrito pelo agente e o efeito escolhido. Quando o mesmo par método-efeito se repete além de um limiar configurável, a ferramenta de observabilidade o reporta como **candidato a virar regra**.
+
+É o laço que fecha o desenho: improviso de LLM vira, com o tempo, comportamento determinístico, testável e gratuito. Quanto mais completo o substrato, menos o GM é chamado, e essa é a direção desejada.
+
+**Aceite:** o painel lista os métodos improvisados mais frequentes, ordenados por contagem, com a regra sugerida em formato colável em `config/reactions.json`.
+
+---
+
+## Transversal
+
+### R-047 — Determinismo
+`P0` · `V1` · derivado de X-004 · dep: R-014
+
+Toda aleatoriedade do substrato vem de um gerador semeado. Mesma seed e mesmas ações produzem exatamente a mesma cadeia de reações.
+
+**Aceite:** duas execuções com a mesma seed produzem logs de reação idênticos byte a byte.
+
+### R-048 — Log causal
+`P1` · `V1` · derivado · dep: R-014
+
+Todo efeito registra o que o causou: qual regra, qual entidade de origem, qual ocasião, ou qual invocação do GM. O log alimenta a timeline e a depuração.
+
+Sem isso, uma cadeia de seis passos é indistinguível de um bug.
+
+**Aceite:** dado um tile queimado, é possível reconstruir a cadeia completa até a causa inicial.
+
+### R-049 — Orçamento de custo por tick
+`P1` · `V3` · derivado de X-008 · dep: R-014
+
+O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação é restrita a entidades com estado ativo, nunca ao grid inteiro. Campos são recalculados só quando emissores ou oclusores mudam.
+
+**Aceite:** com cem tiles em estado ativo simultâneo, o tick permanece dentro do orçamento declarado em `config/tuning.json`.
+
+### R-050 — Tudo em dado
+`P0` · `V1` · decisão · dep: R-001
+
+Materiais, elementos, substâncias, reações, limiares, promoções e propagações vivem em `config/`, validados por schema. Código implementa mecanismo; dado descreve mundo.
+
+**Aceite:** é possível alterar o comportamento de qualquer sistema deste documento sem tocar em arquivo `.ts`.
+
+---
+
+## Não-objetivos
+
+Deliberadamente fora de escopo, por decisão e não por esquecimento: hidrodinâmica com pressão, camadas de tecido e órgãos individuais, química com estequiometria, balística, cálculo estrutural de carga e colapso, e metabolismo nutricional detalhado.
+
+Dwarf Fortress é advertência tanto quanto inspiração. Profundidade de simulação é poço sem fundo, e este projeto não é sobre física — é sobre gente que percebe, pensa e convive. O substrato existe para dar a essa gente algo verdadeiro sobre o que pensar, e para na hora em que para de fazer isso.

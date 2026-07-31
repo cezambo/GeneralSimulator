@@ -1,0 +1,31 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Godot
+.godot/
+.import/
+export_presets.cfg
+
+# Segredos e config local
+.env
+.env.*
+config/models.json
+config/*.local.json
+
+# Saídas de execução
+cassettes/
+saves/
+logs/
+*.log
+
+# Sistema operacional e editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

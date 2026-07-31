@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simulador-interacoes/schemas/llm-io.schema.json",
+  "title": "Contratos de saída dos prompts",
+  "description": "Fonte única. Substitui prompts/_shared/output_schemas.json. Cada prompt referencia um destes por nome no prompt_registry.yaml; o trecho relevante é injetado no prompt em tempo de renderização e usado para validar a resposta.",
+
+  "$defs": {
+
+    "agent_thought_response": {
+      "type": "object",
+      "required": ["thought", "decision"],
+      "properties": {
+        "thought": { "type": "string", "description": "Monólogo interior in-character." },
+        "decision": {
+          "type": "object",
+          "required": ["actionType", "intentDescription"],
+          "properties": {
+            "actionType": {
+              "type": "string",
+              "enum": ["move", "interact", "speak", "wait", "sleep", "eat", "drink", "work", "follow", "flee", "attack", "use_item", "pick_up", "drop", "give", "open_conversation", "none"]
+            },
+            "targetId": { "type": ["string", "null"] },
+            "targetLabel": { "type": ["string", "null"] },
+            "destination": { "type": ["object", "null"], "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
+            "intentDescription": { "type": "string", "description": "Linguagem natural, é o que o GM lê." },
+            "speech": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "requestedDeepThinking": { "type": "boolean" },
+            "emotion": { "type": "string" },
+            "urgency": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "thought_router_response": {
+      "description": "C-002. Decide profundidade antes de gastar tier caro.",
+      "type": "object",
+      "required": ["depth"],
+      "properties": {
+        "depth": { "type": "string", "enum": ["corriqueiro", "aprofundado"] },
+        "reason": { "type": "string", "maxLength": 200 }
+      },
+      "additionalProperties": false
+    },
+
+    "action_intent_response": {
+      "type": "object",
+      "required": ["intentDescription", "actionType"],
+      "properties": {
+        "actionType": { "type": "string" },
+        "targetId": { "type": ["string", "null"] },
+        "intentDescription": { "type": "string" },
+        "parameters": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "personality_drift_response": {
+      "description": "A-021. Deltas pequenos. O texto só muda se algum traço cruzar limiar.",
+      "type": "object",
+      "required": ["deltas"],
+      "properties": {
+        "deltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["trait", "delta", "reason"],
+            "properties": {
+              "trait": { "type": "string" },
+              "delta": { "type": "number", "minimum": -3, "maximum": 3 },
+              "reason": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "newTraitsText": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "marcantes_response": {
+      "description": "C-014. Zero a cinco por dia. Zero é resposta válida e comum.",
+      "type": "object",
+      "required": ["marcantes"],
+      "properties": {
+        "marcantes": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["text", "impact"],
+            "properties": {
+              "text": { "type": "string", "description": "Até duas linhas." },
+              "impact": { "type": "integer", "minimum": 1, "maximum": 5 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "memory_summary_response": {
+      "type": "object",
+      "required": ["summary"],
+      "properties": {
+        "summary": { "type": "string" },
+        "preservedMarcantes": { "type": "array", "items": { "type": "string" } },
+        "discardedTopics": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "longterm_memory_response": {
+      "description": "C-017. Um schema para anual, quinquenal, decadal e era. O nível é variável de entrada.",
+      "type": "object",
+      "required": ["general", "social", "marcantes"],
+      "properties": {
+        "general": { "type": "string", "description": "Dois parágrafos atemporais." },
+        "social": { "type": "string", "description": "Dois parágrafos sobre relações." },
+        "marcantes": { "type": "array", "minItems": 3, "maxItems": 5, "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "verbal_report_response": {
+      "description": "C-019. O agente pode mentir; o log real fica intocado.",
+      "type": "object",
+      "required": ["reportText", "truthfulness"],
+      "properties": {
+        "reportText": { "type": "string" },
+        "truthfulness": { "type": "string", "enum": ["verdade", "omissao", "mentira"] },
+        "omittedOrInvented": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "dissonance_classification_response": {
+      "description": "C-025. Uma chamada cobre todas as impressões contra todas as opiniões. Pares sem relação são omitidos.",
+      "type": "object",
+      "required": ["classifications"],
+      "properties": {
+        "classifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["impressionId", "opinionId", "relation", "intensity"],
+            "properties": {
+              "impressionId": { "type": "string" },
+              "opinionId": { "type": "string" },
+              "relation": { "type": "string", "enum": ["conflito", "sinergia"] },
+              "intensity": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "reason": { "type": "string", "maxLength": 200 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "opinion_burst_response": {
+      "type": "object",
+      "required": ["newNuanceDescription"],
+      "properties": {
+        "newNuanceDescription": { "type": "string", "description": "1 a 3 frases atemporais." },
+        "emotionalTone": { "type": "string" },
+        "severity": { "type": "string", "enum": ["nuance_shift", "inversao"] }
+      },
+      "additionalProperties": false
+    },
+
+    "nightly_reflection_response": {
+      "description": "C-031. Lote noturno das opiniões gerais.",
+      "type": "object",
+      "required": ["impressions"],
+      "properties": {
+        "impressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "topic": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "newOpinionCandidates": {
+          "type": "array",
+          "description": "Tópicos sobre os quais o agente ainda não tinha crença formada.",
+          "items": {
+            "type": "object",
+            "required": ["targetLabel", "nuanceDescription"],
+            "properties": {
+              "targetLabel": { "type": "string" },
+              "nuanceDescription": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "goal_revise_response": {
+      "description": "C-040 a C-044. Um schema para toda revisão de meta, qualquer nível e qualquer gatilho.",
+      "type": "object",
+      "required": ["goalText", "rationale"],
+      "properties": {
+        "goalText": { "type": "string", "description": "Verbo mais objeto. Nada de meta vaga." },
+        "rationale": { "type": "string" },
+        "deprecatedReason": { "type": ["string", "null"] },
+        "alsoRevise": {
+          "type": "array",
+          "description": "Níveis abaixo que a mudança invalidou.",
+          "items": { "type": "string", "enum": ["secondary", "tertiary"] }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "whim_response": {
+      "description": "C-037. Retornar null quando nada puxa o agente.",
+      "type": ["object", "null"],
+      "required": ["whimText", "estimatedMinutes"],
+      "properties": {
+        "whimText": { "type": "string" },
+        "estimatedMinutes": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "trigger": { "type": "string", "enum": ["tedio", "traco", "memoria", "ambiente"] }
+      },
+      "additionalProperties": false
+    },
+
+    "handshake_response": {
+      "description": "S-002.",
+      "type": "object",
+      "required": ["accept"],
+      "properties": {
+        "accept": { "type": "boolean" },
+        "reason": { "type": "string", "maxLength": 200 },
+        "openingLine": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "conversation_turn_response": {
+      "type": "object",
+      "required": ["dialogueText"],
+      "properties": {
+        "dialogueText": { "type": "string" },
+        "relocationProposal": {
+          "type": ["object", "null"],
+          "properties": {
+            "targetLocationLabel": { "type": "string" },
+            "coordinates": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
+            "reason": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "endConversation": { "type": "boolean" },
+        "requestExtension": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+
+    "relocation_vote_response": {
+      "type": "object",
+      "required": ["vote"],
+      "properties": {
+        "vote": { "type": "string", "enum": ["accept", "deny"] },
+        "explanation": { "type": "string", "description": "Obrigatória em caso de deny. Vira fala." }
+      },
+      "additionalProperties": false
+    },
+
+    "post_conversation_response": {
+      "type": "object",
+      "required": ["rawImpressions", "sentimentDeltas"],
+      "properties": {
+        "rawImpressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "aboutAgentId": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sentimentDeltas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["agentId", "delta"],
+            "properties": {
+              "agentId": { "type": "string" },
+              "delta": { "type": "integer", "minimum": -10, "maximum": 10 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "unresolvedTopic": { "type": ["string", "null"], "description": "Gera intenção de retomar a conversa. S-011." }
+      },
+      "additionalProperties": false
+    },
+
+    "meeting_verdict_response": {
+      "type": "object",
+      "required": ["consensusNarrative", "goalOperations", "mechanicChanges"],
+      "properties": {
+        "meetingType": { "type": "string" },
+        "consensusNarrative": { "type": "string" },
+        "goalOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action", "text"],
+            "properties": {
+              "action": { "type": "string", "enum": ["add", "remove", "modify"] },
+              "id": { "type": "string" },
+              "text": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "mechanicChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target", "value", "rationale"],
+            "properties": {
+              "target": { "type": "string" },
+              "value": { "type": "string" },
+              "rationale": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "newLaws": { "type": "array", "items": { "type": "string" } },
+        "dissent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["agentId", "reason"],
+            "properties": { "agentId": { "type": "string" }, "reason": { "type": "string" } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "tactical_choice_response": {
+      "description": "S-033. A engine já calculou as opções; aqui só se escolhe.",
+      "type": "object",
+      "required": ["selectedOptionId"],
+      "properties": {
+        "selectedOptionId": { "type": "string" },
+        "shout": { "type": ["string", "null"], "maxLength": 120 },
+        "reason": { "type": "string", "maxLength": 200 }
+      },
+      "additionalProperties": false
+    },
+
+    "shout_semantic_response": {
+      "description": "S-036. Traduz grito ouvido em viés para o ouvinte.",
+      "type": "object",
+      "required": ["understood", "bias"],
+      "properties": {
+        "understood": { "type": "string", "description": "O que o ouvinte entendeu." },
+        "bias": { "type": "string", "enum": ["obedecer", "ignorar", "contrariar"] },
+        "biasStrength": { "type": "integer", "minimum": 0, "maximum": 3 }
+      },
+      "additionalProperties": false
+    },
+
+    "gm_response": {
+      "description": "G-004 e G-005. Postura permissiva: denied é último recurso.",
+      "type": "object",
+      "required": ["verdict", "narrative", "worldMutations", "agentFeedback"],
+      "properties": {
+        "verdict": { "type": "string", "enum": ["executed", "partial", "reinterpreted", "denied"] },
+        "narrative": { "type": "string", "description": "Terceira pessoa, para timeline e memória do GM." },
+        "worldMutations": {
+          "type": "array",
+          "items": { "$ref": "domain.schema.json#/$defs/WorldMutation" }
+        },
+        "agentFeedback": { "type": "string", "description": "Sensorial e diegético. Nunca linguagem de sistema." },
+        "followUpAffordances": { "type": "array", "items": { "type": "string" } },
+        "isMarcanteCandidate": { "type": "boolean", "description": "G-019. Falha crítica em momento de vida ou morte." },
+        "witnessIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "gm_consolidation_response": {
+      "description": "G-012. Lote noturno para manter coerência entre dias.",
+      "type": "object",
+      "required": ["consistencyNotes"],
+      "properties": {
+        "consistencyNotes": { "type": "array", "items": { "type": "string" } },
+        "worldStateSummary": { "type": "string" },
+        "emergingTensions": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "terrain_params_response": {
+      "type": "object",
+      "required": ["seed", "mapWidth", "mapHeight", "waterRatio", "biomePrimary", "climate", "urbanDensity", "scenarioNarrative"],
+      "properties": {
+        "seed": { "type": "integer" },
+        "mapWidth": { "type": "integer", "minimum": 32, "maximum": 128 },
+        "mapHeight": { "type": "integer", "minimum": 32, "maximum": 128 },
+        "waterRatio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "waterStyle": { "type": "string", "enum": ["lago", "rio", "costa", "pantano", "nenhum"] },
+        "elevationVariance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "biomePrimary": { "type": "string", "enum": ["floresta", "planicie", "urbano", "costeiro", "arido", "montanhoso"] },
+        "roadDensity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "vegetationDensity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "urbanDensity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "climate": { "type": "string", "enum": ["temperado", "arido", "frio", "tropical"] },
+        "dangerZones": { "type": "array", "items": { "type": "string" } },
+        "scenarioNarrative": { "type": "string", "description": "2 a 3 frases. Alimenta o construtor e os perfis." },
+        "inviolableLaws": { "type": "array", "items": { "type": "string" }, "description": "G-014. Regras do cenário que o GM não contorna." }
+      },
+      "additionalProperties": false
+    },
+
+    "agent_profile_response": {
+      "type": "object",
+      "required": ["name", "age", "appearanceDescription", "personality", "initialRole", "primaryGoalSeed", "secondaryGoalSeed", "skills"],
+      "properties": {
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "appearanceDescription": { "type": "string" },
+        "personality": { "$ref": "domain.schema.json#/$defs/Personality" },
+        "skills": { "$ref": "domain.schema.json#/$defs/Skills" },
+        "initialRole": { "type": "string" },
+        "primaryGoalSeed": { "type": "string" },
+        "secondaryGoalSeed": { "type": "string" },
+        "initialOpinions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["targetLabel", "nuanceDescription"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["general", "social"] },
+              "targetLabel": { "type": "string" },
+              "nuanceDescription": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "relationshipSeeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["targetHint", "sentiment", "reason"],
+            "properties": {
+              "targetHint": { "type": "string" },
+              "sentiment": { "type": "integer", "minimum": -100, "maximum": 100 },
+              "kind": { "type": "string" },
+              "reason": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "spawnPreference": { "type": "string", "enum": ["near_residential", "near_work", "central"] }
+      },
+      "additionalProperties": false
+    },
+
+    "item_definition": {
+      "$ref": "domain.schema.json#/$defs/ObjectDef"
+    }
+  }
+}

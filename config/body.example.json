@@ -1,0 +1,98 @@
+{
+  "version": 1,
+
+  "_leiaMe": [
+    "Arvore de partes. Ver docs/spec/SPEC-B-corpo.md.",
+    "Vinte e cinco nos e teto deliberado (B-001). Camada de tecido por parte esta fora de escopo.",
+    "",
+    "NAO EXISTE tabela de tecidos aqui. 'materialId' aponta para config/materials.json, o mesmo",
+    "catalogo que descreve carvalho, ferro e vidro (B-003). Osso e uma entrada so, que serve tanto",
+    "para o esqueleto quanto para um porrete.",
+    "",
+    "'materialId' e o material INICIAL da parte. O material corrente vive no estado do agente e pode",
+    "divergir depois de uma transmutacao do GM (B-038). Toda propriedade que a lesao consulta —",
+    "resistencia por tipo de dano, limiares termicos, densidade, etiquetas — vem do material corrente.",
+    "",
+    "'coverage' e a probabilidade relativa de a parte ser atingida; a soma das externas e 1.",
+    "'capacities' declara quais capacidades a parte serve e com que peso (B-002, B-012)."
+  ],
+
+  "root": "body",
+
+  "parts": {
+    "body":     { "nome": "corpo",         "parent": null,      "materialId": "musculo", "maxHealth": 0,  "coverage": 0.00, "depth": "outside" },
+
+    "head":     { "nome": "cabeca",        "parent": "body",    "materialId": "pele",   "maxHealth": 25, "coverage": 0.10, "depth": "outside" },
+    "skull":    { "nome": "cranio",        "parent": "head",    "materialId": "osso",   "maxHealth": 25, "coverage": 0.00, "depth": "inside" },
+    "brain":    { "nome": "cerebro",       "parent": "skull",   "materialId": "orgao",  "maxHealth": 12, "coverage": 0.00, "depth": "inside", "vital": true,
+                  "capacities": { "consciousness": 1.0 } },
+    "eyeL":     { "nome": "olho esquerdo", "parent": "head",    "materialId": "orgao",  "maxHealth": 8,  "coverage": 0.01, "depth": "outside",
+                  "capacities": { "sight": 0.5 } },
+    "eyeR":     { "nome": "olho direito",  "parent": "head",    "materialId": "orgao",  "maxHealth": 8,  "coverage": 0.01, "depth": "outside",
+                  "capacities": { "sight": 0.5 } },
+    "earL":     { "nome": "orelha esquerda","parent": "head",   "materialId": "pele",   "maxHealth": 8,  "coverage": 0.01, "depth": "outside",
+                  "capacities": { "hearing": 0.5 } },
+    "earR":     { "nome": "orelha direita","parent": "head",    "materialId": "pele",   "maxHealth": 8,  "coverage": 0.01, "depth": "outside",
+                  "capacities": { "hearing": 0.5 } },
+    "nose":     { "nome": "nariz",         "parent": "head",    "materialId": "pele",   "maxHealth": 8,  "coverage": 0.02, "depth": "outside",
+                  "capacities": { "smell": 1.0, "breathing": 0.1 } },
+    "jaw":      { "nome": "mandibula",     "parent": "head",    "materialId": "osso",   "maxHealth": 12, "coverage": 0.02, "depth": "outside",
+                  "capacities": { "talking": 1.0, "eating": 1.0 } },
+
+    "neck":     { "nome": "pescoco",       "parent": "body",    "materialId": "musculo", "maxHealth": 20, "coverage": 0.03, "depth": "outside",
+                  "capacities": { "talking": 0.2, "breathing": 0.1 } },
+
+    "torso":    { "nome": "torso",         "parent": "body",    "materialId": "musculo", "maxHealth": 40, "coverage": 0.38, "depth": "outside" },
+    "ribcage":  { "nome": "caixa toracica","parent": "torso",   "materialId": "osso",   "maxHealth": 30, "coverage": 0.00, "depth": "inside" },
+    "heart":    { "nome": "coracao",       "parent": "ribcage", "materialId": "orgao",  "maxHealth": 15, "coverage": 0.00, "depth": "inside", "vital": true,
+                  "capacities": { "bloodPumping": 1.0 } },
+    "lungL":    { "nome": "pulmao esquerdo","parent": "ribcage","materialId": "orgao",  "maxHealth": 15, "coverage": 0.00, "depth": "inside",
+                  "capacities": { "breathing": 0.4 } },
+    "lungR":    { "nome": "pulmao direito","parent": "ribcage", "materialId": "orgao",  "maxHealth": 15, "coverage": 0.00, "depth": "inside",
+                  "capacities": { "breathing": 0.4 } },
+    "stomach":  { "nome": "estomago",      "parent": "torso",   "materialId": "orgao",  "maxHealth": 15, "coverage": 0.00, "depth": "inside", "vital": true,
+                  "capacities": { "digestion": 1.0 } },
+    "liver":    { "nome": "figado",        "parent": "torso",   "materialId": "orgao",  "maxHealth": 20, "coverage": 0.00, "depth": "inside", "vital": true,
+                  "capacities": { "bloodFiltration": 0.5, "metabolism": 0.5 } },
+    "kidneyL":  { "nome": "rim esquerdo",  "parent": "torso",   "materialId": "orgao",  "maxHealth": 12, "coverage": 0.00, "depth": "inside",
+                  "capacities": { "bloodFiltration": 0.25 } },
+    "kidneyR":  { "nome": "rim direito",   "parent": "torso",   "materialId": "orgao",  "maxHealth": 12, "coverage": 0.00, "depth": "inside",
+                  "capacities": { "bloodFiltration": 0.25 } },
+
+    "armL":     { "nome": "braco esquerdo","parent": "body",    "materialId": "musculo", "maxHealth": 30, "coverage": 0.10, "depth": "outside",
+                  "capacities": { "manipulation": 0.5 } },
+    "handL":    { "nome": "mao esquerda",  "parent": "armL",    "materialId": "musculo", "maxHealth": 20, "coverage": 0.04, "depth": "outside",
+                  "capacities": { "manipulation": 0.5 } },
+    "armR":     { "nome": "braco direito", "parent": "body",    "materialId": "musculo", "maxHealth": 30, "coverage": 0.10, "depth": "outside",
+                  "capacities": { "manipulation": 0.5 } },
+    "handR":    { "nome": "mao direita",   "parent": "armR",    "materialId": "musculo", "maxHealth": 20, "coverage": 0.04, "depth": "outside",
+                  "capacities": { "manipulation": 0.5 } },
+
+    "legL":     { "nome": "perna esquerda","parent": "body",    "materialId": "musculo", "maxHealth": 30, "coverage": 0.06, "depth": "outside",
+                  "capacities": { "moving": 0.5 } },
+    "footL":    { "nome": "pe esquerdo",   "parent": "legL",    "materialId": "musculo", "maxHealth": 20, "coverage": 0.02, "depth": "outside",
+                  "capacities": { "moving": 0.2 } },
+    "legR":     { "nome": "perna direita", "parent": "body",    "materialId": "musculo", "maxHealth": 30, "coverage": 0.06, "depth": "outside",
+                  "capacities": { "moving": 0.5 } },
+    "footR":    { "nome": "pe direito",    "parent": "legR",    "materialId": "musculo", "maxHealth": 20, "coverage": 0.02, "depth": "outside",
+                  "capacities": { "moving": 0.2 } }
+  },
+
+  "capacityRules": {
+    "_nota": "Consciencia e o multiplicador global (B-013). Pesos e limiares calibraveis em tuning.json.",
+
+    "consciousness": {
+      "sources": { "brain": 1.0, "bloodPumping": 0.2, "breathing": 0.2, "bloodFiltration": 0.1 },
+      "painPenalty": { "floor": 0.10, "divisor": 2.25, "maxPenalty": 0.40 },
+      "unconsciousBelow": 0.30,
+      "vital": true
+    },
+    "moving":       { "multipliedByConsciousness": true, "alsoAffectedBy": ["bloodPumping", "breathing"] },
+    "manipulation": { "multipliedByConsciousness": true },
+    "talking":      { "multipliedByConsciousness": true },
+    "breathing":       { "vital": true },
+    "bloodPumping":    { "vital": true },
+    "bloodFiltration": { "vital": true, "governs": "immunityGainSpeed" },
+    "digestion":       { "vital": true }
+  }
+}

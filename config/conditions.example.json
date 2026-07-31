@@ -1,0 +1,178 @@
+{
+  "version": 1,
+
+  "_leiaMe": [
+    "Condicoes e matriz de lesao. Ver docs/spec/SPEC-B-corpo.md.",
+    "Tudo e condicao: ferida, doenca, cicatriz, protese, efeito de substancia, cronica, mental (B-006).",
+    "'cadence' e obrigatorio (B-010): static nunca e avaliada, slow roda uma vez por hora simulada,",
+    "fast roda a cada tick. Num mundo em regime a esmagadora maioria e static, e custa zero.",
+    "'stages' ativam por severidade minima e trazem seus proprios modificadores (B-008).",
+    "Offsets de capacidade sao aditivos; 'max' impoe teto."
+  ],
+
+  "conditions": {
+
+    "laceration": {
+      "nome": "corte",
+      "cadence": "fast",
+      "progressPerDay": -0.35,
+      "bleedRateBySeverity": 0.6,
+      "infectable": true,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.3, "ifSeverityAbove": 0.5 },
+      "stages": [
+        { "minSeverity": 0.0, "nome": "superficial", "pain": 0.05 },
+        { "minSeverity": 0.4, "nome": "profundo",    "pain": 0.15 },
+        { "minSeverity": 0.7, "nome": "grave",       "pain": 0.30 }
+      ]
+    },
+
+    "fracture": {
+      "nome": "fratura",
+      "cadence": "slow",
+      "progressPerDay": -0.06,
+      "requiresRestToHeal": true,
+      "leavesOnHeal": { "condition": "old_injury", "chance": 0.25 },
+      "stages": [
+        { "minSeverity": 0.0, "nome": "trinca",   "pain": 0.15, "partEfficiency": 0.6 },
+        { "minSeverity": 0.5, "nome": "quebrado", "pain": 0.35, "partEfficiency": 0.1 }
+      ]
+    },
+
+    "burn": {
+      "nome": "queimadura",
+      "cadence": "slow",
+      "progressPerDay": -0.15,
+      "infectable": true,
+      "infectionChanceMultiplier": 2.5,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.7 },
+      "stages": [
+        { "minSeverity": 0.0, "nome": "primeiro grau", "pain": 0.10 },
+        { "minSeverity": 0.4, "nome": "segundo grau",  "pain": 0.30 },
+        { "minSeverity": 0.75, "nome": "terceiro grau","pain": 0.20, "nota": "menos dor: o nervo morreu", "partEfficiency": 0.2 }
+      ]
+    },
+
+    "blood_loss": {
+      "nome": "perda de sangue",
+      "wholeBody": true,
+      "cadence": "fast",
+      "drivenBy": "sumOfBleedRates",
+      "recoveryPerDay": -0.5,
+      "lethalAt": 1.0,
+      "stages": [
+        { "minSeverity": 0.15, "nome": "leve",    "capacityOffsets": { "consciousness": -0.05 } },
+        { "minSeverity": 0.35, "nome": "moderada","capacityOffsets": { "consciousness": -0.15, "moving": -0.10 } },
+        { "minSeverity": 0.60, "nome": "severa",  "capacityOffsets": { "consciousness": -0.35, "moving": -0.30 } },
+        { "minSeverity": 0.85, "nome": "critica", "capacityMax": { "consciousness": 0.10 } }
+      ]
+    },
+
+    "infection": {
+      "nome": "infeccao",
+      "cadence": "slow",
+      "_nota": "A corrida de B-024. Sem tratamento a severidade vence; tratamento nao acelera a imunidade, so desacelera a severidade. Quem acelera a imunidade e descanso, nutricao e filtragem sanguinea.",
+      "severityPerDay": 0.84,
+      "immunityPerDay": 0.6441,
+      "immunityVariance": 0.20,
+      "tendReducesSeverityPerDay": 0.53,
+      "severityPerDayWhenImmune": -0.7,
+      "immunityModifiers": { "bloodFiltration": 1.0, "resting": 0.25, "malnutrition": -0.30 },
+      "lethalAt": 1.0,
+      "curedWhenImmunityReaches": 1.0,
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "inicial",  "pain": 0.05 },
+        { "minSeverity": 0.5,  "nome": "avancada", "pain": 0.10, "capacityOffsets": { "consciousness": -0.10 } },
+        { "minSeverity": 0.87, "nome": "extrema",  "pain": 0.20, "capacityOffsets": { "consciousness": -0.30 }, "lifeThreatening": true }
+      ]
+    },
+
+    "hypothermia": {
+      "nome": "hipotermia",
+      "wholeBody": true,
+      "cadence": "slow",
+      "drivenBy": "bodyTemperature",
+      "lethalAt": 1.0,
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "com frio",  "capacityOffsets": { "manipulation": -0.05 } },
+        { "minSeverity": 0.35, "nome": "tremendo",  "pain": 0.05, "capacityOffsets": { "manipulation": -0.20, "moving": -0.15 } },
+        { "minSeverity": 0.70, "nome": "grave",     "capacityOffsets": { "consciousness": -0.30, "moving": -0.40 } }
+      ]
+    },
+
+    "malnutrition": {
+      "nome": "desnutricao",
+      "wholeBody": true,
+      "cadence": "slow",
+      "drivenBy": "needs.hunger",
+      "lethalAt": 1.0,
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "magro",      "capacityOffsets": { "moving": -0.05 } },
+        { "minSeverity": 0.40, "nome": "faminto",    "capacityOffsets": { "moving": -0.15, "manipulation": -0.15, "consciousness": -0.10 } },
+        { "minSeverity": 0.75, "nome": "inanicao",   "capacityOffsets": { "moving": -0.40, "consciousness": -0.30 } }
+      ]
+    },
+
+    "sleep_deprivation": {
+      "nome": "privacao de sono",
+      "wholeBody": true,
+      "cadence": "slow",
+      "drivenBy": "needs.energy",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "cansado",   "capacityOffsets": { "consciousness": -0.05 } },
+        { "minSeverity": 0.50, "nome": "exausto",   "capacityOffsets": { "consciousness": -0.20 } },
+        { "minSeverity": 0.85, "nome": "extenuado", "capacityOffsets": { "consciousness": -0.40 } }
+      ]
+    },
+
+    "drunk": {
+      "nome": "embriaguez",
+      "wholeBody": true,
+      "cadence": "slow",
+      "progressPerDay": -3.0,
+      "_nota": "Payload cognitivo de R-031. O estado alterado entra no prompt e muda a decisao, nao so o numero.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "alegre",     "cognitive": ["disinhibition:20", "moodShift:+10"] },
+        { "minSeverity": 0.35, "nome": "bebado",     "cognitive": ["disinhibition:50", "perceptionDistortion:20"], "capacityOffsets": { "manipulation": -0.15, "moving": -0.15, "talking": -0.10 } },
+        { "minSeverity": 0.70, "nome": "caindo",     "cognitive": ["disinhibition:80", "perceptionDistortion:50"], "capacityOffsets": { "consciousness": -0.30, "moving": -0.40 } }
+      ]
+    },
+
+    "scar":       { "nome": "cicatriz",        "cadence": "static", "permanent": true, "pain": 0.02, "visible": true },
+    "old_injury": { "nome": "lesao antiga",    "cadence": "static", "permanent": true, "pain": 0.08, "partEfficiency": 0.85, "visible": true },
+    "bad_back":   { "nome": "dor nas costas",  "cadence": "static", "permanent": true, "pain": 0.15, "capacityOffsets": { "moving": -0.20, "manipulation": -0.10 }, "ageOnset": 40 },
+    "cataract":   { "nome": "catarata",        "cadence": "static", "permanent": true, "capacityOffsets": { "sight": -0.40 }, "ageOnset": 55 },
+    "frailty":    { "nome": "fragilidade",     "cadence": "static", "permanent": true, "capacityOffsets": { "moving": -0.15, "manipulation": -0.15 }, "ageOnset": 65 }
+  },
+
+  "_notaMatriz": [
+    "A matriz de lesao consulta PROPRIEDADES do material corrente da parte, nunca o nome do tecido.",
+    "E o que faz a transmutacao do GM (B-038) funcionar sem regra nova: um osso transmutado em vidro",
+    "deixa de casar com '#living' e passa a casar com '#fragile', entao para de lacerar e comeca a",
+    "estilhacar. Ninguem escreveu uma regra para ossos de vidro (B-039).",
+    "As regras sao avaliadas em ordem; a primeira que casa vence."
+  ],
+
+  "injuryMatrix": [
+    { "damage": "cut",       "material": "#living",              "condition": "laceration", "bleed": "byMaterial", "infectionChance": 0.10,
+      "porque": "Lamina em tecido vivo lacera, e sangra na proporcao do fator do material." },
+    { "damage": "cut",       "material": "#fragile & #living",   "condition": "fracture",   "bleed": "byMaterial",
+      "porque": "Lamina que alcanca osso o parte e expoe." },
+    { "damage": "blunt",     "material": "#fragile",             "condition": "fracture",   "bleed": "byMaterial",
+      "porque": "Duro e quebradico ao mesmo tempo: osso, ceramica e vidro cedem a impacto." },
+    { "damage": "blunt",     "material": "#living",              "condition": "bruise",     "bleed": "none",
+      "porque": "Pancada em tecido mole produz hematoma sem sangramento externo." },
+    { "damage": "pierce",    "material": "#vital",               "condition": "puncture",   "bleed": "byMaterial", "infectionChance": 0.25,
+      "porque": "Perfuracao de orgao sangra muito e infecciona com facilidade." },
+    { "damage": "burn",      "material": "#inflammable",         "condition": "burn",       "bleed": "none", "infectionChance": 0.25,
+      "porque": "Queimadura nao sangra, mas infecciona bem mais que corte." },
+    { "damage": "cold",      "material": "#living",              "condition": "frostbite",  "bleed": "none",
+      "porque": "Extremidade viva exposta ao frio ulcera." },
+    { "damage": "electric",  "material": "#conductive",          "condition": "shock",      "bleed": "none",
+      "porque": "Material condutivo leva a corrente adiante. Vale para nervo e vale para um femur de ferro." },
+    { "damage": "corrosion", "material": "#living",              "condition": "chem_burn",  "bleed": "byMaterial", "infectionChance": 0.15,
+      "porque": "Corrosivo queima quimicamente e continua queimando ate ser lavado." },
+
+    { "damage": "*",         "material": "!#living",             "condition": null, "fallback": "integrityDamage",
+      "porque": "Parte cujo material nao e vivo nao adoece nem cicatriza: apenas perde integridade, como qualquer objeto (R-027). E a consequencia automatica de transmutar uma parte para material morto." }
+  ]
+}

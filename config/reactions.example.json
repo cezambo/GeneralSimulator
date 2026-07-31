@@ -1,0 +1,200 @@
+{
+  "version": 1,
+
+  "_leiaMe": [
+    "Matriz de reacao do substrato. Ver docs/spec/SPEC-R-substrato.md.",
+    "Regra dos tres (R-003): elemento altera material, elemento altera elemento, material NUNCA altera material.",
+    "Etiquetas com # valem para a classe inteira. Nenhuma regra referencia um material pelo id (R-001).",
+    "Antes de acrescentar uma regra, verifique se ela nao e um limiar termico (R-009) — derreter, congelar,",
+    "ferver e incendiar por calor sao numeros em materials.json, nao linhas deste arquivo.",
+    "O campo 'porque' e obrigatorio e vai para o resumo em linguagem natural entregue ao GM (R-042)."
+  ],
+
+  "effects": {
+    "ignite":      { "nome": "acender",     "aplica": { "state": "burning", "intensity": 60 } },
+    "extinguish":  { "nome": "apagar",      "remove": ["burning"], "aplica": { "state": "smoky", "intensity": 40 } },
+    "wet":         { "nome": "molhar",      "aplica": { "state": "wet", "intensity": 70 } },
+    "dry":         { "nome": "secar",       "remove": ["wet"] },
+    "freeze":      { "nome": "congelar",    "aplica": { "state": "frozen", "intensity": 80 } },
+    "melt":        { "nome": "derreter",    "remove": ["frozen"], "aplica": { "state": "wet", "intensity": 60 } },
+    "electrify":   { "nome": "eletrificar", "aplica": { "state": "electrified", "intensity": 70 } },
+    "shatter":     { "nome": "quebrar",     "integrityDelta": -100 },
+    "stain":       { "nome": "manchar",     "aplica": { "covering": true } },
+    "contaminate": { "nome": "contaminar",  "aplica": { "state": "contaminated", "intensity": 50 } },
+    "illuminate":  { "nome": "iluminar",    "aplica": { "emitsLight": true } },
+    "emit_gas":    { "nome": "emitir gas",  "aplica": { "gas": true } },
+    "smother":     { "nome": "abafar",      "remove": ["burning"], "aplica": { "state": "smoky", "intensity": 80 } },
+    "corrode":     { "nome": "corroer",     "integrityDelta": -3 },
+    "rot":         { "nome": "apodrecer",   "aplica": { "state": "rotting", "intensity": 30 } },
+    "transmute":   { "nome": "transmutar",  "setMaterial": "$param", "_nota": "Troca o material do alvo preservando identidade, estado e posicao. Vale para tile, objeto e parte de corpo, porque os tres usam o mesmo catalogo (B-003). Nenhuma reacao da matriz invoca este efeito: ele existe para o GM (R-043, B-038)." }
+  },
+
+  "_notaAlvos": [
+    "Todo efeito aceita tres especies de alvo: tile, objeto e parte de corpo (R-015).",
+    "Nao ha vocabulario separado para corpo. Molhar molha os tres; corroer corroi os tres.",
+    "As regras abaixo usam etiqueta, entao valem para tecidos sem nenhuma linha adicional:",
+    "'ignition-by-contact' com #inflammable pega pele e gordura; 'water-conducts' com #conductive",
+    "pega nervo e tambem um femur que o GM tenha transmutado para ferro (B-039)."
+  ],
+
+  "reactions": [
+    {
+      "id": "ignition-by-contact",
+      "when": "contact",
+      "in": ["#ignitionSource", "#inflammable"],
+      "effect": "ignite",
+      "chance": 0.9,
+      "modifiedBy": { "wet": -0.8, "flammabilitySpeed": 0.2 },
+      "porque": "Chama desprotegida encostando em material que queima acende o material. Cobre arremesso, encosto, queda e empurrao — o verbo nao importa."
+    },
+    {
+      "id": "fire-spread",
+      "when": "neighborhood",
+      "in": ["burning", "#inflammable"],
+      "effect": "ignite",
+      "chance": 0.35,
+      "modifiedBy": { "wet": -0.9, "flammabilitySpeed": 0.3, "windToward": 0.25 },
+      "porque": "Fogo salta para vizinhos inflamaveis, mais rapido a favor do vento e mais devagar se estiverem molhados."
+    },
+    {
+      "id": "water-douses-fire",
+      "when": "contact",
+      "in": ["burning", "wet"],
+      "effect": "extinguish",
+      "chance": 1.0,
+      "porque": "Agua apaga fogo e produz vapor."
+    },
+    {
+      "id": "organic-smothers-fire",
+      "when": "contact",
+      "in": ["burning", "#organic"],
+      "effect": "smother",
+      "chance": 0.6,
+      "porque": "Cobrir chama com material organico — manta, terra, corpo — abafa devagar e produz fumaca densa."
+    },
+    {
+      "id": "oil-flash",
+      "when": "contact",
+      "in": ["#ignitionSource", "#oily"],
+      "effect": "ignite",
+      "chance": 1.0,
+      "modifiedBy": { "spreadRate": 3.0 },
+      "porque": "Oleo acende na hora e propaga muito mais rapido que qualquer outro inflamavel."
+    },
+    {
+      "id": "electric-chain",
+      "when": "neighborhood",
+      "in": ["electrified", "#conductive"],
+      "effect": "electrify",
+      "chance": 0.95,
+      "porque": "Eletricidade percorre cadeias contiguas de material condutivo."
+    },
+    {
+      "id": "electrified-puddle",
+      "when": "contact",
+      "in": ["electrified", "wet"],
+      "effect": "electrify",
+      "chance": 1.0,
+      "propagates": "wholeLiquidBody",
+      "porque": "Uma poca energizada eletrifica por inteiro, nao so o ponto de contato."
+    },
+    {
+      "id": "shock-on-entry",
+      "when": "entry",
+      "in": ["electrified", "#creature"],
+      "effect": "damage",
+      "chance": 1.0,
+      "payload": { "damageType": "electric", "severity": 40, "condition": "choque" },
+      "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia."
+    },
+    {
+      "id": "slip-on-entry",
+      "when": "entry",
+      "in": ["#slippery", "#creature"],
+      "effect": "fall",
+      "chance": 0.25,
+      "modifiedBy": { "hurry": 0.5, "carryingWeight": 0.2 },
+      "porque": "Superficie escorregadia derruba quem passa, com risco proporcional a pressa e ao peso carregado."
+    },
+    {
+      "id": "impact-shatter",
+      "when": "contact",
+      "in": ["#impact", "#fragile"],
+      "effect": "shatter",
+      "chance": 1.0,
+      "threshold": { "impactForce": "> hardness" },
+      "porque": "Material fragil se estilhaca quando o impacto supera sua dureza."
+    },
+    {
+      "id": "corrosion",
+      "when": "continuous",
+      "in": ["#corrosive", "*"],
+      "effect": "corrode",
+      "chance": 1.0,
+      "porque": "Substancia corrosiva consome integridade do que esta tocando, continuamente."
+    },
+    {
+      "id": "toxic-in-water",
+      "when": "contact",
+      "in": ["#toxic", "#liquid"],
+      "effect": "contaminate",
+      "chance": 1.0,
+      "propagates": "downstream",
+      "porque": "Veneno em corpo d'agua contamina o fluxo inteiro, nao so o ponto onde caiu."
+    },
+    {
+      "id": "immersion-soak",
+      "when": "immersion",
+      "in": ["*", "#liquid"],
+      "effect": "wet",
+      "chance": 1.0,
+      "modifiedBy": { "absorbent": 0.5 },
+      "porque": "Qualquer coisa submersa se molha por completo; absorventes retem mais."
+    },
+    {
+      "id": "staining",
+      "when": "contact",
+      "in": ["#staining", "*"],
+      "effect": "stain",
+      "chance": 1.0,
+      "porque": "Sangue, tinta, fuligem e lama deixam vestigio persistente e visivel. E por este caminho que um fato fisico vira evidencia social."
+    }
+  ],
+
+  "promotions": [
+    {
+      "id": "burnout-to-ash",
+      "from": "#inflammable",
+      "requires": ["burning"],
+      "into": "ash",
+      "chancePerTick": 0.02,
+      "porque": "O que queima acaba virando cinza."
+    },
+    {
+      "id": "puddle-evaporates",
+      "from": "#liquid",
+      "into": null,
+      "chancePerTick": 0.005,
+      "modifiedBy": { "temperature": 0.01, "covered": -0.5 },
+      "porque": "Poca descoberta evapora, mais rapido no calor."
+    },
+    {
+      "id": "mold-spreads",
+      "from": "#porous",
+      "requires": ["wet"],
+      "into": "mold",
+      "chancePerTick": 0.0002,
+      "modifiedBy": { "darkness": 0.5 },
+      "porque": "Canto umido e escuro cria mofo ao longo de semanas."
+    },
+    {
+      "id": "corpse-rots",
+      "from": "#corpse",
+      "into": "remains",
+      "chancePerTick": 0.001,
+      "modifiedBy": { "temperature": 0.02 },
+      "emits": { "odor": 60 },
+      "porque": "Cadaver se decompoe e emite odor detectavel antes de ser encontrado."
+    }
+  ]
+}
