@@ -178,7 +178,7 @@ prompts:
     temperature: 0.3
     maxTokens: 1200
     schema: nightly_appraisal_response
-    status: falta
+    status: rascunho
     prioridade: P0
     description: "Apreciacao noturna: o Crivo e a passagem noturna do classificador numa chamada so"
     variables: [agentContext, existingOpinions, newImpressions, heardClaims, factBankSummary, topicFilter]

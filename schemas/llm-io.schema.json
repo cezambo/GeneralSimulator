@@ -74,7 +74,7 @@
     },
 
     "nightly_appraisal_response": {
-      "description": "C-047 e C-025. A apreciação noturna: uma só chamada resolve o Crivo e a passagem noturna do classificador de dissonância. As duas tarefas leem o mesmo material do dia contra o mesmo contexto pessoal, e mantê-las separadas pagaria uma chamada por agente por noite apenas para renderizar esse contexto duas vezes.\n\nAs duas listas referenciam as definições originais por ponteiro, e não por cópia, para que não possam divergir. `cognition.dissonance_classifier` continua existindo para a passagem a quente, logo depois da conversa, que precisa poder disparar ruptura no mesmo dia.",
+      "description": "C-047 e C-025. A apreciação noturna: uma só chamada resolve o Crivo e a passagem noturna da classificação de dissonância. As duas tarefas leem o mesmo material do dia contra o mesmo contexto pessoal, e mantê-las separadas pagaria uma chamada por agente por noite apenas para renderizar esse contexto duas vezes.\n\nAs duas listas referenciam as definições originais por ponteiro, e não por cópia, para que não possam divergir. A passagem a quente da classificação vive em `post_conversation_response`, logo ao fim da conversa, porque a ruptura precisa poder acontecer no mesmo dia; com as duas cadências fundidas nos hospedeiros, o prompt `cognition.dissonance_classifier` foi aposentado.",
       "type": "object",
       "required": ["classifications", "verdicts"],
       "properties": {
