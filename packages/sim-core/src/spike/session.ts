@@ -8,6 +8,7 @@
 import { createHash } from 'node:crypto';
 import { loadConfig, type SimConfig } from '../config/load.js';
 import { LlmRouter, type CassetteMode } from '../llm/index.js';
+import type { Resolved } from '../llm/binding.js';
 import type { Provider } from '../llm/provider.js';
 import {
   Validator,
@@ -71,7 +72,7 @@ export interface SpikeOptions {
   readonly mode?: CassetteMode;
   readonly cassetteDir?: string;
   readonly config?: SimConfig;
-  readonly providerFactory?: (resolved: unknown) => Provider;
+  readonly providerFactory?: (resolved: Resolved) => Provider;
 }
 
 class EmptyRules implements ProvisionalRuleStore {
@@ -108,9 +109,7 @@ export async function runSpike(opts: SpikeOptions = {}): Promise<SpikeResult> {
   const days = opts.days ?? 3;
   const cfg = opts.config ?? loadConfig();
   const stub = new SpikeStubProvider();
-  const providerFactory =
-    opts.providerFactory ??
-    ((_r: unknown) => stub as Provider);
+  const providerFactory = opts.providerFactory ?? ((_r: Resolved) => stub);
 
   const { sim, world } = buildSpikeRoom(cfg, seed);
   const { lia, rui } = loadSpikeAgents();
@@ -134,8 +133,8 @@ export async function runSpike(opts: SpikeOptions = {}): Promise<SpikeResult> {
 
   const router = new LlmRouter({
     mode: opts.mode ?? 'hybrid',
-    cassetteDir: opts.cassetteDir,
-    providerFactory: providerFactory as (r: never) => Provider,
+    ...(opts.cassetteDir !== undefined ? { cassetteDir: opts.cassetteDir } : {}),
+    providerFactory,
     limits: {
       perAgentPerSimDayCallLimit: 64,
       graveReactiveReserve: 4,
