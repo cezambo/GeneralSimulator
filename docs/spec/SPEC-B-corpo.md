@@ -382,7 +382,7 @@ Este é o requisito de custo mais importante do documento. A simulação pode se
 **Aceite:** a descrição corporal cabe num orçamento de tokens declarado em `tuning.json`, e condições irrelevantes para a decisão corrente são omitidas.
 
 ### B-031 — Capacidade perdida invalida objetivo
-`P0` · `V5` · decisão · dep: B-012, C-014
+`P0` · `V5` · decisão · dep: B-012, C-044
 
 Objetivos declaram as capacidades que exigem. Quando uma cai abaixo do necessário, o objetivo é marcado inviável e dispara reavaliação.
 

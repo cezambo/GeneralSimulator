@@ -57,11 +57,11 @@ O PDF tem centenas de exigências entrelaçadas. Sem identificação, é imposs�
 Cada requisito vira uma entrada atômica e testável:
 
 ```markdown
-### C-014 — Ruptura de Opinião (The Burst)
+### C-029 — Ruptura de Opinião (The Burst)
 
 **Prioridade:** P0
-**Origem:** PDF §3.2
-**Depende de:** C-011 (classificador de dissonância), C-012 (limiar de teimosia)
+**Origem:** PDF 451-460
+**Depende de:** C-027 (limiar de teimosia), que por sua vez depende de C-025 (classificador de dissonância)
 **Prompt:** `cognition.opinion_burst`
 **Módulo:** `sim-core/cognition/opinions`
 **Critério de aceite:**
