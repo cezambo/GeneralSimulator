@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sim": "node --experimental-strip-types src/cli/run.ts"
+    "sim": "vite-node src/cli/run.ts"
   },
   "devDependencies": {
     "@types/node": "^22.13.0"
