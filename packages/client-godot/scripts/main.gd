@@ -27,6 +27,8 @@ func _ready() -> void:
 	hud.construction_toggled.connect(_on_construction)
 	hud.build_undo_requested.connect(_on_undo)
 	hud.build_redo_requested.connect(_on_redo)
+	hud.save_requested.connect(_on_save)
+	hud.load_requested.connect(_on_load)
 
 
 func _process(_delta: float) -> void:
@@ -218,6 +220,8 @@ func _on_error(payload: Dictionary) -> void:
 			hud.set_selection("Nada para refazer")
 		"NOT_FOUND":
 			hud.set_selection("Não encontrado: %s" % String(payload.get("message", code)))
+		"SAVE_FAILED", "LOAD_FAILED":
+			hud.set_selection("Save/load: %s" % String(payload.get("message", code)))
 
 
 func _on_speed(speed: int) -> void:
@@ -244,3 +248,13 @@ func _on_undo() -> void:
 
 func _on_redo() -> void:
 	core.redo_build()
+
+
+func _on_save() -> void:
+	core.save_slot("demo")
+	hud.set_selection("Salvando slot demo…")
+
+
+func _on_load() -> void:
+	core.load_slot("demo")
+	hud.set_selection("Carregando slot demo…")

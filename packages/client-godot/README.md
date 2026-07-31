@@ -48,6 +48,8 @@ godot --path packages/client-godot
 | X | Remover móvel na célula |
 | Z / Y | Undo / redo |
 | Arrastar (construção) | Pintar / apagar células |
+| F6 | Salvar slot `demo` |
+| F7 | Carregar slot `demo` |
 | V | Liga/desliga cone de visão |
 
 Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; molhados azuis; integridade baixa escurece. `SIM_FIRE=0` desliga o seed. Caminhos são recalculados se uma parede cortar a rota.

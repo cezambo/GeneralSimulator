@@ -122,6 +122,14 @@ func toggle_door(x: int, y: int) -> void:
 	send_command("cmd.world.toggleDoor", {"x": x, "y": y})
 
 
+func save_slot(slot: String = "demo") -> void:
+	send_command("cmd.sim.save", {"slot": slot})
+
+
+func load_slot(slot: String = "demo") -> void:
+	send_command("cmd.sim.load", {"slot": slot})
+
+
 func send_command(type: String, payload: Dictionary, req_id: String = "") -> void:
 	if not is_core_connected():
 		return

@@ -358,6 +358,51 @@ describe('ProtocolHub (X-007)', () => {
     expect(delta.tiles[0]!.states?.some((s) => s.type === 'wet')).toBe(true);
   });
 
+  it('cmd.sim.save e load chamam handlers', () => {
+    const calls: string[] = [];
+    const cfg = loadConfig();
+    const { sim, world } = buildSpikeRoom(cfg, 'proto-save');
+    const clock = new SimClock(sim.state.clock, {
+      minutesPerTick: cfg.tuning.minutesPerTick,
+      hoursPerDay: cfg.tuning.hoursPerDay,
+      daysPerSeason: cfg.tuning.daysPerSeason,
+      seasonsPerYear: cfg.tuning.seasonsPerYear,
+      availableSpeeds: cfg.tuning.availableSpeeds,
+    });
+    const hub = new ProtocolHub({
+      sim,
+      world,
+      clock,
+      onSave: (slot) => {
+        calls.push(`save:${slot}`);
+      },
+      onLoad: (slot) => {
+        calls.push(`load:${slot}`);
+      },
+    });
+    const c = new MemorySink('c');
+    hub.connect(c);
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.sim.save',
+      seq: 1,
+      simTime: 0,
+      reqId: 's1',
+      payload: { slot: 'demo' },
+    });
+    expect(c.last('res.ok')?.reqId).toBe('s1');
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.sim.load',
+      seq: 2,
+      simTime: 0,
+      reqId: 'l1',
+      payload: { slot: 'demo' },
+    });
+    expect(c.last('res.ok')?.reqId).toBe('l1');
+    expect(calls).toEqual(['save:demo', 'load:demo']);
+  });
+
   it('cmd.world.toggleDoor abre e fecha e notifica geometria', () => {
     let geomCalls = 0;
     const cfg = loadConfig();

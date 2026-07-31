@@ -10,6 +10,8 @@ signal build_tool_changed(tool_id: String)
 signal build_undo_requested
 signal build_redo_requested
 signal sandbox_tool_changed(tool_id: String)
+signal save_requested
+signal load_requested
 
 @onready var status_label: Label = $Margin/VBox/Status
 @onready var clock_label: Label = $Margin/VBox/Clock
@@ -124,7 +126,7 @@ func _refresh_help() -> void:
 		help_label.text = "C·sair · B parede pedra · N parede madeira · F/R chão/porta · E apagar · T cadeira · X móvel · Z/Y undo/redo"
 		set_selection(_selection_text)
 	else:
-		help_label.text = "Clique: sel./andar · porta: clique nela · G água · Q apagar fogo · C construir · Espaço pausa · 1–4 vel · V cone · WASD câmera"
+		help_label.text = "Clique: sel./andar · porta · G água · Q apagar fogo · F6 salvar · F7 carregar · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
 		set_selection(_selection_text)
 
 
@@ -206,6 +208,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("tool_extinguish"):
 		_set_sandbox_tool("extinguish")
+		return
+	if event.is_action_pressed("save_slot"):
+		save_requested.emit()
+		return
+	if event.is_action_pressed("load_slot"):
+		load_requested.emit()
 		return
 	if event.is_action_pressed("toggle_pause"):
 		if _paused:

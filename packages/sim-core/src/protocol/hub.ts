@@ -46,6 +46,8 @@ export type ToolApplyHandler = (
   cells: readonly { x: number; y: number }[],
 ) => WorldDeltaPayload;
 
+export type SaveLoadHandler = (slot: string) => void;
+
 export interface ProtocolHubOptions {
   readonly sim: Simulation;
   readonly world: World;
@@ -61,18 +63,24 @@ export interface ProtocolHubOptions {
   readonly onGeometryChanged?: () => void;
   /** Ferramentas de substrato fora do modo construção. */
   readonly onToolApply?: ToolApplyHandler;
+  /** Persistência X-003 / U-013 — a sessão (live-serve) escreve o arquivo. */
+  readonly onSave?: SaveLoadHandler;
+  readonly onLoad?: SaveLoadHandler;
 }
 
 export class ProtocolHub {
-  readonly #sim: Simulation;
-  readonly #world: World;
-  readonly #clock: SimClock;
+  #sim: Simulation;
+  #world: World;
+  #clock: SimClock;
   #mode: SimMode;
   readonly #motionOf: AgentMotionLookup | undefined;
   readonly #onAgentMove: AgentMoveHandler | undefined;
   readonly #onGeometryChanged: (() => void) | undefined;
   readonly #onToolApply: ToolApplyHandler | undefined;
-  readonly #build: BuildHistory;
+  readonly #onSave: SaveLoadHandler | undefined;
+  readonly #onLoad: SaveLoadHandler | undefined;
+  readonly #objects: ReadonlyMap<string, ObjectDef> | undefined;
+  #build: BuildHistory;
   readonly #clients = new Map<string, ProtocolSink>();
   #seq = 0;
   /** Seq por cliente (mensagens inbound). */
@@ -87,7 +95,21 @@ export class ProtocolHub {
     this.#onAgentMove = opts.onAgentMove;
     this.#onGeometryChanged = opts.onGeometryChanged;
     this.#onToolApply = opts.onToolApply;
+    this.#onSave = opts.onSave;
+    this.#onLoad = opts.onLoad;
+    this.#objects = opts.objects;
     this.#build = new BuildHistory(opts.sim, opts.world, opts.objects);
+  }
+
+  /**
+   * Troca o trio sim/mundo/relógio após um load. Clientes já conectados
+   * recebem snapshot novo via `broadcastSnapshot()`.
+   */
+  rebind(opts: { sim: Simulation; world: World; clock: SimClock }): void {
+    this.#sim = opts.sim;
+    this.#world = opts.world;
+    this.#clock = opts.clock;
+    this.#build = new BuildHistory(opts.sim, opts.world, this.#objects);
   }
 
   get clientCount(): number {
@@ -217,6 +239,32 @@ export class ProtocolHub {
         );
         this.broadcast('clock.update', clockPayload(this.#clock));
         if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, mode }, env.reqId);
+        return;
+      }
+      case 'cmd.sim.save': {
+        if (!this.#onSave) {
+          throw new ProtocolError('UNSUPPORTED', 'cmd.sim.save não está ativo nesta sessão');
+        }
+        const slot = String(p['slot'] ?? 'demo');
+        try {
+          this.#onSave(slot);
+        } catch (e) {
+          throw new ProtocolError('SAVE_FAILED', e instanceof Error ? e.message : String(e));
+        }
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, slot }, env.reqId);
+        return;
+      }
+      case 'cmd.sim.load': {
+        if (!this.#onLoad) {
+          throw new ProtocolError('UNSUPPORTED', 'cmd.sim.load não está ativo nesta sessão');
+        }
+        const slot = String(p['slot'] ?? 'demo');
+        try {
+          this.#onLoad(slot);
+        } catch (e) {
+          throw new ProtocolError('LOAD_FAILED', e instanceof Error ? e.message : String(e));
+        }
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, slot }, env.reqId);
         return;
       }
       case 'cmd.build.paintTile': {

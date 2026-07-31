@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import { startLiveServe, type LiveServeHandle } from './live-serve.js';
@@ -139,4 +142,94 @@ describe('live serve (Godot)', () => {
 
     expect(motion.pathLen).toBeGreaterThan(0);
   }, 15000);
+
+  it('save e load restauram parede pintada', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'live-save-'));
+    const prev = process.env['SIM_SAVE_DIR'];
+    process.env['SIM_SAVE_DIR'] = dir;
+    try {
+      handle = await startLiveServe({ port: 0, fire: false, seed: 'live-saveload', tickMs: 40 });
+      const url = `ws://127.0.0.1:${handle.port}`;
+
+      const ok = await new Promise<boolean>((resolve, reject) => {
+        const ws = new WebSocket(url);
+        let seq = 0;
+        let phase: 'boot' | 'painted' | 'saved' | 'cleared' | 'check' = 'boot';
+        const timer = setTimeout(() => {
+          ws.close();
+          reject(new Error('timeout saveload'));
+        }, 12000);
+
+        const send = (type: string, payload: Record<string, unknown>, reqId?: string) => {
+          seq += 1;
+          ws.send(
+            JSON.stringify({
+              v: 1,
+              type,
+              seq,
+              simTime: 0,
+              payload,
+              ...(reqId ? { reqId } : {}),
+            }),
+          );
+        };
+
+        ws.on('message', (data) => {
+          const env = JSON.parse(data.toString()) as {
+            type: string;
+            reqId?: string;
+            payload: { tiles?: { x: number; y: number; type: string }[]; mode?: string };
+          };
+          if (env.type === 'world.snapshot' && phase === 'boot') {
+            send('cmd.sim.setMode', { mode: 'construction' });
+            phase = 'painted';
+            return;
+          }
+          if (env.type === 'world.snapshot' && env.payload.mode === 'construction' && phase === 'painted') {
+            send('cmd.build.paintTile', {
+              tileType: 'wall',
+              materialId: 'pedra',
+              cells: [{ x: 4, y: 4 }],
+            });
+            return;
+          }
+          if (env.type === 'world.delta' && phase === 'painted') {
+            const t = env.payload.tiles?.find((c) => c.x === 4 && c.y === 4);
+            if (t?.type !== 'wall') return;
+            send('cmd.sim.save', { slot: 'demo' }, 'save1');
+            phase = 'saved';
+            return;
+          }
+          if (env.type === 'res.ok' && env.reqId === 'save1' && phase === 'saved') {
+            send('cmd.build.paintTile', {
+              tileType: 'floor',
+              materialId: 'pinho',
+              cells: [{ x: 4, y: 4 }],
+            });
+            return;
+          }
+          if (env.type === 'world.delta' && phase === 'saved') {
+            const t = env.payload.tiles?.find((c) => c.x === 4 && c.y === 4);
+            if (t?.type !== 'floor') return;
+            send('cmd.sim.load', { slot: 'demo' }, 'load1');
+            phase = 'cleared';
+            return;
+          }
+          if (env.type === 'world.snapshot' && phase === 'cleared') {
+            const t = env.payload.tiles?.find((c) => c.x === 4 && c.y === 4);
+            clearTimeout(timer);
+            ws.close();
+            resolve(t?.type === 'wall');
+          }
+        });
+        ws.on('error', reject);
+      });
+
+      expect(ok).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env['SIM_SAVE_DIR'];
+      else process.env['SIM_SAVE_DIR'] = prev;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 20000);
 });

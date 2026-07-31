@@ -5,7 +5,9 @@
  * a sala de teste tem que deixar a propagação ser lida a olho, não num piscar.
  */
 
+import { join } from 'node:path';
 import { loadConfig } from '../config/load.js';
+import { loadSlot, saveSlot } from '../persist/index.js';
 import {
   advance,
   clearPath,
@@ -31,8 +33,10 @@ import {
   SPIKE_HEIGHT,
   SPIKE_WIDTH,
 } from '../spike/room.js';
+import { Simulation } from '../state/index.js';
 import { ReactionMatrix } from '../substrate/matrix.js';
 import { Substrate, TileReactiveBridge } from '../substrate/index.js';
+import { World } from '../world/grid.js';
 import { SimClock } from '../world/clock.js';
 
 /** Intervalo real entre ticks na demo visual (~1 hop de fogo a cada poucos segundos). */
@@ -71,7 +75,7 @@ export async function startLiveServe(opts?: {
   const tickMs = opts?.tickMs ?? DEMO_TICK_MS;
   // Em testes com tickMs baixo, frame = tick; na demo, subpasso visual ~10 Hz.
   const frameMs = opts?.frameMs ?? (tickMs <= 120 ? tickMs : 100);
-  const { sim, world } = buildSpikeRoom(cfg, opts?.seed ?? process.env['SIM_SEED'] ?? 'serve-v0');
+  let { sim, world } = buildSpikeRoom(cfg, opts?.seed ?? process.env['SIM_SEED'] ?? 'serve-v0');
   const { lia, rui } = loadSpikeAgents();
   lia.vision = { angle: 100, range: 5 };
   rui.vision = { angle: 100, range: 5 };
@@ -81,15 +85,15 @@ export async function startLiveServe(opts?: {
   sim.state.clock.paused = true;
   sim.state.clock.speed = 0;
 
-  const clock = new SimClock(sim.state.clock, {
+  const calendar = {
     minutesPerTick: cfg.tuning.minutesPerTick,
     hoursPerDay: cfg.tuning.hoursPerDay,
     daysPerSeason: cfg.tuning.daysPerSeason,
     seasonsPerYear: cfg.tuning.seasonsPerYear,
     availableSpeeds: cfg.tuning.availableSpeeds,
-  });
+  };
+  let clock = new SimClock(sim.state.clock, calendar);
 
-  const bridge = new TileReactiveBridge(sim, world);
   // Matriz só desta sessão: propaga mais devagar sem alterar o JSON de aceite.
   const demoMatrix = new ReactionMatrix(
     cfg.reactions.rules.map((r) =>
@@ -104,20 +108,26 @@ export async function startLiveServe(opts?: {
     ),
     cfg.materials,
   );
-  const substrate = new Substrate({
-    materials: cfg.materials,
-    matrix: demoMatrix,
-    effects: cfg.effects,
-    rng: sim.rng.stream('substrato'),
-    tuning: {
-      stateDecayPerTick: cfg.tuning.stateDecayPerTick * 0.25,
-      maxActiveTargets: cfg.tuning.maxActiveTargets,
-      thermalEquilibriumTolerance: cfg.tuning.thermalEquilibriumTolerance,
-      maxCascadeStepsPerTick: 1,
-      // ~100 ticks até virar resíduo — tempo de ver o alastramento.
-      burnIntegrityLossPerTick: 1,
-    },
-  });
+
+  function makeSubstrate(s: Simulation): Substrate {
+    return new Substrate({
+      materials: cfg.materials,
+      matrix: demoMatrix,
+      effects: cfg.effects,
+      rng: s.rng.stream('substrato'),
+      tuning: {
+        stateDecayPerTick: cfg.tuning.stateDecayPerTick * 0.25,
+        maxActiveTargets: cfg.tuning.maxActiveTargets,
+        thermalEquilibriumTolerance: cfg.tuning.thermalEquilibriumTolerance,
+        maxCascadeStepsPerTick: 1,
+        // ~100 ticks até virar resíduo — tempo de ver o alastramento.
+        burnIntegrityLossPerTick: 1,
+      },
+    });
+  }
+
+  let bridge = new TileReactiveBridge(sim, world);
+  let substrate = makeSubstrate(sim);
 
   const movers = new Map<string, MoverState>([
     [lia.id, createMover(SPIKE_GRID, lia.pos.x, lia.pos.y, lia.rotation)],
@@ -127,6 +137,8 @@ export async function startLiveServe(opts?: {
   const manualControl = new Set<string>();
   /** Último destino pedido — usado para recalcular quando a geometria muda. */
   const goals = new Map<string, { x: number; y: number }>();
+
+  const saveDir = process.env['SIM_SAVE_DIR'] ?? join(process.cwd(), 'saves');
 
   const hub = new ProtocolHub({
     sim,
@@ -140,6 +152,30 @@ export async function startLiveServe(opts?: {
     onAgentMove: (agentId, goal) => orderMove(agentId, goal.x, goal.y, true),
     onGeometryChanged: () => revalidatePaths(),
     onToolApply: (effect, cells) => applyTool(effect, cells),
+    onSave: (slot) => {
+      const path = saveSlot(saveDir, slot, sim.serialize());
+      console.log(JSON.stringify({ event: 'saved', slot, path }));
+    },
+    onLoad: (slot) => {
+      const json = loadSlot(saveDir, slot);
+      sim = Simulation.deserialize(json);
+      world = new World({
+        sim,
+        scale: { metersPerTile: cfg.tuning.metersPerTile },
+      });
+      clock = new SimClock(sim.state.clock, calendar);
+      bridge = new TileReactiveBridge(sim, world);
+      substrate = makeSubstrate(sim);
+      rehydrateSubstrate();
+      rebuildMoversFromAgents();
+      hub.rebind({ sim, world, clock });
+      // Não reacende o foco inicial — o save já tem o fogo (ou a cinza).
+      fireLit = true;
+      started = true;
+      hub.broadcastSnapshot();
+      hub.pushFrame();
+      console.log(JSON.stringify({ event: 'loaded', slot, simTime: clock.simTime }));
+    },
   });
   const port = opts?.port ?? Number(process.env['SIM_PORT'] ?? DEFAULT_PORT);
   const server = await startProtocolServer({ hub, port, host: '0.0.0.0' });
@@ -251,6 +287,35 @@ export async function startLiveServe(opts?: {
       }
     }
     return n;
+  }
+
+  /** Reativa tiles com estado/temperatura depois de um load. */
+  function rehydrateSubstrate(): void {
+    const grid = world.grid(SPIKE_GRID);
+    for (let y = 0; y < grid.height; y += 1) {
+      for (let x = 0; x < grid.width; x += 1) {
+        const o = sim.overlayAt(SPIKE_GRID, x, y);
+        if (!o) continue;
+        const hasState = (o.states?.length ?? 0) > 0;
+        const hasTemp = o.temperature !== undefined;
+        const damaged = o.integrity !== undefined && o.integrity < 100;
+        if (hasState || hasTemp || damaged) {
+          substrate.activate(bridge.targetAt(SPIKE_GRID, x, y));
+        }
+      }
+    }
+  }
+
+  function rebuildMoversFromAgents(): void {
+    movers.clear();
+    goals.clear();
+    manualControl.clear();
+    for (const agent of Object.values(sim.state.agents)) {
+      movers.set(
+        agent.id,
+        createMover(SPIKE_GRID, agent.pos.x, agent.pos.y, agent.rotation ?? 0),
+      );
+    }
   }
 
   function cellPayload(gridId: string, x: number, y: number) {
