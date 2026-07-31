@@ -225,7 +225,14 @@
     "fatorVelocidadeMinimoPorCarga": 0.25,
     "habilidadeMinimaDesmonteSemDano": 30,
     "orcamentoTokensBlocoObjetos": 150,
-    "limiarDivergenciaTermicaC": 1.0
+    "limiarDivergenciaTermicaC": 1.0,
+    "liquido": {
+      "$comment": "O-029 a O-031. Carga e poca usam a mesma forma, entao estes numeros valem nos dois lados.",
+      "volumeBebidaPorAcaoM3": 0.0004,
+      "minutosParaTransferirLiquido": 1,
+      "fracaoDaCargaPerdidaAoTombar": 0.6,
+      "porqueTombarNaoPerdeTudo": "Recipiente tombado que perdesse a carga inteira tornaria todo transporte de agua uma aposta de tudo ou nada. Perder a maior parte mantem o susto e deixa o que sobrou valer a pena carregar."
+    }
   },
 
   "mundo": {

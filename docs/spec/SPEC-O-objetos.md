@@ -133,6 +133,45 @@ Esta é a distinção que permite um baú com quarenta itens não custar quarent
 
 ---
 
+## Líquido
+
+Um recipiente que não pode conter água é um recipiente pela metade. Sem esta seção, `R-020` dá volume à poça e `O-003` dá volume ao baú, e não existe o meio entre os dois: sede só é saciável em cima da fonte, cozinhar não tem panela, e levar água para a roça é impossível. É a lacuna que separa "há líquido no mundo" de "líquido é algo que se administra".
+
+### O-029 — Carga líquida
+`P1` · `V4` · decisão · dep: O-003, R-020, R-021
+
+Um `ObjectDef` pode declarar `liquidCapacity` em metros cúbicos, e um exemplar com essa capacidade carrega no máximo uma **carga**: material dominante, descritor opcional de uma a três palavras, volume e temperatura.
+
+Essa é exatamente a representação que `R-021` já usa para a poça, e é de propósito. Carga e poça são a mesma coisa em lugares diferentes, então encher e verter não traduzem entre dois formatos, e não existe pergunta sobre o que acontece com a informação no caminho: nada acontece, porque não há caminho. Nenhuma tabela de componentes com proporções mora no recipiente.
+
+O que se perde com isso é a receita: não há como representar "três partes de água e uma de álcool", e portanto não há alquimia por dosagem. O que se ganha é que verter o que não devia continua sendo expressível — "água com óleo", "água com sangue" —, e é essa a parte que produz cena. Se dosagem vier a importar, o lugar de mudar é `R-021`, e recipiente e poça mudam juntos porque são a mesma regra.
+
+A capacidade é independente do `volume` de `O-001`: um cantil ocupa mais espaço na mochila do que a água que leva dentro, e a diferença é a parede.
+
+**Aceite:** um cantil de capacidade declarada aceita até aquele volume e não mais; a carga aparece em percepção como dominante mais descritor, nunca como lista de volumes; e o cantil cheio e o vazio ocupam o mesmo espaço na mochila.
+
+### O-030 — Encher, verter, beber
+`P1` · `V4` · derivado · dep: O-029, B-019, V-002
+
+Transferir líquido entre poça e recipiente, entre dois recipientes, ou do recipiente para a boca é affordance declarada, resolvida na engine sem mediação, pelo caminho de `V-002`. Transferir para um recipiente que já tem carga de material diferente aplica `R-021` sobre o resultado, e é assim que "água com óleo" nasce dentro do cantil pela mesma regra que a faria nascer no chão.
+
+O peso da carga entra na carga transportada de `O-013` como qualquer outro peso, o que faz água ser cara de carregar sem que exista regra alguma sobre água ser cara de carregar.
+
+Beber consome volume e satisfaz a sede de `B-019` pelo caminho normal das necessidades. Recipiente sem carga não oferece a affordance, e é isso que faz o cantil vazio ser um problema em vez de um objeto inerte.
+
+**Aceite:** encher um cantil numa poça reduz o volume da poça no mesmo tanto que a carga aumentou; beber de cantil cheio move a sede e esvazia por volume; o cantil vazio não oferece beber; e um cantil cheio pesa mais na conta de `O-013` que o mesmo cantil vazio.
+
+### O-031 — A carga troca calor e se perde quando o recipiente se perde
+`P1` · `V4` · derivado · dep: O-029, O-006, O-016, R-007
+
+A carga tem temperatura e converge com o recipiente pelo grafo de `O-006`, com o mesmo `thermalEfficiency` que já governa junta de composto. Panela de metal sobre fogo esquenta o que tem dentro depressa; odre de couro isola. Nada disso é regra sobre cozinhar: cozinhar é o que sobra quando calor, recipiente e material já estão ligados.
+
+Recipiente destruído por `O-016`, ou tombado, devolve a carga ao tile como poça de `R-020`, na temperatura que tinha. Água quente derramada é água quente no chão, e o substrato reage a ela sem saber que veio de uma panela.
+
+**Aceite:** panela com água sobre tile em chamas eleva a temperatura da carga a uma taxa maior que odre de couro com a mesma carga no mesmo tile; quebrar a panela cheia produz poça do volume e da temperatura que a carga tinha.
+
+---
+
 ## Trânsito
 
 ### O-010 — Projétil é apenas um objeto com velocidade
