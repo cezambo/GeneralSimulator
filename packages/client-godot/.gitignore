@@ -1,0 +1,5 @@
+# Ignore Godot editor/user noise; keep the project source.
+.godot/
+*.translation
+export_presets.cfg
+android/

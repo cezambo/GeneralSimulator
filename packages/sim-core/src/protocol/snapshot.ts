@@ -61,14 +61,10 @@ export function buildWorldSnapshot(
     name: a.name,
     pos: { x: a.pos.x, y: a.pos.y },
     rot: a.rotation,
-    ...(a.vision
-      ? {
-          vision: {
-            angle: a.vision.angle ?? 120,
-            range: a.vision.range ?? 15,
-          },
-        }
-      : {}),
+    vision: {
+      angle: a.vision?.angle ?? 120,
+      range: a.vision?.range ?? 8,
+    },
   }));
 
   return {
