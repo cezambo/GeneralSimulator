@@ -50,6 +50,8 @@
     "maxPassosDeCascataPorTick": 4,
     "porqueTetoDeCascata": "R-017. Efeito aplicado dispara reacao de contato com quem divide a celula, e essa cadeia precisa de teto. Nao e otimizacao: 'extinguish' gera 'smoky', e uma regra mal escrita que fizesse 'smoky' gerar 'extinguish' prenderia o tick num laco infinito. O teto transforma um travamento numa cadeia curta demais, que e um defeito que aparece. Quatro cobre agua-piso-poca-criatura, que e a cadeia mais longa que o catalogo inicial produz.",
     "decaimentoEstadoTransientePorTick": 0.02,
+    "perdaIntegridadeQueimaPorTick": 4,
+    "porquePerdaIntegridadeQueima": "R-027. Pontos de integridade consumidos por tick enquanto burning>0. Em 4, um piso de madeira (100) vira residuo em 25 ticks — cerca de meia hora simulada — o bastante para o fogo se alastrar antes de virar cinza.",
     "limiarVolumeLiquidoPerceptivel": 0.05,
     "ticksParaApodrecimento": 4320
   },

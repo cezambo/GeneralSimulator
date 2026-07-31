@@ -36,6 +36,8 @@ godot --path packages/client-godot
 | 1 / 2 / 3 / 4 | Velocidade 1, 2, 5, 20 |
 | V | Liga/desliga cone de visão |
 
+Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; resíduo (cinza/carvão) escurece. `SIM_FIRE=0` desliga o seed.
+
 ## O que o cliente faz / não faz
 
 Faz: desenhar snapshot, interpolar visualmente posição recebida, enviar `cmd.sim.setSpeed`.

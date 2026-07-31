@@ -35,17 +35,18 @@ export function buildWorldSnapshot(
   for (let y = 0; y < grid.height; y += 1) {
     for (let x = 0; x < grid.width; x += 1) {
       const t = world.tileAt(grid.id, x, y);
-      const cell: TileCellSnapshot = {
+      const overlay = sim.overlayAt(grid.id, x, y);
+      tiles.push({
         x,
         y,
         type: t.type,
         materialId: t.materialId,
-      };
-      if (t.state && Object.keys(t.state).length > 0) {
-        tiles.push({ ...cell, state: { ...t.state } });
-      } else {
-        tiles.push(cell);
-      }
+        ...(t.state && Object.keys(t.state).length > 0 ? { state: { ...t.state } } : {}),
+        ...(overlay?.states && overlay.states.length > 0
+          ? { states: overlay.states.map((s) => ({ type: s.type, intensity: s.intensity })) }
+          : {}),
+        ...(overlay?.integrity !== undefined ? { integrity: overlay.integrity } : {}),
+      });
     }
   }
 

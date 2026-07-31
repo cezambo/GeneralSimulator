@@ -25,6 +25,7 @@ const TUNING: SubstrateTuning = {
   maxActiveTargets: 512,
   thermalEquilibriumTolerance: 0.5,
   maxCascadeStepsPerTick: 4,
+  burnIntegrityLossPerTick: 4,
 };
 
 function material(id: string, over: Partial<Material> = {}): Material {

@@ -50,6 +50,9 @@ export interface TileCellSnapshot {
   readonly type: string;
   readonly materialId: string;
   readonly state?: Record<string, unknown>;
+  /** Estados transientes (burning, wet, …) para o cliente pintar. */
+  readonly states?: readonly { type: string; intensity: number }[];
+  readonly integrity?: number;
 }
 
 export interface WorldSnapshotPayload {

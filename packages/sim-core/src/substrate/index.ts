@@ -7,6 +7,7 @@ import { hasState, type MaterialLookup, type ReactiveTarget } from './target.js'
 export * from './target.js';
 export * from './matrix.js';
 export * from './effects.js';
+export { TileReactiveBridge, tileTargetId } from './world-bridge.js';
 
 /**
  * O substrato reativo. R-014, R-017, R-047, R-048, R-049.
@@ -41,6 +42,11 @@ export interface SubstrateTuning {
   readonly thermalEquilibriumTolerance: number;
   /** `substrato.maxPassosDeCascataPorTick`. */
   readonly maxCascadeStepsPerTick: number;
+  /**
+   * `substrato.perdaIntegridadeQueimaPorTick`.
+   * R-027: tile/objeto em chamas perde integridade a cada tick.
+   */
+  readonly burnIntegrityLossPerTick: number;
 }
 
 export interface SubstrateOptions {
@@ -138,6 +144,7 @@ export class Substrate {
 
     aplicados += this.#thermalPass(alvos, ctx);
     this.#decayPass(alvos);
+    this.#burnConsumePass(alvos, ctx);
 
     let desativados = 0;
     for (const alvo of alvos) {
@@ -453,6 +460,39 @@ export class Substrate {
         }
       }
       alvo.states = alvo.states.filter((s) => s.intensity > 0);
+    }
+  }
+
+  /**
+   * Fogo consome combustível. R-027.
+   *
+   * Integridade zero → `burnsTo` (se estava em chama) ou `rubbleMaterialId`.
+   * Sem isto o aceite "queima até virar escombro" não fecha.
+   */
+  #burnConsumePass(alvos: readonly ReactiveTarget[], ctx: TickContext): void {
+    const perda = this.#o.tuning.burnIntegrityLossPerTick;
+    for (const alvo of alvos) {
+      if (!hasState(alvo, 'burning')) continue;
+      if (alvo.integrity === undefined) alvo.integrity = 100;
+      const antes = alvo.integrity;
+      alvo.integrity = Math.max(0, alvo.integrity - perda);
+      if (alvo.integrity !== antes) {
+        this.#log(ctx.simTime, 'burn_consume', alvo, { kind: 'time', ref: 'burning' });
+      }
+      if (alvo.integrity > 0) continue;
+
+      const material = this.#o.materials.get(alvo.materialId);
+      const residuo = material.burnsTo ?? material.rubbleMaterialId;
+      if (residuo && residuo !== alvo.materialId && this.#o.materials.has(residuo)) {
+        const de = alvo.materialId;
+        alvo.materialId = residuo;
+        this.#log(ctx.simTime, 'transmute', alvo, { kind: 'time', ref: `burnsTo:${de}` });
+      }
+      // Chama morre no residuo; sobra fumaça breve.
+      alvo.states = alvo.states.filter((s) => s.type !== 'burning');
+      if (!alvo.states.some((s) => s.type === 'smoky')) {
+        alvo.states.push({ type: 'smoky', intensity: 40 });
+      }
     }
   }
 
