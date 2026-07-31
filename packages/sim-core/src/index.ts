@@ -10,4 +10,5 @@
  */
 
 export { SeedRoot, hashString, type Rng } from './rng/index.js';
+export * from './llm/index.js';
 export * from './types/domain.js';
