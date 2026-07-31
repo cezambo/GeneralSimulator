@@ -15,8 +15,12 @@ export_presets.cfg
 # Segredos e config local
 .env
 .env.*
-config/models.json
-config/*.local.json
+# Os *.example.json sao a referencia comentada e VAO para o versionamento; os
+# arquivos reais, sem .example, sao os carregados em execucao e ficam de fora
+# (config/README.md). Antes so models.json era ignorado, e tuning.json local
+# teria entrado no repositorio junto da calibracao pessoal de quem o editou.
+config/*.json
+!config/*.example.json
 
 # Saídas de execução
 cassettes/

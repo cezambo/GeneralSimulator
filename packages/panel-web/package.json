@@ -1,0 +1,10 @@
+{
+  "name": "@sim/panel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Painéis densos de dados: inspetor, seletor de modelos, timeline, custo. V2 em diante.",
+  "scripts": {
+    "dev": "echo \"panel-web ainda não começou — V2. Ver docs/04-ROADMAP.md\" && exit 0"
+  }
+}

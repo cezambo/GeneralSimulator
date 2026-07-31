@@ -1,0 +1,18 @@
+{
+  "name": "@sim/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Núcleo headless: mundo, substrato, corpo, cognição, Validador e camada de LLM. X-001.",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sim": "node --experimental-strip-types src/cli/run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$comment": "Base compartilhada. X-001 manda o núcleo ser headless: nenhuma lib de DOM aqui, e é de propósito — a ausência de \"dom\" em lib é o que faz o compilador recusar código de renderização dentro do sim-core antes de a regra virar convenção que alguém esquece.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+
+    "declaration": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
+  }
+}
