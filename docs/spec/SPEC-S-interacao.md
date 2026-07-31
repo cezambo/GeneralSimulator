@@ -122,9 +122,11 @@ Separar os dois é o que permite ao agente gostar menos de alguém sem mudar o q
 ### S-014 — Impressões alimentam a dissonância
 `P0` · `V6` · decisão · dep: S-012, C-025
 
-As impressões de todos os participantes entram **numa** passagem pelo classificador de dissonância, com pré-filtro por tópico (`C-030`).
+As impressões que um participante tirou da conversa entram **todas numa** passagem pelo classificador de dissonância, com pré-filtro por tópico (`C-030`). Uma passagem por participante, e dentro dela todas as impressões daquela pessoa de uma vez.
 
-**Aceite:** uma conversa de três participantes gera uma chamada de classificação por participante, não uma por par de impressão e opinião.
+A unidade é o participante, e não a conversa, porque o classificador julga impressão contra **as opiniões de quem teve a impressão**. Uma passagem única para a mesa inteira teria de carregar as opiniões de todos os presentes no mesmo contexto, e o modelo passaria a decidir contra crenças de várias pessoas ao mesmo tempo — o que não é caro, é errado. O que `C-025` economiza é a explosão de pares: seis impressões contra vinte opiniões são uma chamada e não cento e vinte. O número de participantes multiplica; o número de pares, não.
+
+**Aceite:** uma conversa de três participantes gera três chamadas de classificação, uma por participante, e não uma por par de impressão e opinião.
 
 ---
 

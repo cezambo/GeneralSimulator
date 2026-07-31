@@ -201,7 +201,9 @@ Abaixo do limiar de desmaio, o agente cai. Em zero, morre.
 ### B-014 — Consciência escolhe o tier
 `P0` · `V5` · decisão · dep: B-013, L-004
 
-O nível de consciência seleciona o tier de LLM usado no próximo pensamento. Consciência baixa força `instinct`: pensamento curto, barato, impulsivo.
+O nível de consciência seleciona **qual prompt de pensamento** roda em seguida, pelo caminho de `C-004`: abaixo do limiar, `agent.thought.base_low`, que é curto, barato e impulsivo; acima, `base_high`. O tier vem junto do prompt, e não da consciência — quem escolhe modelo é `L-003`, e o prompt curto está atrelado ao tier `compact`.
+
+A distinção importa porque o corpo não deve conhecer modelo. Se a consciência escolhesse tier direto, trocar o vínculo de um tier no menu de modelos passaria a mexer no que um agente atordoado consegue pensar, e uma configuração de infraestrutura viraria uma regra de fisiologia.
 
 Duas coisas de uma vez, e é por isso que este requisito importa mais do que parece: um agente ferido **pensa pior**, o que é dramaticamente correto, e **custa menos**, o que é economicamente conveniente. O incentivo do sistema aponta na direção certa.
 
@@ -267,24 +269,31 @@ Assim necessidade e saúde deixam de ser dois sistemas. Fome extrema não "drena
 
 Tipo de dano cruzado com **propriedade do material** produz condição. Mesma forma de regra de reescrita da matriz de reação, mesmo formato de arquivo, mesmo verificador de contratos — inclusive o campo `porque` obrigatório e a proibição de R-001 de nomear material por identificador.
 
+Os identificadores abaixo são os que estão no arquivo, em inglês, e não uma tradução deles. A tabela já esteve escrita em português — `corte`, `#frágil`, `#condutivo` —, e foi essa tradução que produziu o defeito: `O-012` mandava faca produzir `pierce` e prometia laceração no mesmo parágrafo, porque quem leu a tabela traduzida não tinha como notar que são tipos diferentes. Prosa em português, identificador em código.
+
+**A ordem importa: a primeira linha que casa vence.** Por isso o específico vem antes do geral — osso é `#fragile` **e** `#living` ao mesmo tempo, e com as duas linhas de `cut` na ordem inversa a de fratura exposta nunca dispararia. A última linha é fallback, e não uma linha comum: só vale quando nenhuma das outras casou.
+
 | Dano | Material | Condição |
 |------|----------|----------|
-| corte | `#living` | laceração, sangra pelo fator do material |
-| corte | `#frágil & #living` | fratura exposta |
-| contusão | `#frágil` | fratura |
-| contusão | `#living` | hematoma |
-| perfuração | `#vital` | perfuração, sangra muito, risco alto de infecção |
-| queimadura | `#inflamável` | queimadura por estágio |
-| frio | `#living` | ulceração por congelamento |
-| elétrico | `#condutivo` | choque, inconsciência possível |
-| corrosivo | `#living` | queimadura química |
-| qualquer | `!#living` | nenhuma condição: perde integridade como objeto (R-027) |
+| `cut` | `#fragile & #living` | `fracture` — fratura exposta |
+| `cut` | `#living` | `laceration` — sangra pelo fator do material |
+| `blunt` | `#fragile` | `fracture` |
+| `blunt` | `#living` | `bruise` — hematoma |
+| `pierce` | `#vital` | `puncture` — sangra muito, risco alto de infecção |
+| `pierce` | `#living` | `puncture` — sangra pelo fator do material |
+| `burn` | `#inflammable` | `burn` — por estágio |
+| `cold` | `#living` | `frostbite` |
+| `electric` | `#conductive` | `shock`, inconsciência possível |
+| `corrosion` | `#living` | `chem_burn` |
+| `*` *(fallback)* | `!#living` | nenhuma condição: perde integridade como objeto (R-027) |
 
 A coluna do meio é etiqueta e não nome de tecido, e a última linha é a que fecha o desenho. Ossos são frágeis porque o catálogo diz que são — igual a vidro e cerâmica. Nervos conduzem porque são condutivos — igual a cobre. E uma parte cujo material deixou de ser vivo simplesmente para de adoecer e passa a se comportar como matéria, que é exatamente o que se espera depois de uma transmutação (B-039).
 
 Os tipos de dano da primeira coluna vêm do vocabulário fechado de B-052, e são a única coisa aqui que não é ajustável em dado: acrescentar linha à matriz é editar arquivo, acrescentar **tipo** é mudar contrato.
 
-**Aceite:** cada linha tem teste; acrescentar uma linha à matriz é editar dado; nenhuma linha nomeia um material por identificador; e todo tipo de dano de B-052 tem ao menos uma linha.
+A dependência de ordem é o custo de "a primeira que casa vence", e é um custo real: uma linha nova posta no lugar errado morre calada, sem erro e sem teste vermelho, e o sintoma aparece meses depois como um tipo de golpe que não machuca. Foi o que já aconteceu duas vezes neste arquivo. Por isso o `porque` de cada linha específica registra de quem ela precisa vir antes, e por isso o aceite abaixo cobra as duas coisas que só se descobrem lendo o arquivo inteiro: que nenhuma linha esteja morta, e que nenhum tipo de dano fique sem alcançar tecido comum.
+
+**Aceite:** cada linha tem teste; acrescentar uma linha à matriz é editar dado; nenhuma linha nomeia um material por identificador; **toda linha é alcançável** — nenhuma é precedida por outra mais geral que a cubra por completo; e **todo tipo de dano de B-052 tem ao menos uma linha que casa com tecido meramente `#living`**, para que nenhuma agressão possa resolver em nada por falta de linha.
 
 ### B-021 — Seleção da parte atingida
 `P0` · `V5` · decisão de RimWorld · dep: B-002

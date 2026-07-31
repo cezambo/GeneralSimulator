@@ -199,7 +199,7 @@ O campo `velocity` permanece porque é o parâmetro do raio, não uma posição 
 
 A energia do impacto sai da massa e da velocidade, com os fatores em `tuning.json`. O tipo de dano sai do material, dentro do vocabulário fechado de `DamageType` e sem nenhuma entrada nova: objeto com a etiqueta `sharp` produz `pierce`, qualquer outro produz `blunt`. Daí em diante não há caminho novo — é R-027 para tiles e objetos, B-020 para corpos, e a matriz de reação para o que o contato desencadeia.
 
-Consequência que é o ponto: arremessar uma faca em alguém e esfaquear alguém convergem no mesmo lugar, então uma facada arremessada produz laceração, sangramento, cobertura de sangue no tile e rastro seguível, sem que exista sistema de arremesso além do raio. Queda usa o mesmo canal apontado para baixo e entrega `blunt` (W-062). E o Validador não é chamado para nada disso, pela regra de V-007.
+Consequência que é o ponto: arremessar uma faca em alguém e esfaquear alguém convergem no mesmo lugar, então uma facada arremessada produz perfuração, sangramento, cobertura de sangue no tile e rastro seguível, sem que exista sistema de arremesso além do raio. Queda usa o mesmo canal apontado para baixo e entrega `blunt` (W-062). E o Validador não é chamado para nada disso, pela regra de V-007.
 
 **Aceite:** uma faca e uma pedra de massa igual arremessadas contra o mesmo alvo produzem `pierce` e `blunt` respectivamente, pelos mesmos caminhos de um golpe corpo a corpo, com zero invocações do Validador.
 
@@ -339,7 +339,9 @@ Quando alguém tenta um uso que nenhuma regra cobre, o Validador julga — e dec
 
 O ciclo de vida é o mesmo das regras provisórias de V-025 — provisória, permanente ou rejeitada; viva desde o instante em que nasce, porque uma fila de aprovação humana antes da ativação devolveria exatamente o custo que o mecanismo existe para eliminar; revisável no painel de U-022, com contagem de disparos e ponteiro para o julgamento de origem. Rejeitar impede disparos futuros e não desfaz o que já aconteceu.
 
-O registro vive na definição do objeto, e não como `ProvisionalRule` de domínio próprio, porque a regra é expressa no vocabulário do próprio objeto — gatilho de uso, desfecho, efeito nomeado — e não no vocabulário fechado de nenhum dos domínios de V-022.
+O registro é **um só**, e fica em `ProvisionalRule` com domínio `object`, materializado como `ItemRule` na definição para que a resolução em jogo seja uma consulta local ao molde. Um registro e um espelho, não duas verdades.
+
+⚑ Este parágrafo já disse o contrário — que a regra viveria só na definição do objeto, fora do vocabulário de V-022. Ficou insustentável quando V-041 exigiu que o teto de regras vivas de V-027, a detecção de disparo anômalo e o painel de U-022 valessem também para objetos: nenhum dos três consegue contar, vigiar ou revisar o que não está no registro que eles leem. A saída foi acrescentar `object` como sexto domínio de V-022, com `ItemRule` por forma, em vez de manter um registro paralelo que precisaria de cópias próprias dos três mecanismos.
 
 É aqui que o documento se paga. O primeiro agente que tenta usar uma foice como arma custa uma chamada; o segundo não custa nada, nem o terceiro, e a definição da foice fica permanentemente mais rica do que o catálogo a criou. Um mundo antigo é mais barato de simular que um mundo novo.
 

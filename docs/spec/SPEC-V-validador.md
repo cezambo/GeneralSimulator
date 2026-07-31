@@ -217,8 +217,11 @@ A regra proposta precisa ser expressável no vocabulário fechado do domínio qu
 | `social` | template de fato perceptível, viés de relação |
 | `cognition` | tópico, `stance` resultante |
 | `community` | template de norma, alvo mecânico permitido |
+| `object` | `ItemRule`: gatilho de uso, desfecho, efeito nomeado, com o `defId` do molde alvo |
 
 O Validador nunca inventa primitiva nova de engine. Ele apenas combina as que existem.
+
+O domínio `object` é o sexto e o mais novo, e existe para que a promoção com destino ao Funcionamento (`V-041`, `O-024`) passe pela mesma porta que as outras. A alternativa considerada era deixar regra de objeto fora desta tabela, por ser expressa no vocabulário do próprio objeto; foi descartada porque `V-023` força `one_off` em tudo que não é expressável aqui, e regra de objeto nasceria natimorta.
 
 **Aceite:** uma regra que cita efeito, operação ou alvo fora do vocabulário do seu domínio é rejeitada.
 

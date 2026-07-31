@@ -134,7 +134,19 @@ for (const file of textTargets) {
     if (NEGATING.test(line)) continue;
     for (const t of OBSOLETE_TIERS) {
       // Só conta como tier quando aparece em posição de tier, não como palavra solta.
-      if (new RegExp(`(tier|ROLE)[^\\n]{0,20}\\b${t}\\b|\`${t}\`\\s*[|,]`, 'i').test(line)) {
+      //
+      // Duas formas. A crase é voz de identificador: `instinct` em prosa é uso,
+      // não menção, e conta sozinha. A segunda forma cobre o caso sem crase pela
+      // vizinhança da palavra "tier".
+      //
+      // A janela era de 20 caracteres e exigia que a crase viesse seguida de "|"
+      // ou ",", o que só pegava célula de tabela e item de lista. B-014 escapou
+      // das duas: dizia "seleciona o tier de LLM usado no próximo pensamento.
+      // Consciência baixa força `instinct`" — a crase seguida de dois-pontos, e a
+      // palavra "tier" na frase anterior, longe demais. Passou por uma auditoria
+      // inteira sem ser vista, que é exatamente o que este bloco existe para
+      // impedir.
+      if (new RegExp(`\`${t}\`|(tier|ROLE)[^\\n]{0,120}\\b${t}\\b`, 'i').test(line)) {
         fail(`${rel}:${n}: tier aposentado "${t}"`);
       }
     }
@@ -330,6 +342,61 @@ for (const row of matrixRows) {
 // Totalidade: um dano sem regra é uma agressão que não resolve em nada.
 for (const dt of damageTypes) {
   if (!seenDamage.has(dt)) fail(`conditions.example.json: nenhuma regra da matriz cobre o dano "${dt}" — uma agressão desse tipo não produziria ferimento`);
+}
+
+// ── Duas checagens que só se fazem lendo a matriz inteira ────────────────
+//
+// A checagem acima é fraca de um jeito que custou caro: ela se satisfaz com
+// UMA linha qualquer. "pierce" tinha uma, contra #vital, e passou — enquanto
+// uma facada em braço não produzia ferimento nenhum, porque nem casava com
+// #vital nem com o fallback, que exige !#living. Uma agressão resolvia em
+// nada, que é o desfecho que B-052 existe para impedir.
+//
+// Selector é conjunção de termos como "#fragile & #living" e "!#living".
+const parseSel = (s) => {
+  const pos = new Set(), neg = new Set();
+  for (const raw of String(s ?? '').split('&')) {
+    const t = raw.trim();
+    if (!t) continue;
+    if (t.startsWith('!')) neg.add(t.replace(/^!#?/, ''));
+    else pos.add(t.replace(/^#/, ''));
+  }
+  return { pos, neg };
+};
+const subset = (a, b) => [...a].every((x) => b.has(x));
+
+// Fallback tem campo próprio e não é linha comum: só vale quando nada casou.
+const normalRows = matrixRows.filter((r) => !r.fallback);
+
+// 1. Todo tipo de dano precisa alcançar tecido meramente vivo. Um tipo que só
+//    casa com tecido especial some justamente no golpe mais comum.
+for (const dt of damageTypes) {
+  const alcancaComum = normalRows.some((r) => {
+    if ((r.damageType ?? r.damage) !== dt) return false;
+    const { pos, neg } = parseSel(r.material ?? r.materialSelector);
+    return subset(pos, new Set(['living'])) && !neg.has('living');
+  });
+  if (!alcancaComum) {
+    fail(`conditions.example.json: o dano "${dt}" não tem linha que alcance tecido meramente #living — um golpe desse tipo em membro comum não produziria ferimento`);
+  }
+}
+
+// 2. Linha inalcançável. Como "a primeira que casa vence", uma linha precedida
+//    por outra mais geral que a cubra por completo está morta: nunca dispara,
+//    não quebra teste, e o sintoma aparece muito depois como um golpe que não
+//    machuca. Foi o que aconteceu com "cut + #fragile & #living", que estava
+//    depois de "cut + #living" e portanto nunca produziu fratura exposta.
+for (let i = 0; i < normalRows.length; i++) {
+  const alvo = parseSel(normalRows[i].material ?? normalRows[i].materialSelector);
+  const dtAlvo = normalRows[i].damageType ?? normalRows[i].damage;
+  for (let j = 0; j < i; j++) {
+    const antes = parseSel(normalRows[j].material ?? normalRows[j].materialSelector);
+    const dtAntes = normalRows[j].damageType ?? normalRows[j].damage;
+    if (dtAntes !== dtAlvo && dtAntes !== '*') continue;
+    if (subset(antes.pos, alvo.pos) && subset(antes.neg, alvo.neg)) {
+      fail(`conditions.example.json: a linha ${i + 1} da matriz (${dtAlvo} + ${normalRows[i].material}) é inalcançável — a linha ${j + 1} (${dtAntes} + ${normalRows[j].material}) é mais geral, vem antes e sempre vence`);
+    }
+  }
 }
 
 // Reações: material e efeito citados precisam existir.

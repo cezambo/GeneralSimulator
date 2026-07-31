@@ -74,7 +74,7 @@ A bandeira só é **oferecida** quando o orçamento de pensamento profundo do ag
 ### C-051 — Orçamento de pensamento profundo
 `P0` · `V5` · decisão · dep: C-004, C-005, A-020
 
-Por via de regra o agente decide e conversa com o modelo médio, sem raciocínio. Pensar mais profundamente, com o modelo mais forte, é opção dele, limitada por um orçamento que o agente carrega no estado — total, usado e início da janela — e que vale por um período de vários dias, não por dia, com o tamanho dimensionado pela inteligência da personalidade (`A-020`). Janela longa em vez de cota diária porque deliberação é recurso de crise: um agente que gasta as três deliberações da semana no dia em que o irmão morre está se comportando corretamente, e uma cota diária o impediria disso para lhe dar profundidade num dia em que não acontece nada.
+Por via de regra o agente decide e conversa pelos prompts comuns de `C-004` — `agent.thought.base_low` ou `base_high` conforme a consciência —, sem raciocínio. Pensar mais profundamente é escalar para `agent.thought.reasoning`, no tier `longform`, e é opção dele, limitada por um orçamento que o agente carrega no estado — total, usado e início da janela — e que vale por um período de vários dias, não por dia, com o tamanho dimensionado pela inteligência da personalidade (`A-020`). Janela longa em vez de cota diária porque deliberação é recurso de crise: um agente que gasta as três deliberações da semana no dia em que o irmão morre está se comportando corretamente, e uma cota diária o impediria disso para lhe dar profundidade num dia em que não acontece nada.
 
 Abaixo do limiar de inteligência declarado em `tuning.json` o total é **zero**, e nesse caso a opção não é oferecida: o campo de escalada não entra no contexto e o agente não tem como pedir o que não pode ter. Não oferecer é diferente de negar. Um agente que pede e é recusado todo ciclo produz um pedido desperdiçado por ciclo e um monólogo que fala de uma capacidade inexistente; um agente a quem nunca se ofereceu simplesmente age por impulso. O primeiro parece mal escrito, o segundo é um personagem limitado por incapacidade — que é exatamente o que se queria.
 
@@ -330,7 +330,18 @@ Sem isto, o prompt mais chamado do sistema é o único cujo contexto cresce inde
 
 Lote noturno que transforma o dia em impressões sobre **opiniões gerais** e propõe tópicos sobre os quais o agente ainda não tinha crença formada.
 
-Roda **antes** da apreciação noturna (`C-047`), e as impressões que produz entram nela junto com as do dia. Assim a reflexão não precisa de passagem de classificação própria, e a ordem do lote fica sendo a ordem de consumo: reflexão, apreciação, marcantes e resumo diário, cada um lendo o produto do anterior.
+Roda **antes** da apreciação noturna (`C-047`), e as impressões que produz entram nela junto com as do dia. Assim a reflexão não precisa de passagem de classificação própria.
+
+**A ordem do lote é total e fixa**, e é a ordem de consumo — cada etapa lê o produto da anterior:
+
+1. **Reflexão** (`C-031`) — produz impressões sobre opiniões gerais.
+2. **Apreciação** (`C-047`, `C-025`) — classifica tudo do dia, incluindo o que a reflexão acabou de produzir, e passa o Crivo.
+3. **Consolidação de opiniões** (`C-032`) — funde o que ficou redundante, depois de a apreciação ter escrito o que tinha para escrever.
+4. **Marcantes** (`C-014`) — eleição determinística sobre as notas do dia, sem chamada.
+5. **Resumo diário** (`C-015`) — recebe os marcantes já eleitos e condensa o resto.
+6. **Auto-entendimento** (`C-050`) — só quando cai na cadência, e por último, porque lê as memórias que os passos anteriores acabaram de fechar.
+
+Ordem total, e não "todas rodam no lote", porque `X-004` exige que a mesma seed produza a mesma simulação: duas etapas sem ordem declarada entre si são duas ordens possíveis, e basta uma escrever no que a outra lê para que o resultado dependa de qual o código chamou primeiro.
 
 **Aceite:** uma noite produz um lote de impressões gerais e, quando cabível, candidatas a opinião nova; e essas impressões são classificadas na mesma chamada de apreciação que já roda naquela noite.
 

@@ -347,7 +347,9 @@ Dia, estação de 15 dias, ano de 4 estações. Escala configurável.
 
 Governa sono, iluminação e visibilidade.
 
-**Aceite:** agentes dormem no horário da rotina e a sumarização diária dispara ao dormir.
+Não governa a cadência da memória. O lote noturno roda na fronteira de dia **global**, por `C-031`, e não no instante em que cada um adormece: com rotinas distintas por `A-027`, um agente deita às 22h e outro às 3h, e amarrar a condensação ao evento de sono faria a mesma noite ser condensada em momentos diferentes para cada pessoa — com risco de resumo duplo, de resumo antes de o dia daquele agente ter acabado, e de marcantes eleitos num instante e condensados noutro.
+
+**Aceite:** agentes dormem no horário da rotina e a iluminação e o alcance de visão mudam com a hora; nenhum resumo de memória é disparado pelo evento de dormir.
 
 ### W-055 — Clima
 `P2` · `V4` · PDF 489-491 · dep: W-053, R-040

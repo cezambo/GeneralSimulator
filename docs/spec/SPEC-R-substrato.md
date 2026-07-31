@@ -489,12 +489,12 @@ O Validador nunca simula física. Decide apenas *se* um efeito começa, e só qu
 ### R-046 — Promoção generalizada
 `P1` · `V4` · decisão · dep: R-043, B-045, X-006
 
-Mecanismo **único** para improviso que vira regra — vale para substrato, corpo, social, cognição e comunidade. Contrato na saída do Validador (`generalization`):
+Mecanismo **único** para improviso que vira regra — vale para substrato, corpo, social, cognição, comunidade e objeto. Contrato na saída do Validador (`generalization`):
 
 ```json
 {
   "verdict": "systemic" | "one_off",
-  "domain": "substrate" | "body" | "social" | "cognition" | "community",
+  "domain": "substrate" | "body" | "social" | "cognition" | "community" | "object",
   "rule": { /* só se verdict==systemic; vocabulário fechado do domínio */ },
   "reasoning": "..."
 }
@@ -508,6 +508,7 @@ Mecanismo **único** para improviso que vira regra — vale para substrato, corp
 | `social` | `{ perceptTemplate, relationBias }` — fato perceptível + viés A-029 |
 | `cognition` | `{ topic, stance }` — mínimo expressável em opinião |
 | `community` | `{ lawTemplate, mechanicTarget? }` — proposta de lei ou mecânica |
+| `object` | `{ defId, trigger, outcome, effect }` — `ItemRule` no Funcionamento, V-041 |
 
 Regra provisória entra **viva imediatamente**, revisável no painel (R-046/B-045). Se não expressável no vocabulário fechado → forçar `one_off`. Portão: registro de plausibilidade do cenário (B-044).
 
