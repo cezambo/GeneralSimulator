@@ -75,11 +75,21 @@ export class LlmRouter {
        * determinístico — o oposto do que X-011 pede.
        */
       providerFactory?: (resolved: Resolved) => Provider;
+      /**
+       * Onde ficam os cassetes. Existe para teste, pelo mesmo motivo que
+       * `providerFactory`: sem isso, dois testes que chamam o mesmo prompt com
+       * as mesmas variáveis compartilham a gravação, e o segundo recebe a
+       * resposta do primeiro sem que nada acuse.
+       */
+      cassetteDir?: string;
     } = {},
   ) {
     const cfg = loadModelsConfig();
     this.#providerFactory = opts.providerFactory ?? ((r) => makeProvider(r.provider));
-    this.cassettes = new CassetteStore(opts.mode ?? modeFromEnv(cfg.cassettes.mode as CassetteMode));
+    this.cassettes = new CassetteStore(
+      opts.mode ?? modeFromEnv(cfg.cassettes.mode as CassetteMode),
+      opts.cassetteDir,
+    );
     this.accounting = new Accounting({
       perAgentPerSimDayCallLimit: cfg.budget.perAgentPerSimDayCallLimit,
       graveReactiveReserve: 4,

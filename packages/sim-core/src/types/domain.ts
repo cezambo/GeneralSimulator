@@ -848,7 +848,7 @@ export interface Condition {
   partId?: string;
   severity: number;
   /**
-   * DERIVADO da severidade pelos limiares declarados. B-008.
+   * DERIVADO da severidade pelos limiares declarados. V-013 nomeia estágio de condição entre os campos que o Validador nunca escreve, e a marcação estava só na prosa: o guarda de mutação lê a marca, não a descrição. B-008.
    */
   stage?: number;
   /**

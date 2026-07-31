@@ -18,7 +18,8 @@ import type { Resolved } from './binding.js';
  * mudaria a resposta.
  */
 
-export type CassetteMode = 'live' | 'hybrid' | 'replay';
+export const CASSETTE_MODES = ['live', 'hybrid', 'replay'] as const;
+export type CassetteMode = (typeof CASSETTE_MODES)[number];
 
 export interface CassetteRecord {
   readonly key: string;
@@ -74,6 +75,13 @@ export class CassetteStore {
   readonly mode: CassetteMode;
 
   constructor(mode: CassetteMode, dir = cassetteDir()) {
+    // Modo desconhecido não pode passar. O comportamento de um modo inválido
+    // aqui é "grava e relê tudo", que não parece defeito nenhum: as chamadas
+    // respondem, os testes rodam, e a segunda chamada com as mesmas variáveis
+    // silenciosamente recebe a resposta da primeira.
+    if (!CASSETTE_MODES.includes(mode)) {
+      throw new Error(`modo de cassete inválido: "${mode}". Use ${CASSETTE_MODES.join(', ')}.`);
+    }
     this.mode = mode;
     this.#dir = dir;
   }

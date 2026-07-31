@@ -584,7 +584,7 @@
         "defId": { "type": "string", "description": "Entrada em config/conditions.json." },
         "partId": { "type": "string", "description": "Ausente significa condição de corpo inteiro." },
         "severity": { "type": "number", "minimum": 0, "maximum": 1 },
-        "stage": { "type": "integer", "minimum": 0, "description": "DERIVADO da severidade pelos limiares declarados. B-008." },
+        "stage": { "type": "integer", "minimum": 0, "x-derived": true, "description": "DERIVADO da severidade pelos limiares declarados. V-013 nomeia estágio de condição entre os campos que o Validador nunca escreve, e a marcação estava só na prosa: o guarda de mutação lê a marca, não a descrição. B-008." },
         "immunity": { "type": "number", "minimum": 0, "maximum": 1, "description": "Só em condições que correm contra imunidade. A primeira das duas a chegar a 1 vence. B-024." },
         "bleedRate": { "type": "number", "minimum": 0, "description": "Contribuição para a perda de sangue. B-017." },
         "tendQuality": { "type": "number", "minimum": 0, "maximum": 1.3, "description": "Qualidade do último tratamento. B-025." },

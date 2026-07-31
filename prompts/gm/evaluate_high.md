@@ -22,6 +22,7 @@
 - `{{injurySummary}}` — o que a matriz de lesão já resolve sozinha (B-035)
 - `{{allowedOperations}}` — operações autorizadas neste cenário (B-044)
 - `{{plausibilityRegistry}}` — registro de plausibilidade legível
+- `{{priorAttempts}}` — tentativas já negadas nesta mesma intenção, com o domínio e o motivo (V-036). Vazio na primeira vez
 
 ---
 
@@ -89,6 +90,9 @@ Quando invocar causação nova (`engine_effect` ou operação biológica), preen
   - **body:** `{ operation, conditionId?, partSelector? }` (B-037)
   - **social:** `{ perceptTemplate, relationBias }` (A-029)
   - **cognition / community:** mínimo expressável no schema — senão force `one_off`.
+  - **object:** `{ defId, trigger, outcome, effect }` — vira regra do Funcionamento daquele molde (V-041)
+
+O domínio `object` é o que mais rende. Uso de objeto é a categoria de intenção mais repetida por agentes diferentes, e uma regra por tipo de objeto se amortiza sobre a partida inteira. Promova no **primeiro** julgamento, e não depois de ver repetição: esperar a segunda ocorrência custa uma chamada desperdiçada por regra, para sempre.
 
 Regra provisória entra viva imediatamente; revisável no painel (R-046/B-045). Se não expressável no vocabulário fechado → `one_off`.
 
@@ -100,6 +104,12 @@ Regra provisória entra viva imediatamente; revisável no painel (R-046/B-045). 
 2. **Executar parcial** — acontece com custo, falha parcial ou complicação.
 3. **Reinterpretar** — a ação literal falha, mas um equivalente narrativo acontece.
 4. **Negar** — último recurso: instrução do usuário, lei inviolável, ou impossibilidade total sem adaptação.
+
+Ao negar, nomeie o domínio em `deniedDomain`. É ele que decide se o agente tem chance de tentar outra coisa sabendo por que a primeira não deu, ou se a negação é final — e a engine não tem como adivinhar isso a partir da prosa.
+
+Se `{{priorAttempts}}` não estiver vazio, o agente já bateu nesta porta e já ouviu o motivo. Julgue a tentativa nova pelo que ela tem de diferente; repetir a mesma negação com as mesmas palavras é o único desfecho que não acrescenta nada.
+
+Veredito `executed` sem nenhuma mutação e sem nenhuma consequência é narrativa que não altera nada, e é recusado pela engine. Se a ação de fato não muda nada no mundo, o veredito é `reinterpreted`.
 
 ### Mutações
 
@@ -120,6 +130,8 @@ Regra provisória entra viva imediatamente; revisável no painel (R-046/B-045). 
 
 ### Intenção do agente
 {{intent}}
+
+{{priorAttempts}}
 
 ### Agente
 {{agentSnapshot}}

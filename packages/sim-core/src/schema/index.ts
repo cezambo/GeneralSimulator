@@ -25,6 +25,9 @@ const schemas: Record<string, Record<string, unknown>> = {
   [LLM_IO]: readSchema(LLM_IO),
 };
 
+/** O schema de domínio cru, para quem precisa ler marcações e não validar. V-013. */
+export const domainSchema: Record<string, unknown> = schemas[DOMAIN]!;
+
 let ajv: Ajv2020 | undefined;
 const compiled = new Map<string, ValidateFunction>();
 

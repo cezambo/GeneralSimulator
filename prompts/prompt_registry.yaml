@@ -323,4 +323,4 @@ prompts:
     schema: gm_response
     status: ok
     description: "Unico Validador — emite generalization cross-domain"
-    variables: [intent, agentSnapshot, targetSnapshot, worldSnapshot, userInstructions, substrateSnapshot, matrixSummary, bodySnapshot, injurySummary, allowedOperations, plausibilityRegistry]
+    variables: [intent, agentSnapshot, targetSnapshot, worldSnapshot, userInstructions, substrateSnapshot, matrixSummary, bodySnapshot, injurySummary, allowedOperations, plausibilityRegistry, priorAttempts]

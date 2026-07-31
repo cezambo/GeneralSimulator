@@ -132,6 +132,22 @@ export class SeedRoot {
     return rng;
   }
 
+  /**
+   * Um gerador efêmero, derivado do nome e **não registrado**. V-039, X-017.
+   *
+   * É o dado de uma rolagem que já sabe quem é: a resolução de consequência do
+   * Validador semeia em hora simulada, agente e ação, e o nome resultante nunca
+   * se repete. Registrar cada um deixaria o save crescer uma linha por rolagem
+   * para sempre, e não compraria nada — o fluxo é reconstruível a partir do
+   * nome, que já está na trilha de auditoria.
+   *
+   * A diferença com `stream` é essa e só essa: `stream` é para quem tem posição
+   * a guardar entre ticks; `derive` é para quem nasce, rola e morre.
+   */
+  derive(name: string): Rng {
+    return makeRng(name, (this.seed ^ hashString(name)) >>> 0);
+  }
+
   /** Fluxos já abertos, em ordem de abertura. Diagnóstico. */
   openStreams(): string[] {
     return [...this.#streams.keys()];

@@ -291,9 +291,7 @@ describe('roteador de ponta a ponta', () => {
 
   const router = (respostas: string[], mode: 'hybrid' | 'replay' = 'hybrid') => {
     const provider = new FakeProvider(respostas);
-    const r = new LlmRouter({ mode, providerFactory: () => provider });
-    // @ts-expect-error — redireciona o diretório para o temporário do teste
-    r.cassettes = new CassetteStore(mode, dir);
+    const r = new LlmRouter({ mode, cassetteDir: dir, providerFactory: () => provider });
     return { r, provider };
   };
 

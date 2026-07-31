@@ -38,7 +38,9 @@ Se a `actionType` da intenção casa com uma affordance declarada do alvo e a pr
 
 Chamar um modelo para autorizar sentar numa cadeira seria a chamada de maior volume e menor retorno do sistema. O Validador só entra quando a intenção não encontra affordance — que é exatamente o caso interessante.
 
-**Aceite:** sentar, pegar item visível, abrir porta destrancada, comer e largar item geram zero invocação de Validador.
+**A ordem dos portões é affordance, depois regra provisória, depois modelo.** Os dois primeiros são gratuitos, e a affordance vem antes por ser mais barata — consulta a um índice contra casamento de condição. A ordem entre eles nunca deveria importar, porque `V-041` faz a promoção habilitar affordance no alvo justamente para que o caso passe a resolver pelo primeiro portão; se um dia importar, é sinal de que a promoção habilitou uma affordance que diverge da regra que a originou.
+
+**Aceite:** sentar, pegar item visível, abrir porta destrancada, comer e largar item geram zero invocação de Validador; e uma affordance declarada mas fora de alcance cai para o Validador em vez de executar.
 
 ### V-003 — Postura permissiva
 `P0` · `V4` · PDF 82-87 · dep: V-001
@@ -63,7 +65,11 @@ Conforme `WorldMutation`. Toda resposta lista alterações concretas de estado c
 
 Mutação listada aqui é **certa**: acontece sem sorteio. O que é incerto vai para as consequências de `V-038`.
 
-**Aceite:** um veredito `executed` que descreve mudança física sem emitir mutação correspondente é rejeitado na validação.
+**A conferência é a que dá para fazer sem julgar julgamento:** `executed` com zero mutações e zero consequências. Nenhum verificador determinístico consegue ler a narrativa e decidir se ela descreve mudança física, e fingir que consegue produziria recusa arbitrária. O caso que dá para pegar é o que importa: um veredito que afirma que algo aconteceu sem nada ter acontecido. Ação que de fato não muda nada não deveria ter chegado ao Validador — ela resolveria por affordance (`V-002`), de graça —, e quando chega, o veredito honesto é `reinterpreted`.
+
+**Mutação recusada não derruba as válidas ao lado.** O que `V-032` proíbe é travar a simulação e aplicar meia mutação, não filtrar uma lista: as recusadas vão para o campo de mutações rejeitadas da trilha (`V-029`), que existe exatamente para isso, e o julgamento vale pelo resto.
+
+**Aceite:** um veredito `executed` sem nenhuma mutação e sem nenhuma consequência resolve pelo caminho degradado com retorno diegético; e um julgamento com uma mutação inválida entre duas válidas aplica as duas e registra a recusada.
 
 ### V-006 — Retorno diegético
 `P0` · `V4` · PDF 82-87 · dep: V-004
@@ -262,7 +268,9 @@ Sem isso, o Validador continuaria sendo chamado para o caso que ele mesmo acabou
 
 Teto de regras provisórias vivas simultaneamente; detecção de regra que dispara com frequência anômala; e conflito entre provisória e permanente resolvido sempre a favor da permanente.
 
-**Aceite:** ultrapassar o teto impede novas promoções até que alguma seja revisada, e uma provisória que contradiz uma permanente nunca prevalece.
+**O teto é conferido antes do vocabulário.** Uma regra bem formada além do teto é exatamente o caso que `V-027` existe para conter, e conferir a forma primeiro faria a mensagem culpar o vocabulário por um limite que não tem nada a ver com ele — mandando ajustar a regra quando o que falta é revisar as que já estão vivas.
+
+**Aceite:** ultrapassar o teto impede novas promoções até que alguma seja revisada, com motivo que nomeia o teto e não o vocabulário; e uma provisória que contradiz uma permanente nunca prevalece.
 
 ### V-028 — Dívida de matriz
 `P1` · `V4` · derivado de R-045 · dep: V-021
@@ -271,7 +279,11 @@ Invocação recorrente do mesmo método é dívida: sinal de que falta regra det
 
 É o único item de observabilidade do projeto que se paga em dinheiro.
 
-**Aceite:** o mesmo método invocado três vezes sem promoção aparece no topo da lista de dívida.
+**"O mesmo método" é tipo de ação mais alvo, e não a intenção em prosa.** A prosa muda de palavra a cada agente e nunca se repetiria, o que deixaria a lista permanentemente vazia enquanto o mesmo improviso é rejulgado a cada ocorrência — uma métrica que só sabe reportar que está tudo bem.
+
+Um método sai da dívida no instante em que vira regra. Continuar contando faria o painel apontar como dívida justamente o que foi quitado.
+
+**Aceite:** o mesmo método invocado três vezes sem promoção aparece no topo da lista de dívida, e o método que gerou uma regra provisória some dela.
 
 ---
 
@@ -363,7 +375,11 @@ Além das mutações certas, a resposta pode enumerar desfechos possíveis com p
 
 A disciplina que faz isso valer a pena é a contenção: **a maior parte das ações não produz consequência incerta nenhuma**. Desfecho certo vai em mutação e não é sorteado. Probabilidade existe para o caso em que a incerteza é o conteúdo — se o galho aguenta, se o nó segura, se a mentira cola — e usá-la fora disso só acrescenta variância sem acrescentar drama.
 
-**Aceite:** um grupo exclusivo cujas probabilidades não somam cem é rejeitado na validação, e uma bateria de ações triviais produz zero consequências probabilísticas.
+**Grupo que não fecha cem é rejeitado inteiro, e nunca normalizado.** Normalizar em silêncio faria uma estimativa errada do modelo virar comportamento plausível, e o defeito nunca apareceria em lugar nenhum; rejeitar deixa as mutações certas valerem e põe o problema onde alguém lê.
+
+**A mutação sorteada passa pela mesma triagem da certa.** Um desfecho improvável não é um desfecho menos sujeito às regras — seria a porta de entrada mais fácil para escrever em campo derivado ou invocar operação que o cenário não permite, e a mais difícil de flagrar, porque só apareceria nas execuções em que o dado calhasse.
+
+**Aceite:** um grupo exclusivo cujas probabilidades não somam cem tem todos os seus desfechos marcados como não ocorridos e a rejeição registrada; uma bateria de ações triviais produz zero consequências probabilísticas; e uma mutação inválida dentro de um desfecho sorteado é recusada pelo mesmo requisito que a recusaria fora dele.
 
 ### V-039 — Rolagem semeada
 `P0` · `V4` · decisão · dep: V-038, X-004
@@ -372,7 +388,11 @@ A engine — nunca o modelo — resolve as probabilidades, com gerador semeado a
 
 Isso preserva o determinismo por seed de `X-004` e mantém o cassete capaz de reproduzir a partida inteira: a resposta do modelo é gravada, e a rolagem é recalculável a partir da mesma semente. Um dado não semeado tornaria replay impossível e levaria junto toda a capacidade de depurar.
 
-**Aceite:** duas execuções da mesma partida com a mesma semente produzem os mesmos resultados de rolagem, e a semente usada em cada rolagem aparece na trilha de auditoria.
+**O fluxo da rolagem é derivado e efêmero: nasce do nome, rola e morre, sem entrar no save.** Registrá-lo faria o save crescer uma linha por rolagem para sempre, contra `X-017`, e não compraria nada — o nome já está na trilha, e dele o fluxo se reconstrói. É também o que torna a rolagem reproduzível **isoladamente**: puxar de um fluxo compartilhado do Validador seria igualmente determinístico, mas exigiria ter passado por todas as rolagens anteriores para chegar nesta, e depurar uma consequência do dia vinte significaria reexecutar dezenove dias.
+
+**A ordem de avaliação dos desfechos é por descrição, e não a do array.** A ordem do array vem do modelo, e dois cassetes do mesmo julgamento podem trazê-la trocada sem que nada de fato tenha mudado; deixá-la decidir qual desfecho consome qual dado faria o replay divergir por reordenação cosmética.
+
+**Aceite:** duas execuções da mesma partida com a mesma semente produzem os mesmos resultados de rolagem, a semente usada em cada rolagem aparece na trilha de auditoria, reordenar os desfechos não muda qual ocorre, e nenhuma rolagem deixa fluxo registrado no save.
 
 ### V-040 — Promoção por molde de fórmula
 `P1` · `V5` · decisão · dep: V-021, V-022
