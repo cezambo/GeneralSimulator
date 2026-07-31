@@ -108,6 +108,16 @@
       "espontaneoChancePorHora": 0.12,
       "reativoCooldownMinutos": 10
     },
+    "retencao": {
+      "$comment": "X-017. Todo deposito que recebe entrada por tick, por acao ou por dia declara teto aqui. Deposito sem teto nao aparece no perfil de CPU, porque escrever e barato, e so aparece no fim, quando o save nao cabe. Os tres abaixo cresciam sem limite ate a auditoria de custo.",
+      "diasDeLogCausalRetidos": 3,
+      "porqueLogCausalDescarta": "X-005 e X-017. Descarta sem condensar, porque e o unico dos tres que e RECONSTITUIVEL: com semente (X-004) e cassete (X-002), reexecutar regenera o trecho identico. Guardar 30 dias e guardar o que se recalcula de graca.",
+      "diasDeRegistroDeAtividadeEmDetalheCheio": 7,
+      "porqueRegistroCondensa": "C-010 e X-017. Fora da janela vira resumo do dia com contagens e as entradas de nota alta. Mentira sobre anteontem se confere contra o registro; sobre o ano passado, quem confere e a memoria, que ja condensou. Condensar aqui e DESCARTAR em bloco depois de resumir, nunca editar entrada que fica.",
+      "tetoFatosNoBancoPorAgente": 200,
+      "porqueBancoDespeja": "C-048 e X-017. Despeja o de menor confianca que faz mais tempo que nao e usado. Fato nao expira por tempo — ninguem esquece que o poco tem agua por passar tempo —, mas boato que ninguem repetiu nem usou some, e se voltar a ser dito reentra por C-049 do zero de corroboracao, que e o peso certo para coisa esquecida."
+    },
+
     "memoria": {
       "$comment": "C-052, C-053. O limiar decide o que vira memoria; a nota vem de graca na resposta que ja decide a acao.",
       "tetoCurtoPrazoItens": 40,
@@ -198,8 +208,12 @@
 
   "llm": {
     "$comment": "L-006, L-016, L-017. Espelha config/models.json quando houver conflito, models.json vence.",
-    "tetoChamadasPorAgentePorDiaSimulado": 25,
-    "tetoChamadasDeLotePorAgentePorDiaSimulado": 5,
+    "tetoChamadasPorAgentePorDiaSimulado": 32,
+    "reservaOrcamentoParaReativoGrave": 4,
+    "tetoChamadasDeLotePorAgentePorDiaSimulado": 6,
+    "porqueTeto": "C-007. PROVISORIO, e nenhum destes numeros foi medido contra execucao real. A recontagem por cenario deu 9 num dia calmo, 22 num dia movimentado e 26 ou mais num dia de crise com deliberacao, retentativa de porteiro e segunda ruptura — ou seja, 25 fechava no caso feliz e estourava exatamente no dia que interessa. 32 da folga para o dia ruim sem convidar o dia comum a gastar mais, porque quem limita o dia comum e a cadencia de gatilhos, nao o teto.",
+    "porqueReserva": "C-007. Fatia intocavel pelos gatilhos comuns, irma da reserva social de S-019. Ordenar a supressao so ajuda enquanto sobra alguma coisa: num dia de crise o consumo vem todo de evento legitimo, e sem reserva o agente para de pensar por ter vivido demais, no exato momento em que B-031, C-044 e S-036 exigem cognicao.",
+    "porqueLoteSeis": "C-031. Cinco cabia na noite comum e estourava na virada de ano, quando diaria, sazonal e anual caem no mesmo lote junto de reflexao, apreciacao e auto-entendimento.",
     "porqueLoteSeparado": "C-007. O lote noturno preserva o estado que faz o agente existir amanha. Disputando o mesmo teto, o agente que passou o dia conversando perderia a memoria do dia.",
     "tetoGastoDiarioUsd": 5.0,
     "aoExceder": "degrade",

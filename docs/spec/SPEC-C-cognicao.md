@@ -98,11 +98,17 @@ A `intentDescription` é o que o Validador lê quando é chamado, e é o que o r
 
 Cada agente tem teto de chamadas por dia simulado. Ao se aproximar do teto, gatilhos espontâneos e contemplativos são suprimidos primeiro; depois os agendados de baixa prioridade; reativos graves são os últimos a cair.
 
-Ao estourar, o agente segue rotina e affordances sem LLM, e o fato é registrado como degradação visível no painel — nunca em silêncio.
+**Reativo grave não cai: tem reserva própria.** Uma fatia do teto, declarada em `tuning.json`, é intocável pelos outros gatilhos, do mesmo jeito que a conversa já tem a sua (`S-019`). Um agente pode chegar sem saldo para divagar e ainda ter com que reagir a estar ferido, a estar sendo atacado, ou a ter perdido a capacidade que a meta exigia.
+
+A ordenação sozinha não bastava, e o motivo é o formato do dia ruim. Suprimir por prioridade só ajuda enquanto sobra alguma coisa; num dia de crise o consumo vem todo de eventos legítimos — conversa que virou conflito, ruptura, mediação, retentativa — e o agente atinge o teto **por ter vivido demais**. Aí a degradação chega exatamente no momento em que `B-031`, `C-044` e `S-036` exigem cognição, e o personagem vira autômato de rotina no meio da própria crise. Isso não é economia, é o drama sendo cortado pela conta. A reserva custa o que custa e compra a garantia de que o pior dia de alguém não é o dia em que ele para de pensar.
+
+Ao estourar tudo, inclusive a reserva, o agente segue rotina e affordances sem LLM, e o fato é registrado como degradação visível no painel — nunca em silêncio.
+
+⚑ O teto é provisório e existe para ser mexido. Nenhum dos números foi medido contra execução real, e a recontagem que os produziu mostrou que um dia de crise passa de vinte e seis chamadas com combinações plausíveis. Por isso teto, reserva e teto de lote moram todos em `tuning.json`, e nenhum deles aparece em código.
 
 O lote noturno tem teto próprio, declarado à parte em `tuning.json` e contabilizado à parte do teto de pensamento e conversa. Se disputasse o mesmo orçamento, o agente que passou o dia conversando chegaria à noite sem saldo e perderia a memória do dia, o Crivo e a apreciação das opiniões — ou seja, o dia inteiro custaria caro e não deixaria nada. O lote é o que preserva o estado que faz o agente existir amanhã, e por isso não compete com o dia de hoje.
 
-**Aceite:** um agente que atinge o teto continua agindo por rotina, a degradação aparece no painel identificando qual agente e a partir de que hora simulada, e o lote noturno daquele agente roda mesmo assim, dentro do próprio teto.
+**Aceite:** um agente que atinge o teto continua agindo por rotina, a degradação aparece no painel identificando qual agente e a partir de que hora simulada, e o lote noturno daquele agente roda mesmo assim, dentro do próprio teto; um agente que gastou todo o saldo comum em conversa ainda pensa ao ser ferido, e só deixa de pensar depois que a reserva de reativo grave também acaba.
 
 ### C-008 — Affordances no contexto
 `P0` · `V4` · derivado de PDF 103-104 · dep: C-002, W-031
@@ -125,7 +131,9 @@ O último monólogo interior fica acessível para inspeção na UI e para o bal�
 
 Log privado e determinístico do que o agente **de fato** fez: tempo, ação, alvo, setor, veredito e desfecho. Não passa por LLM e não é memória — é o fato contra o qual relato e mentira são comparados.
 
-**Aceite:** toda ação resolvida, com ou sem Validador, gera entrada no registro, e o registro nunca é reescrito.
+Tem janela de detalhe cheio e teto (`X-017`): o que sai da janela vira resumo do dia. Isso não conflita com nunca ser reescrito — entrada que fica nunca muda; o que acontece com as antigas é serem descartadas em bloco depois de resumidas.
+
+**Aceite:** toda ação resolvida, com ou sem Validador, gera entrada no registro; nenhuma entrada existente é jamais alterada; e o número de entradas em detalhe cheio não cresce com o tempo total de simulação.
 
 ---
 
@@ -273,14 +281,18 @@ Sem isso, resumos e opiniões acumulam "ontem" e "recentemente" que envelhecem e
 
 **Aceite:** numa amostra de nuances geradas, nenhuma contém marcador temporal relativo.
 
-### C-025 — Classificador de dissonância
-`P0` · `V5` · PDF 451-458 · dep: C-022, C-030 · prompt: `cognition.dissonance_classifier`
+### C-025 — Classificação de dissonância
+`P0` · `V5` · PDF 451-458 · dep: C-022, C-030 · prompts: `social.post_conversation`, `cognition.nightly_appraisal`
 
-Uma chamada classifica **todas** as impressões novas contra as opiniões relevantes, devolvendo pares com relação (conflito ou sinergia) e intensidade de 1 a 3. Pares sem relação são omitidos da resposta.
+Impressões novas são classificadas **em lote** contra as opiniões relevantes, devolvendo pares com relação (conflito ou sinergia) e intensidade de 1 a 3. Pares sem relação são omitidos da resposta. É o único ponto que decide se uma experiência contradiz ou reforça uma crença: sem ele o buffer nunca enche e a ruptura nunca acontece.
 
-É o prompt de maior volume do sistema e o único ponto que decide se uma experiência contradiz ou reforça uma crença. Sem ele o buffer nunca enche e a ruptura nunca acontece.
+A classificação tem duas cadências, e **nenhuma das duas é uma chamada própria**. A quente acontece ao fim da conversa, dentro de `social.post_conversation`, porque a ruptura precisa poder acontecer no mesmo dia em que a conversa aconteceu. A noturna acontece dentro da apreciação (`C-047`), sobre o que sobrou do dia e sobre as impressões que a reflexão (`C-031`) acabou de produzir.
 
-O classificador tem duas cadências. A quente roda logo após a conversa (`S-014`), porque a ruptura de opinião precisa poder acontecer no mesmo dia em que a conversa aconteceu. A noturna roda uma vez, sobre o que sobrou do dia e sobre as impressões que a reflexão (`C-031`) acabou de produzir — e essa passagem noturna é **a mesma chamada** do Crivo (`C-047`), porque as duas leem o mesmo material contra o mesmo contexto pessoal.
+⚑ Havia um prompt `cognition.dissonance_classifier`, e ele foi aposentado por não ter sobrado cadência que o chamasse. Nos dois momentos em que a classificação acontece, **outra chamada já leu o mesmo material contra o mesmo contexto pessoal** um instante antes — a de pós-conversa acabou de escrever as impressões, a da apreciação vai lê-las de qualquer forma. Uma chamada separada pagava para renderizar o mesmo contexto duas vezes, e no caso da conversa isso era uma chamada por participante por conversa, o multiplicador social mais frequente depois dos próprios turnos.
+
+A unidade continua sendo o participante, e não a conversa (`S-014`): cada um classifica contra as próprias opiniões. As instruções de classificação vivem em `_shared/classification_block.md` e são incluídas pelos dois prompts; a **forma** da resposta continua canônica em `dissonance_classification_response`, e os dois apontam para ela por ponteiro, não por cópia.
+
+**O recuo, se a fusão se mostrar instável.** Modelo pequeno erra primeiro quando a resposta tem duas tarefas estruturalmente distintas. Separar de novo custa uma chamada por participante por conversa e uma por agente por noite — números conhecidos, e por isso a fusão é reversível sem redesenho.
 
 **Aceite:** uma conversa com seis impressões e vinte opiniões relevantes consome uma chamada, não cento e vinte; e a passagem noturna não acrescenta chamada além da apreciação já prevista no lote.
 
@@ -343,6 +355,8 @@ Roda **antes** da apreciação noturna (`C-047`), e as impressões que produz en
 
 Ordem total, e não "todas rodam no lote", porque `X-004` exige que a mesma seed produza a mesma simulação: duas etapas sem ordem declarada entre si são duas ordens possíveis, e basta uma escrever no que a outra lê para que o resultado dependa de qual o código chamou primeiro.
 
+**Quando o lote não cabe no teto, adia-se de trás para frente.** Nas viradas de período, a condensação de camada longa (`C-012`) cai no mesmo lote que a noite comum, e a soma passa do teto. A ordem acima também é a ordem de prioridade: corta-se do fim. Camada longa é a primeira a ceder, e cede sem dano, porque ela condensa um período que **já terminou** — resumir a estação hoje ou amanhã dá o mesmo resumo, e nada que rode amanhã lê o resultado dela. Adiar reflexão ou apreciação, ao contrário, perderia o dia: as impressões do dia estariam condensadas antes de terem sido classificadas.
+
 **Aceite:** uma noite produz um lote de impressões gerais e, quando cabível, candidatas a opinião nova; e essas impressões são classificadas na mesma chamada de apreciação que já roda naquela noite.
 
 ### C-032 — Consolidação de opiniões
@@ -393,7 +407,9 @@ Um fato do banco **pode ser falso**, e o sistema não tem nem quer ter como sabe
 
 Fato não tem buffer nem limiar de teimosia; não é opinião e não vai virar uma. A ponte entre os dois é a colisão: quando entra um fato que contradiz outro já guardado, os dois ficam ligados por `contradictedByFactId` e a contradição vira impressão como qualquer outra, indo parar no classificador (`C-025`) pelo caminho normal, contra as opiniões que o tópico alcança. O banco não inventa mecanismo próprio de mudança de crença — alimenta o que já existe, que é a única razão de ele caber neste documento sem custar chamada nova.
 
-**Aceite:** um fato entra no banco por veredito verdadeiro do Crivo e é serializado e restaurado sem perda de campo; e dois fatos contraditórios produzem impressão de conflito sem nenhum caminho de código próprio de ruptura.
+O banco tem teto por agente (`X-017`), e despeja o fato de menor confiança que faz mais tempo que não é usado. Fato não expira sozinho — ninguém esquece que o poço tem água por passar tempo —, mas boato que ninguém repetiu nem usou some, e some certo: se voltar a ser dito, volta a entrar pelo caminho normal (`C-049`), do zero de corroboração, que é exatamente o peso que uma coisa esquecida deve ter ao ser ouvida de novo.
+
+**Aceite:** um fato entra no banco por veredito verdadeiro do Crivo e é serializado e restaurado sem perda de campo; dois fatos contraditórios produzem impressão de conflito sem nenhum caminho de código próprio de ruptura; e o banco de um agente nunca passa do teto declarado.
 
 ### C-049 — Corroboração sem chamada
 `P1` · `V6` · derivado · dep: C-048

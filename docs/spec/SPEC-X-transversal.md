@@ -51,7 +51,9 @@ Todo efeito registra o que o causou: regra da matriz, invocação do Validador, 
 
 É a memória do mundo, é determinística e é grátis — e é por isso que não existe resumo em prosa do Validador.
 
-**Aceite:** qualquer estado do mundo pode ser rastreado até a causa que o produziu.
+Grátis por tick, não por mês: o log tem janela de retenção declarada (`X-017`), e o que sai dela é descartado sem condensar, porque semente e cassete regeneram o trecho quando ele for preciso.
+
+**Aceite:** qualquer estado do mundo dentro da janela de retenção pode ser rastreado até a causa que o produziu, e um estado anterior à janela é rastreável reexecutando a partir da semente.
 
 ### X-006 — Observabilidade
 `P0` · `V4` · decisão · dep: X-005, L-016
@@ -139,6 +141,25 @@ Saves declaram versão. Carregar versão anterior migra ou recusa com mensagem c
 Dependências e versões declaradas, com instruções de instalação verificadas. O detalhamento está em [06-AMBIENTE.md](../06-AMBIENTE.md).
 
 **Aceite:** uma máquina limpa chega a rodar a suíte seguindo apenas o documento de ambiente.
+
+### X-017 — Nada cresce sem teto
+`P0` · `V2` · derivado de auditoria de custo · dep: X-003, X-005, C-010, C-048
+
+Todo depósito que recebe entrada por tick, por ação ou por dia declara **teto e política de descarte** em `tuning.json`. Depósito sem teto declarado é defeito, verificável na revisão e não em teste.
+
+A meta é trinta dias simulados com dez agentes (`X-008`). Três depósitos recebem entrada continuamente e nenhum tinha teto, o que significa que o custo deles não estava no orçamento de ninguém: não aparecem no perfil de CPU, porque escrever é barato, e só aparecem no fim, quando o save não cabe ou o carregamento demora minutos. Cada um tem uma razão diferente para poder esquecer.
+
+| Depósito | Cresce com | Política | Por que pode esquecer |
+|---|---|---|---|
+| Log causal (`X-005`) | Cada efeito de cada tick | Janela deslizante de dias simulados; o que sai da janela é descartado, não condensado | É **reconstituível**. Com semente (`X-004`) e cassete (`X-002`), reexecutar regenera o log idêntico. Guardar trinta dias de causalidade é guardar o que se pode recalcular de graça |
+| Registro de atividade (`C-010`) | Cada ação resolvida, por agente | Janela em detalhe cheio; o que sai vira resumo do dia com contagens e as entradas de nota alta | É o fato contra o qual mentira é comparada — mas só se compara o que alguém ainda pode contestar. Mentira sobre anteontem se confere; sobre o ano passado, quem confere é a memória, que já condensou |
+| Banco de fatos (`C-048`) | Cada veredito verdadeiro do Crivo | Teto por agente; despeja o de menor confiança que faz mais tempo que não é usado | Fato despejado que voltar a ser ouvido volta a entrar pelo caminho normal (`C-049`). Esquecer um boato que ninguém repetiu nem usou é o comportamento certo, não perda |
+
+O log causal é o caso que mais engana: por ser determinístico e grátis de escrever, `X-005` o chama de "memória do mundo" e nada dizia sobre pará-lo. Mas grátis por tick não é grátis por mês.
+
+**O registro de atividade continua sem ser reescrito.** `C-010` diz que nenhuma entrada é alterada, e continua valendo: condensar aqui é **descartar** entradas antigas em bloco depois de resumi-las, nunca editar uma entrada que fica. A distinção importa porque o valor do registro está em ser imutável.
+
+**Aceite:** trinta dias simulados com dez agentes produzem um save cujo tamanho cresce sublinearmente com o número de dias depois que as janelas enchem, e nenhum dos três depósitos tem contagem de entradas que cresça monotonicamente com o tempo de simulação.
 
 ---
 

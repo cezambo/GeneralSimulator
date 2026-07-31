@@ -193,7 +193,7 @@ Papel declarado — ferreiro, curandeiro, agricultor — que orienta metas e ele
 
 Valor de −100 a +100 por par de agentes, distinto da opinião social textual. No **prompt**, relações entram comprimidas: `stance` canônico (`trust`, `distrust`, `admire`, `pity`, `resent`, `indifferent`, `fear`, `desire`, `neutral`) + número só quando a decisão exige nuance fina.
 
-**Pré-filtro:** `cognition.dissonance_classifier` recebe `topicFilter` e opiniões já filtradas por `stance`/`topic` — não manda todas contra todas quando o tópico é conhecido.
+**Pré-filtro:** quem classifica dissonância (`C-025`, hoje dentro de `social.post_conversation` e de `cognition.nightly_appraisal`) recebe `topicFilter` e opiniões já filtradas por `stance`/`topic` — não manda todas contra todas quando o tópico é conhecido.
 
 **Grito de combate:** sem prompt LLM dedicado. A engine registra grito como **fato perceptível** (R-037); ouvintes aplicam **viés de relação** conforme sentimento com quem gritou (`obedecer` / `ignorar` / `contrariar` proporcional ao sentiment).
 

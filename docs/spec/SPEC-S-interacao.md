@@ -108,7 +108,9 @@ Conversa encerrada com assunto em aberto registra o tópico e gera inclinação 
 
 Ao encerrar, cada participante produz impressões cruas e deltas de sentimento pelos demais. É a ponte da conversa para a cognição.
 
-**Aceite:** encerrar uma conversa produz, para cada participante, impressões identificadas e um delta por interlocutor.
+Na mesma resposta vêm as classificações de dissonância dessas impressões (`S-014`, `C-025`): a chamada que acabou de escrever as impressões é a que as julga contra as opiniões de quem as teve.
+
+**Aceite:** encerrar uma conversa produz, para cada participante, impressões identificadas, um delta por interlocutor e as classificações delas — tudo numa chamada por participante.
 
 ### S-013 — Delta de sentimento
 `P0` · `V6` · PDF 509-516 · dep: S-012, A-029
@@ -122,11 +124,13 @@ Separar os dois é o que permite ao agente gostar menos de alguém sem mudar o q
 ### S-014 — Impressões alimentam a dissonância
 `P0` · `V6` · decisão · dep: S-012, C-025
 
-As impressões que um participante tirou da conversa entram **todas numa** passagem pelo classificador de dissonância, com pré-filtro por tópico (`C-030`). Uma passagem por participante, e dentro dela todas as impressões daquela pessoa de uma vez.
+As impressões que um participante tirou da conversa são classificadas **todas de uma vez**, com pré-filtro por tópico (`C-030`), **dentro da própria chamada de pós-conversa** (`S-012`). Uma passagem por participante, e dentro dela todas as impressões daquela pessoa juntas.
 
-A unidade é o participante, e não a conversa, porque o classificador julga impressão contra **as opiniões de quem teve a impressão**. Uma passagem única para a mesa inteira teria de carregar as opiniões de todos os presentes no mesmo contexto, e o modelo passaria a decidir contra crenças de várias pessoas ao mesmo tempo — o que não é caro, é errado. O que `C-025` economiza é a explosão de pares: seis impressões contra vinte opiniões são uma chamada e não cento e vinte. O número de participantes multiplica; o número de pares, não.
+A unidade é o participante, e não a conversa, porque a classificação julga impressão contra **as opiniões de quem teve a impressão**. Uma passagem única para a mesa inteira teria de carregar as opiniões de todos os presentes no mesmo contexto, e o modelo passaria a decidir contra crenças de várias pessoas ao mesmo tempo — o que não é caro, é errado. O que `C-025` economiza é a explosão de pares: seis impressões contra vinte opiniões são uma passagem e não cento e vinte. O número de participantes multiplica; o número de pares, não.
 
-**Aceite:** uma conversa de três participantes gera três chamadas de classificação, uma por participante, e não uma por par de impressão e opinião.
+**Dentro da mesma chamada, e não depois dela.** Era uma chamada à parte, e ela relia impressões que o modelo tinha acabado de escrever, contra opiniões que já estavam no mesmo contexto. Numa conversa de três, isso eram três chamadas de pós-conversa mais três de classificação, e conversa é a coisa mais frequente que dois agentes fazem — era o multiplicador social mais caro depois dos próprios turnos.
+
+**Aceite:** uma conversa de três participantes gera três chamadas no total, uma por participante, cada uma trazendo impressões e classificações — e não seis, nem uma por par de impressão e opinião.
 
 ---
 

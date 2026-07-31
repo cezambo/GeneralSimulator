@@ -296,9 +296,11 @@
     },
 
     "post_conversation_response": {
+      "description": "S-012, S-014, C-025. A apreciação a quente: tirar as impressões da conversa e classificá-las contra as opiniões de quem as teve, numa chamada só.\n\nEste prompt produzia só as impressões, e o classificador de dissonância era chamado logo em seguida para relê-las contra as mesmas opiniões — mesmo material, dois renders, uma chamada por participante por conversa. É a mesma fusão já feita para o lote noturno em `nightly_appraisal_response`, aplicada ao par que dispara com mais frequência.\n\nO agente classifica o que ele mesmo acabou de sentir, o que é mais fácil que classificar impressão alheia, e não mais difícil.",
       "type": "object",
-      "required": ["rawImpressions", "sentimentDeltas"],
+      "required": ["rawImpressions", "sentimentDeltas", "classifications"],
       "properties": {
+        "classifications": { "$ref": "#/$defs/dissonance_classification_response/properties/classifications" },
         "rawImpressions": {
           "type": "array",
           "items": {

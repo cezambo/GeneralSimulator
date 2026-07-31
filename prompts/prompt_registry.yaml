@@ -160,16 +160,16 @@ prompts:
 
   # ── OPINIOES ─────────────────────────────────────────────────────────
 
-  cognition.dissonance_classifier:
-    file: "cognition/dissonance_classifier.md"
-    tier: compact
-    temperature: 0.2
-    maxTokens: 600
-    schema: dissonance_classification_response
-    status: rascunho
-    prioridade: P0
-    description: "Passagem a quente: classifica impressoes contra opinioes logo apos a conversa, para que a ruptura possa acontecer no mesmo dia"
-    variables: [agentContext, existingOpinions, newImpressions, topicFilter]
+  # cognition.dissonance_classifier foi APOSENTADO por C-025.
+  #
+  # Ele tinha duas cadencias e as duas foram fundidas em quem ja lia o mesmo
+  # material: a noturna em cognition.nightly_appraisal, a quente em
+  # social.post_conversation. Sem cadencia propria, o prompt ficou sem chamador.
+  #
+  # As instrucoes de classificacao viraram _shared/classification_block.md, e as
+  # duas fusoes as incluem. A FORMA da resposta continua canonica em
+  # dissonance_classification_response, e as duas apontam para ela por ponteiro,
+  # e nao por copia, para que nao possam divergir.
 
   cognition.nightly_appraisal:
     file: "cognition/nightly_appraisal.md"
@@ -276,10 +276,18 @@ prompts:
     file: "social/post_conversation.md"
     tier: narrative
     temperature: 0.85
-    maxTokens: 600
+    maxTokens: 1000
     schema: post_conversation_response
-    status: ok
-    variables: [agentContext, conversationTranscript, participants]
+    status: rascunho
+    description: "Apreciacao a quente: impressoes da conversa e a classificacao delas contra as opinioes de quem as teve"
+    variables: [agentContext, conversationTranscript, participants, existingOpinions, topicFilter]
+    porque: >
+      S-012, S-014 e C-025 fundidos. Este prompt produzia so as impressoes e o
+      classificador de dissonancia era chamado em seguida para reler as mesmas
+      impressoes contra as mesmas opinioes: mesmo material, dois renders, uma
+      chamada por participante por conversa. Era o multiplicador social mais
+      frequente depois dos proprios turnos. Mesma fusao ja feita no lote noturno.
+      Voltou para rascunho porque o arquivo ainda produz so as impressoes.
 
   # ── COMUNIDADE ───────────────────────────────────────────────────────
 
