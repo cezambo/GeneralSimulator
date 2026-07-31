@@ -13,6 +13,7 @@ export { SeedRoot, hashString, type Rng } from './rng/index.js';
 export * from './llm/index.js';
 export * from './state/index.js';
 export * from './perception/index.js';
+export * from './substrate/index.js';
 export * from './cognition/context.js';
 export { validateDomain, validateLlmOutput, definitionOf } from './schema/index.js';
 export * from './types/domain.js';

@@ -45,6 +45,10 @@
     "atenuacaoSomPorPisoAtravessado": 0.5,
     "densidadeGasAmbiente": 1.0,
     "porqueDensidadeAmbiente": "R-052. Referencia contra a qual um gas sobe ou assenta. Gas mais denso que isto desce pela coluna; menos denso sobe e atravessa abertura para o grid de cima.",
+    "toleranciaEquilibrioTermico": 0.5,
+    "porqueTolerancia": "R-008, X-013. Diferenca em graus abaixo da qual a entidade deixa de guardar temperatura propria e volta a ler como ambiente. E o numero que tira o alvo do laco termico: sem ele, um tile aquecido uma vez continuaria sendo visitado para sempre, convergindo por assintota e nunca chegando. Meio grau e menor que qualquer coisa que a percepcao consiga descrever.",
+    "maxPassosDeCascataPorTick": 4,
+    "porqueTetoDeCascata": "R-017. Efeito aplicado dispara reacao de contato com quem divide a celula, e essa cadeia precisa de teto. Nao e otimizacao: 'extinguish' gera 'smoky', e uma regra mal escrita que fizesse 'smoky' gerar 'extinguish' prenderia o tick num laco infinito. O teto transforma um travamento numa cadeia curta demais, que e um defeito que aparece. Quatro cobre agua-piso-poca-criatura, que e a cadeia mais longa que o catalogo inicial produz.",
     "decaimentoEstadoTransientePorTick": 0.02,
     "limiarVolumeLiquidoPerceptivel": 0.05,
     "ticksParaApodrecimento": 4320

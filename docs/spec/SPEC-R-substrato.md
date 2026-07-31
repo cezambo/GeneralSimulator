@@ -106,7 +106,9 @@ Cada material declara, cada um opcional: ponto de fragilização, congelamento, 
 
 Cruzar um limiar dispara a transição correspondente automaticamente. Não há regra na matriz para isso — é aritmética.
 
-**Aceite:** gelo aquecido acima do ponto de fusão vira água sem que exista reação declarada ligando fogo a gelo.
+**O limiar é conferido antes da convergência do tick, e não depois.** Material de calor específico baixo converge por inteiro num tick só; conferir depois seria conferir a temperatura ambiente, e gelo largado a quarenta graus voltaria a vinte sem nunca ter passado pelo ponto de fusão. A transição pertence à temperatura com que a entidade chegou ao tick, não àquela com que ela sai.
+
+**Aceite:** gelo aquecido acima do ponto de fusão vira água sem que exista reação declarada ligando fogo a gelo, inclusive quando seu calor específico o faria reconverger no mesmo tick.
 
 ### R-010 — Fontes de calor e frio
 `P0` · `V1` · derivado · dep: R-008
@@ -144,6 +146,10 @@ Uma reação é: duas entradas, duas saídas, uma probabilidade e uma ocasião. 
   "porque": "Chama desprotegida encostando em material que queima acende o material."
 }
 ```
+
+**`modifiedBy` é somado à chance base, não multiplicado.** Lido como multiplicador, `wet: -0.8` significaria "reduz para 20%", que ainda acende madeira encharcada quase uma vez em cinco; somado, ele leva 0,9 a 0,1 e a zero conforme a saturação sobe, que é o que a prosa da regra descreve. Cada modificador nomeia um estado do alvo, um número do material ou uma propriedade booleana, e vale de 0 a 1 — intensidade de estado dividida por cem, número do material tal como está, propriedade presente valendo um.
+
+Modificador que não encontra nada a que se referir é **ignorado**, e não tratado como zero. São a mesma coisa aritmeticamente e não são a mesma coisa na depuração: ignorado pode ser reportado como "esta regra citou `windToward` e não havia vento", que é a diferença entre uma regra inerte e uma regra errada.
 
 Identificadores em inglês, como no resto dos contratos de dado. O campo `porque` é a exceção deliberada: é prosa, e é obrigatório, porque tem dois leitores — o humano que ajusta e o Validador, que recebe a matriz resumida em linguagem natural (R-042).
 
@@ -204,7 +210,13 @@ Os quatro são planos: a vizinhança de uma célula é o que está ao lado dela 
 
 Efeitos disparam reações que disparam outros efeitos, sem profundidade máxima além de um teto de segurança por tick contra laço infinito. Nenhum caso especial escrito à mão.
 
-**Aceite:** água derramada sobre piso condutivo com cabo energizado eletrifica a poça inteira e fere quem estiver nela, sem que nenhuma regra descreva esse cenário.
+**A cadeia e a propagação espacial andam em ritmos diferentes, e é deliberado.** Contato encadeia **dentro** do tick: um efeito aplicado reavalia as regras de contato com quem divide a célula, e é por aí que a poça eletrificada fere quem está nela no mesmo instante. Vizinhança avalia **uma vez por alvo por tick**, sobre a fotografia do conjunto ativo tirada no início do tick.
+
+Sem essa separação o fogo atravessaria o mapa inteiro num tick, porque cada tile recém-aceso entraria na mesma varredura e acenderia o próximo — e a cadência espacial de R-016, que é o que faz um incêndio ser um evento com duração sobre o qual dá para decidir alguma coisa, deixaria de existir.
+
+O teto de cascata (`substrato.maxPassosDeCascataPorTick`) não é otimização. `extinguish` gera `smoky`, e uma regra mal escrita que fizesse `smoky` gerar `extinguish` prenderia o tick num laço infinito. O teto troca um travamento por uma cadeia curta demais, que é um defeito que aparece.
+
+**Aceite:** água derramada sobre piso condutivo com cabo energizado eletrifica a poça inteira e fere quem estiver nela no mesmo tick, sem que nenhuma regra descreva esse cenário; e o fogo leva três ticks para atravessar três tiles inflamáveis enfileirados, e não um.
 
 ### R-018 — Catálogo inicial de reações
 `P0` · `V1` · decisão · dep: R-012
@@ -527,9 +539,16 @@ Regra provisória entra **viva imediatamente**, revisável no painel (R-046/B-04
 ### R-047 — Determinismo
 `P0` · `V1` · derivado de X-004 · dep: R-014
 
-Toda aleatoriedade do substrato vem de um gerador semeado. Mesma seed e mesmas ações produzem exatamente a mesma cadeia de reações.
+Toda aleatoriedade do substrato vem de um gerador semeado, em fluxo próprio: acrescentar um dado no substrato não desloca o do Validador.
 
-**Aceite:** duas execuções com a mesma seed produzem logs de reação idênticos byte a byte.
+Duas ordens precisam ser fixas, e nenhuma das duas é a ordem natural da estrutura de dados:
+
+- **O conjunto ativo é percorrido por identificador**, e não pela ordem de inserção. A ordem de inserção é determinística em JavaScript, mas depende da sequência de eventos que ativou cada alvo — o que faz a mesma cena, alcançada por caminhos diferentes, consumir o fluxo em ordem diferente e divergir a partir dali. Ordenar até `substrato.maxTilesAtivosSimultaneos` alvos custa nada.
+- **As regras são avaliadas por identificador**, e não pela ordem do arquivo. Duas regras podem casar com o mesmo par, e deixar isso depender de onde alguém colou a regra nova no JSON faria uma edição cosmética mudar toda uma partida gravada.
+
+O dado é puxado mesmo quando a chance é 1. Puxar só quando há incerteza faria o consumo do fluxo depender do estado do mundo, e duas execuções que divergissem por um instante nunca mais se reencontrariam.
+
+**Aceite:** duas execuções com a mesma seed produzem logs de reação idênticos byte a byte, inclusive quando os alvos foram ativados em ordens diferentes.
 
 ### R-048 — Log causal
 `P1` · `V1` · derivado · dep: R-014
@@ -538,7 +557,9 @@ Todo efeito registra o que o causou: qual regra, qual entidade de origem, qual o
 
 Sem isso, uma cadeia de seis passos é indistinguível de um bug.
 
-**Aceite:** dado um tile queimado, é possível reconstruir a cadeia completa até a causa inicial.
+**Efeito que não muda nada não vira linha.** Fogo sobre o que já queima, molhar o que já está encharcado no mesmo grau: a engine devolve "nada mudou" e o log não registra. Registrar não-eventos encheria a janela de retenção de X-017 com ruído e, pior, reativaria o alvo, mantendo no laço uma entidade que já não tem o que dizer.
+
+**Aceite:** dado um tile queimado, é possível reconstruir a cadeia completa até a causa inicial; e invocar `ignite` sobre o que já queima com intensidade menor não produz linha nenhuma.
 
 ### R-049 — Orçamento de custo por tick
 `P1` · `V3` · derivado de X-008 · dep: R-014, R-005
