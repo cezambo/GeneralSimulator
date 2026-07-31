@@ -126,7 +126,15 @@ A ordem, do que nunca cai para o que cai primeiro:
 
 Sem ordem declarada, o corte fica dependendo de qual estrutura o código varreu primeiro, e duas execuções com a mesma semente divergem — o que quebra `X-004`. E o corte por proximidade, que é o palpite natural, é o pior possível: o fogo do outro lado do cômodo perde para a cadeira ao lado.
 
-**Aceite:** o relato nunca passa do orçamento declarado; num cômodo com mais coisas do que cabe, perigo e pessoas aparecem e o mobiliário de fundo é o que some; e o corte é idêntico entre duas execuções da mesma cena.
+**Dentro de uma mesma camada o desempate também é declarado**, porque quando uma camada só cabe pela metade alguém decide quais fatos dela sobrevivem. A ordem é: novidade (`isChange`) antes do que já estava lá, e depois o próprio texto, em ordem alfabética. O segundo critério é arbitrário de propósito — a alternativa natural seria a ordem em que os fatos foram colhidos, e é exatamente ela que este requisito proíbe. Ordem arbitrária e declarada é reproduzível; ordem "natural" e emergente não é.
+
+A ordem de leitura do relato é a mesma da saliência, e não uma ordem narrativa mais bonita. `L-019` diz que os prompts são escritos para o tier mais fraco, e modelo fraco atende ao começo do bloco: o que importa mais precisa ser lido primeiro.
+
+Um fato que não cabe **não interrompe** o aproveitamento do resto: um fato longo de camada 5 pode estourar o que sobrou enquanto um curto de camada 6 ainda cabe, e parar no primeiro estouro desperdiçaria orçamento já pago.
+
+O orçamento é conferido por uma estimativa de tokens que erra **para cima** de propósito. Não há tokenizador na engine, e não deveria haver: o roteador é agnóstico de provedor (`L-001`) e cada família tokeniza diferente, então cravar um amarraria a montagem a um modelo. O que se pode escolher é o lado do erro, e subestimar faria quem corta ser o provedor — no meio da frase e sem critério de saliência nenhum.
+
+**Aceite:** o relato nunca passa do orçamento declarado; num cômodo com mais coisas do que cabe, perigo e pessoas aparecem e o mobiliário de fundo é o que some; e o corte é idêntico entre duas execuções da mesma cena, inclusive quando os fatos são colhidos em ordem diferente.
 
 ### A-033 — O que a percepção nunca carrega
 `P0` · `V2` · decisão · dep: A-031, O-020, O-025
