@@ -16,16 +16,13 @@
  * outro, e uma mudança no substrato não move o dado do Validador.
  */
 
-/** Mistura um inteiro de 32 bits. Passo de avanço do mulberry32. */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+/** Passo de avanço do mulberry32, a partir de um estado de 32 bits. */
+function mulberry32Step(a: number): { state: number; value: number } {
+  const s = (a + 0x6d2b79f5) >>> 0;
+  let t = s;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return { state: s, value: ((t ^ (t >>> 14)) >>> 0) / 4294967296 };
 }
 
 /** FNV-1a de 32 bits. Determinístico entre plataformas, que é o único requisito. */
@@ -51,13 +48,35 @@ export interface Rng {
   pick<T>(items: readonly T[]): T;
   /** Embaralhamento Fisher-Yates numa cópia. */
   shuffle<T>(items: readonly T[]): T[];
+  /**
+   * Posição atual, para o save. X-003.
+   *
+   * É o estado interno inteiro, e não a contagem de sorteios: restaurar por
+   * contagem exigiria puxar N números fora até chegar onde estava, o que é
+   * exato mas fica caro num fluxo que rodou trinta dias.
+   */
+  snapshot(): { state: number; draws: number };
+  /** Volta a uma posição salva. */
+  restore(state: number, draws?: number): void;
 }
 
 function makeRng(stream: string, seed: number): Rng {
-  const next = mulberry32(seed);
+  let a = seed >>> 0;
+  let draws = 0;
+  const next = (): number => {
+    const r = mulberry32Step(a);
+    a = r.state;
+    draws++;
+    return r.value;
+  };
   return {
     stream,
     next,
+    snapshot: () => ({ state: a, draws }),
+    restore(state, d = 0) {
+      a = state >>> 0;
+      draws = d;
+    },
     int(min, max) {
       if (max < min) throw new RangeError(`int(${min}, ${max}): máximo abaixo do mínimo`);
       return min + Math.floor(next() * (max - min + 1));
@@ -116,5 +135,30 @@ export class SeedRoot {
   /** Fluxos já abertos, em ordem de abertura. Diagnóstico. */
   openStreams(): string[] {
     return [...this.#streams.keys()];
+  }
+
+  /**
+   * Posição de cada fluxo aberto, ordenada por nome. X-003.
+   *
+   * Ordenada porque a ordem de abertura depende de que subsistema agiu
+   * primeiro, e isso varia entre partidas — deixar essa ordem vazar para o save
+   * faria dois saves de estado idêntico diferirem byte a byte, e o teste de
+   * ida e volta de X-003 é justamente comparação campo a campo.
+   */
+  cursors(): { stream: string; state: number; draws: number }[] {
+    return [...this.#streams.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([stream, rng]) => ({ stream, ...rng.snapshot() }));
+  }
+
+  /**
+   * Retoma os fluxos de um save. Fluxo salvo que ainda não foi aberto é aberto
+   * aqui, e não na primeira chamada, porque quem restaura precisa que a posição
+   * esteja de pé antes de qualquer sorteio.
+   */
+  restoreCursors(cursors: readonly { stream: string; state: number; draws?: number }[]): void {
+    for (const c of cursors) {
+      this.stream(c.stream).restore(c.state, c.draws ?? 0);
+    }
   }
 }

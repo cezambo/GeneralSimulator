@@ -1303,6 +1303,170 @@
         "notes": { "type": "string" }
       },
       "additionalProperties": false
+    },
+
+    "CausalEntry": {
+      "type": "object",
+      "description": "Uma linha do log causal: um efeito e a causa que o produziu. X-005. É a memória do mundo, e é por ela existir que não há resumo em prosa do Validador. Tem janela de retenção declarada: o que sai dela é descartado sem condensar, porque semente e cassete regeneram o trecho. X-017.",
+      "required": ["simTime", "cause", "effect", "targetKind", "targetId"],
+      "properties": {
+        "simTime": { "type": "number" },
+        "cause": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["matrix_rule", "injury_matrix", "provisional_rule", "validator", "agent_decision", "engine_effect", "time"],
+              "description": "As quatro origens de X-005, abertas nas formas que a engine distingue. 'time' cobre o que decai ou converge sozinho por passagem de tick."
+            },
+            "ref": {
+              "type": "string",
+              "description": "Identificador da regra, do efeito ou da decisão. É o que permite ir do estado ao motivo sem busca textual."
+            },
+            "actorId": { "type": "string", "description": "Agente responsável, quando houve um." }
+          },
+          "additionalProperties": false
+        },
+        "effect": { "type": "string", "description": "O que mudou, em vocabulário fechado da engine. Não é prosa: prosa aqui viraria um segundo canal narrativo concorrendo com a percepção." },
+        "targetKind": { "type": "string", "enum": ["tile", "object", "agent", "body_part", "world"] },
+        "targetId": { "type": "string" },
+        "gridId": { "type": "string" },
+        "pos": { "$ref": "#/$defs/GridPos" }
+      },
+      "additionalProperties": false
+    },
+
+    "RngCursor": {
+      "type": "object",
+      "description": "Posição de um fluxo nomeado de aleatoriedade no momento do save. X-004, X-003. Sem isto, carregar e continuar reinicia cada fluxo do começo e a partida retomada sorteia de novo o que já tinha sorteado — o save preservaria o estado e perderia o futuro.",
+      "required": ["stream", "state"],
+      "properties": {
+        "stream": { "type": "string" },
+        "state": { "type": "integer", "description": "Estado interno do gerador, restaurado tal e qual. Inteiro de 32 bits sem sinal." },
+        "draws": { "type": "integer", "minimum": 0, "description": "Quantos números já saíram deste fluxo. Diagnóstico: não é usado para restaurar." }
+      },
+      "additionalProperties": false
+    },
+
+    "GridTileLayers": {
+      "type": "object",
+      "description": "As três camadas que toda célula sempre tem — tipo, material e altura do solo — guardadas densamente e codificadas por repetição no save. W-058. Densa porque não há célula sem elas, e codificada por repetição porque um grid 512×512 recém-gerado é quase todo a mesma coisa: o que ocupa 262 mil posições em memória cabe em algumas dezenas de números em disco, sem perda.",
+      "required": ["gridId", "width", "height", "typePalette", "materialPalette", "typeRuns", "materialRuns", "baseHeightRuns"],
+      "properties": {
+        "gridId": { "type": "string" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "typePalette": { "type": "array", "items": { "$ref": "#/$defs/TileType" }, "description": "Valores distintos presentes no grid. As camadas guardam o índice, não a string." },
+        "materialPalette": { "type": "array", "items": { "type": "string" }, "description": "Identificadores de material distintos presentes no grid." },
+        "typeRuns": { "$ref": "#/$defs/RunLengthRuns" },
+        "materialRuns": { "$ref": "#/$defs/RunLengthRuns" },
+        "baseHeightRuns": { "$ref": "#/$defs/RunLengthRuns", "description": "Aqui o valor é a altura em metros, e não índice de paleta." }
+      },
+      "additionalProperties": false
+    },
+
+    "RunLengthRuns": {
+      "type": "array",
+      "items": { "type": "number" },
+      "description": "Pares alternados de valor e contagem, em ordem de varredura por linha: [valor, quantas, valor, quantas, ...]. A soma das contagens é exatamente width × height, e é essa igualdade que torna a decodificação verificável em vez de confiável.",
+      "minItems": 0
+    },
+
+    "TileOverlay": {
+      "type": "object",
+      "description": "O que só algumas células têm, indexado pela célula afetada. W-058. Estados transientes, coberturas, líquido, gás, ocupação e guardado vivem aqui e não em matriz densa, para que a memória cresça com o que aconteceu e não com a área do mapa. Uma célula ausente daqui é uma célula intacta, e é isso que faz um grid 512×512 recém-gerado não custar quase nada.",
+      "properties": {
+        "tileHeight": { "type": "number", "minimum": 0 },
+        "pressure": { "type": "number" },
+        "gravityMultiplier": { "type": "number", "minimum": 0 },
+        "temperature": { "type": "number" },
+        "integrity": { "type": "number", "minimum": 0, "maximum": 100 },
+        "rotation": { "type": "integer", "enum": [0, 90, 180, 270] },
+        "state": { "type": "object", "additionalProperties": true },
+        "states": { "type": "array", "items": { "$ref": "#/$defs/TransientState" } },
+        "coverings": { "type": "array", "items": { "$ref": "#/$defs/Covering" } },
+        "liquid": { "$ref": "#/$defs/LiquidVolume" },
+        "gas": {
+          "type": "object",
+          "properties": {
+            "materialId": { "type": "string" },
+            "density": { "type": "number", "minimum": 0, "maximum": 100 }
+          },
+          "additionalProperties": false
+        },
+        "occupancy": {
+          "type": "object",
+          "properties": {
+            "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+            "occupantIds": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "storedObjectIds": { "type": "array", "items": { "type": "string" } },
+        "sectorId": { "type": "string" },
+        "locationLabel": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "SaveManifest": {
+      "type": "object",
+      "description": "O que é preciso saber para reproduzir a partida, e não faz parte do estado dela. X-002, X-003.",
+      "required": ["seed", "preset", "promptsVersion", "engineVersion"],
+      "properties": {
+        "seed": { "type": "string", "description": "Semente-mestra como texto, e não número: uma semente escrita pelo usuário é o caso comum, e converter na entrada perderia o que ele digitou. X-004." },
+        "preset": { "type": "string", "description": "Preset de modelos ativo quando a partida rodou. L-005." },
+        "promptsVersion": { "type": "string", "description": "Impressão digital do conjunto de prompts. Prompt editado invalida cassete (L-015), e sem registrar isto o replay divergiria calado." },
+        "engineVersion": { "type": "string" },
+        "configFingerprint": {
+          "type": "string",
+          "description": "Impressão digital dos arquivos de configuração. O save guarda identificadores de material, condição e definição de objeto, mas não o catálogo — que vive em config (X-008). Se o catálogo mudou entre salvar e carregar, um identificador pode não resolver mais, e é melhor avisar na carga do que descobrir num tick qualquer."
+        },
+        "createdAtRealTime": { "type": "string", "format": "date-time" },
+        "savedAtSimTime": { "type": "number" },
+        "scenarioName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "SimulationState": {
+      "type": "object",
+      "description": "A raiz. Tudo que a simulação sabe está aqui dentro, e o save é este objeto serializado sem projeção nenhuma. X-003, X-001.\n\nSalvar por projeção — montar um objeto de save a partir do estado vivo — parece mais limpo e é a origem do defeito clássico: acrescenta-se um campo ao estado, esquece-se de acrescentá-lo à projeção, e a perda só aparece dias depois, num carregamento, sem erro. Estado que já é a forma salva não tem como esquecer.\n\nO que vive em configuração não vive aqui: materiais, reações, condições, plano de corpo e definições de objeto são referenciados por identificador e carregados de config (X-008). O save guarda a partida, não o jogo.",
+      "required": ["saveVersion", "manifest", "clock", "grids", "tileLayers", "tileOverlays", "objects", "agents", "rngCursors", "nextIds"],
+      "properties": {
+        "saveVersion": { "type": "integer", "minimum": 1, "description": "Versão do formato. Carregar versão incompatível recusa com mensagem, nunca carrega pela metade. X-015." },
+        "manifest": { "$ref": "#/$defs/SaveManifest" },
+        "clock": { "$ref": "#/$defs/Clock" },
+        "grids": { "type": "array", "items": { "$ref": "#/$defs/Grid" } },
+        "tileLayers": { "type": "array", "items": { "$ref": "#/$defs/GridTileLayers" } },
+        "tileOverlays": {
+          "type": "object",
+          "description": "Por grid, as células que têm algo além das camadas densas. A chave interna é \"x,y\".",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/TileOverlay" }
+          }
+        },
+        "objects": { "type": "object", "additionalProperties": { "$ref": "#/$defs/WorldObject" } },
+        "composites": { "type": "object", "additionalProperties": { "$ref": "#/$defs/CompositeStructure" } },
+        "agents": { "type": "object", "additionalProperties": { "$ref": "#/$defs/Agent" } },
+        "conversations": { "type": "object", "additionalProperties": { "$ref": "#/$defs/ConversationInstance" } },
+        "laws": { "type": "array", "items": { "$ref": "#/$defs/CommunityLaw" } },
+        "communityGoals": { "type": "array", "items": { "$ref": "#/$defs/CommunityGoal" } },
+        "provisionalRules": { "type": "array", "items": { "$ref": "#/$defs/ProvisionalRule" } },
+        "formulaBindings": { "type": "array", "items": { "$ref": "#/$defs/FormulaBinding" } },
+        "plausibility": { "$ref": "#/$defs/PlausibilityRegistry" },
+        "validationPolicy": { "$ref": "#/$defs/ValidationPolicy" },
+        "causalLog": { "type": "array", "items": { "$ref": "#/$defs/CausalEntry" } },
+        "rngCursors": { "type": "array", "items": { "$ref": "#/$defs/RngCursor" } },
+        "nextIds": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "description": "Contador por prefixo de identificador. Precisa ser salvo: sem ele, a partida retomada recomeça a numerar do zero e passa a criar objetos com identificador que já existe — colisão que não dá erro, apenas sobrescreve."
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

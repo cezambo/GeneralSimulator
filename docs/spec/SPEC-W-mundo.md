@@ -393,7 +393,9 @@ O teto sobe de 128×128 para **512×512**. A 0,5 m por célula, 128 células dã
 
 **O custo é aceitável e a razão é precisa: o substrato avalia apenas o que está ativo (X-013), então um grid maior multiplica memória, não CPU.** Quadruplicar o lado multiplica por dezesseis a quantidade de células inertes, e célula inerte não entra na matriz de reação, não entra em campo calculado, não entra em varredura de vizinhança e não entra no pathfinding além do trecho consultado. O tick não sabe o tamanho do mapa.
 
-Para que a memória também não cresça com a área, o que é raro é guardado de forma **esparsa**: estados transientes, coberturas, líquidos, gases, objetos guardados e ocupação vivem em estrutura indexada pela célula afetada, nunca em matriz densa. Só o que toda célula sempre tem — tipo, material e `baseHeight` — justifica matriz densa, e são justamente os campos pequenos.
+Para que a memória também não cresça com a área, o que é raro é guardado de forma **esparsa**: conforme `TileOverlay`, estados transientes, coberturas, líquidos, gases, objetos guardados e ocupação vivem em estrutura indexada pela célula afetada, nunca em matriz densa. Célula ausente é célula intacta. Só o que toda célula sempre tem — tipo, material e `baseHeight` — justifica matriz densa, e são justamente os campos pequenos; no save essas três viram `GridTileLayers`, com paleta e codificação por repetição, porque um grid recém-gerado é quase todo a mesma coisa e 262 mil posições cabem em algumas dezenas de números sem perda.
+
+O que é materializado a partir das duas fontes é um `Tile`: ele é a **visão montada** de uma célula, e não a forma como ela é guardada.
 
 **Aceite:** um grid 512×512 sem nenhuma célula em estado ativo custa tempo de tick indistinguível de um 64×64 nas mesmas condições; e a memória ocupada por estados, coberturas, líquidos e ocupação cresce com o número de células afetadas, nunca com a área do grid.
 

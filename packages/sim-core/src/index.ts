@@ -11,4 +11,6 @@
 
 export { SeedRoot, hashString, type Rng } from './rng/index.js';
 export * from './llm/index.js';
+export * from './state/index.js';
+export { validateDomain, validateLlmOutput, definitionOf } from './schema/index.js';
 export * from './types/domain.js';

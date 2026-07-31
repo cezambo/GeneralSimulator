@@ -33,9 +33,13 @@ Toda chamada de LLM é gravada e pode ser reproduzida, com manifesto que registr
 ### X-003 — Persistência
 `P0` · `V2` · PDF 101-107 · dep: X-001
 
-Mundo, agentes, memórias, opiniões, metas, leis e regras provisórias são serializados e restaurados sem perda.
+Conforme `SimulationState`. Mundo, agentes, memórias, opiniões, metas, leis e regras provisórias são serializados e restaurados sem perda.
 
-**Aceite:** salvar e carregar produz estado idêntico campo a campo.
+O estado vivo **é** a forma salva, e salvar é serializá-lo sem projeção. Montar um objeto de save a partir do estado parece mais limpo e é a origem do defeito clássico: acrescenta-se um campo ao estado, esquece-se de acrescentá-lo à projeção, e a perda aparece dias depois num carregamento, sem erro nenhum. Só duas coisas fogem à regra, por não terem representação eficiente em JSON: as camadas densas de tile, que vão codificadas por repetição (`GridTileLayers`), e a posição dos geradores (`RngCursor`).
+
+Restaurado sem perda inclui o que não é conteúdo do mundo mas decide o que vem depois: a posição de cada fluxo de aleatoriedade e o contador de identificadores. Sem o primeiro, a partida retomada sorteia de novo o que já tinha sorteado — o save preserva o estado e perde o futuro. Sem o segundo, ela recomeça a numerar do zero e passa a criar objetos com identificador existente, colisão que não dá erro e apenas sobrescreve.
+
+**Aceite:** salvar e carregar produz estado idêntico campo a campo; salvar, carregar e salvar de novo produz texto idêntico; e a partida retomada devolve, no fluxo seguinte, exatamente o número que a original devolveria.
 
 ### X-004 — Determinismo por semente
 `P0` · `V1` · decisão · dep: X-001
@@ -47,7 +51,7 @@ Toda aleatoriedade vem de geradores semeados e nomeados por subsistema. Nada usa
 ### X-005 — Log causal
 `P0` · `V1` · decisão · dep: X-004
 
-Todo efeito registra o que o causou: regra da matriz, invocação do Validador, decisão de agente ou passagem de tempo.
+Conforme `CausalEntry`. Todo efeito registra o que o causou: regra da matriz, invocação do Validador, decisão de agente ou passagem de tempo.
 
 É a memória do mundo, é determinística e é grátis — e é por isso que não existe resumo em prosa do Validador.
 

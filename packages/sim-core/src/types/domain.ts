@@ -58,6 +58,21 @@ export type ThoughtTrigger =
   | 'postDenial'
   | 'wakeUp'
   | 'meeting';
+/**
+ * Pares alternados de valor e contagem, em ordem de varredura por linha: [valor, quantas, valor, quantas, ...]. A soma das contagens é exatamente width × height, e é essa igualdade que torna a decodificação verificável em vez de confiável.
+ *
+ * @minItems 0
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "RunLengthRuns".
+ */
+export type RunLengthRuns = number[];
+/**
+ * Pares alternados de valor e contagem, em ordem de varredura por linha: [valor, quantas, valor, quantas, ...]. A soma das contagens é exatamente width × height, e é essa igualdade que torna a decodificação verificável em vez de confiável.
+ *
+ * @minItems 0
+ */
+export type RunLengthRuns1 = number[];
 
 export interface Domain {
   Vec2?: Vec2;
@@ -107,6 +122,13 @@ export interface Domain {
   FormulaBinding?: FormulaBinding1;
   ValidationPolicy?: ValidationPolicy;
   PlausibilityRegistry?: PlausibilityRegistry;
+  CausalEntry?: CausalEntry;
+  RngCursor?: RngCursor;
+  GridTileLayers?: GridTileLayers;
+  RunLengthRuns?: RunLengthRuns;
+  TileOverlay?: TileOverlay;
+  SaveManifest?: SaveManifest;
+  SimulationState?: SimulationState;
 }
 /**
  * This interface was referenced by `Domain`'s JSON-Schema
@@ -1677,4 +1699,194 @@ export interface PlausibilityRegistry {
    */
   inviolableLaws: string[];
   notes?: string;
+}
+/**
+ * Uma linha do log causal: um efeito e a causa que o produziu. X-005. É a memória do mundo, e é por ela existir que não há resumo em prosa do Validador. Tem janela de retenção declarada: o que sai dela é descartado sem condensar, porque semente e cassete regeneram o trecho. X-017.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "CausalEntry".
+ */
+export interface CausalEntry {
+  simTime: number;
+  cause: {
+    /**
+     * As quatro origens de X-005, abertas nas formas que a engine distingue. 'time' cobre o que decai ou converge sozinho por passagem de tick.
+     */
+    kind:
+      | 'matrix_rule'
+      | 'injury_matrix'
+      | 'provisional_rule'
+      | 'validator'
+      | 'agent_decision'
+      | 'engine_effect'
+      | 'time';
+    /**
+     * Identificador da regra, do efeito ou da decisão. É o que permite ir do estado ao motivo sem busca textual.
+     */
+    ref?: string;
+    /**
+     * Agente responsável, quando houve um.
+     */
+    actorId?: string;
+  };
+  /**
+   * O que mudou, em vocabulário fechado da engine. Não é prosa: prosa aqui viraria um segundo canal narrativo concorrendo com a percepção.
+   */
+  effect: string;
+  targetKind: 'tile' | 'object' | 'agent' | 'body_part' | 'world';
+  targetId: string;
+  gridId?: string;
+  pos?: GridPos;
+}
+/**
+ * Posição de um fluxo nomeado de aleatoriedade no momento do save. X-004, X-003. Sem isto, carregar e continuar reinicia cada fluxo do começo e a partida retomada sorteia de novo o que já tinha sorteado — o save preservaria o estado e perderia o futuro.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "RngCursor".
+ */
+export interface RngCursor {
+  stream: string;
+  /**
+   * Estado interno do gerador, restaurado tal e qual. Inteiro de 32 bits sem sinal.
+   */
+  state: number;
+  /**
+   * Quantos números já saíram deste fluxo. Diagnóstico: não é usado para restaurar.
+   */
+  draws?: number;
+}
+/**
+ * As três camadas que toda célula sempre tem — tipo, material e altura do solo — guardadas densamente e codificadas por repetição no save. W-058. Densa porque não há célula sem elas, e codificada por repetição porque um grid 512×512 recém-gerado é quase todo a mesma coisa: o que ocupa 262 mil posições em memória cabe em algumas dezenas de números em disco, sem perda.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "GridTileLayers".
+ */
+export interface GridTileLayers {
+  gridId: string;
+  width: number;
+  height: number;
+  /**
+   * Valores distintos presentes no grid. As camadas guardam o índice, não a string.
+   */
+  typePalette: TileType[];
+  /**
+   * Identificadores de material distintos presentes no grid.
+   */
+  materialPalette: string[];
+  typeRuns: RunLengthRuns;
+  materialRuns: RunLengthRuns;
+  baseHeightRuns: RunLengthRuns1;
+}
+/**
+ * O que só algumas células têm, indexado pela célula afetada. W-058. Estados transientes, coberturas, líquido, gás, ocupação e guardado vivem aqui e não em matriz densa, para que a memória cresça com o que aconteceu e não com a área do mapa. Uma célula ausente daqui é uma célula intacta, e é isso que faz um grid 512×512 recém-gerado não custar quase nada.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "TileOverlay".
+ */
+export interface TileOverlay {
+  tileHeight?: number;
+  pressure?: number;
+  gravityMultiplier?: number;
+  temperature?: number;
+  integrity?: number;
+  rotation?: 0 | 90 | 180 | 270;
+  state?: {
+    [k: string]: unknown;
+  };
+  states?: TransientState[];
+  coverings?: Covering[];
+  liquid?: LiquidVolume2;
+  gas?: {
+    materialId?: string;
+    density?: number;
+  };
+  occupancy?: {
+    fraction?: number;
+    occupantIds?: string[];
+  };
+  storedObjectIds?: string[];
+  sectorId?: string;
+  locationLabel?: string;
+}
+/**
+ * O que é preciso saber para reproduzir a partida, e não faz parte do estado dela. X-002, X-003.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "SaveManifest".
+ */
+export interface SaveManifest {
+  /**
+   * Semente-mestra como texto, e não número: uma semente escrita pelo usuário é o caso comum, e converter na entrada perderia o que ele digitou. X-004.
+   */
+  seed: string;
+  /**
+   * Preset de modelos ativo quando a partida rodou. L-005.
+   */
+  preset: string;
+  /**
+   * Impressão digital do conjunto de prompts. Prompt editado invalida cassete (L-015), e sem registrar isto o replay divergiria calado.
+   */
+  promptsVersion: string;
+  engineVersion: string;
+  /**
+   * Impressão digital dos arquivos de configuração. O save guarda identificadores de material, condição e definição de objeto, mas não o catálogo — que vive em config (X-008). Se o catálogo mudou entre salvar e carregar, um identificador pode não resolver mais, e é melhor avisar na carga do que descobrir num tick qualquer.
+   */
+  configFingerprint?: string;
+  createdAtRealTime?: string;
+  savedAtSimTime?: number;
+  scenarioName?: string;
+}
+/**
+ * A raiz. Tudo que a simulação sabe está aqui dentro, e o save é este objeto serializado sem projeção nenhuma. X-003, X-001.
+ *
+ * Salvar por projeção — montar um objeto de save a partir do estado vivo — parece mais limpo e é a origem do defeito clássico: acrescenta-se um campo ao estado, esquece-se de acrescentá-lo à projeção, e a perda só aparece dias depois, num carregamento, sem erro. Estado que já é a forma salva não tem como esquecer.
+ *
+ * O que vive em configuração não vive aqui: materiais, reações, condições, plano de corpo e definições de objeto são referenciados por identificador e carregados de config (X-008). O save guarda a partida, não o jogo.
+ *
+ * This interface was referenced by `Domain`'s JSON-Schema
+ * via the `definition` "SimulationState".
+ */
+export interface SimulationState {
+  /**
+   * Versão do formato. Carregar versão incompatível recusa com mensagem, nunca carrega pela metade. X-015.
+   */
+  saveVersion: number;
+  manifest: SaveManifest;
+  clock: Clock;
+  grids: Grid[];
+  tileLayers: GridTileLayers[];
+  /**
+   * Por grid, as células que têm algo além das camadas densas. A chave interna é "x,y".
+   */
+  tileOverlays: {
+    [k: string]: {
+      [k: string]: TileOverlay;
+    };
+  };
+  objects: {
+    [k: string]: WorldObject;
+  };
+  composites?: {
+    [k: string]: CompositeStructure1;
+  };
+  agents: {
+    [k: string]: Agent;
+  };
+  conversations?: {
+    [k: string]: ConversationInstance;
+  };
+  laws?: CommunityLaw[];
+  communityGoals?: CommunityGoal[];
+  provisionalRules?: ProvisionalRule[];
+  formulaBindings?: FormulaBinding1[];
+  plausibility?: PlausibilityRegistry;
+  validationPolicy?: ValidationPolicy;
+  causalLog?: CausalEntry[];
+  rngCursors: RngCursor[];
+  /**
+   * Contador por prefixo de identificador. Precisa ser salvo: sem ele, a partida retomada recomeça a numerar do zero e passa a criar objetos com identificador que já existe — colisão que não dá erro, apenas sobrescreve.
+   */
+  nextIds: {
+    [k: string]: number;
+  };
 }
