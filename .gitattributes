@@ -1,0 +1,15 @@
+# O gerador de tipos escreve LF e compara byte a byte com o disco em
+# `npm run types -- --check`. Sem isto, o git devolveria CRLF no checkout e a
+# checagem falharia num clone novo em Windows, acusando divergencia de um
+# arquivo que ninguem tocou.
+*.ts text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+
+# Godot exige LF nos proprios formatos.
+*.gd text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+project.godot text eol=lf
