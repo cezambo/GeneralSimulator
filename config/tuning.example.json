@@ -122,7 +122,7 @@
   },
 
   "gm": {
-    "$comment": "G-002, G-024, G-027, G-028.",
+    "$comment": "V-002, V-024, V-027, V-028.",
     "maxRegrasProvisoriasVivas": 24,
     "invocacoesParaEntrarNaDivida": 3,
     "disparosPorDiaParaAlertaAnomalia": 50,

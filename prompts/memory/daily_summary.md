@@ -28,7 +28,7 @@ Você comprime um dia de atividades em memória durável. Escreva como ESTA pess
 
 **Regras:**
 - 1 parágrafo, 3-6 frases, terceira pessoa ou primeira (consistente).
-- Preserve fatos significativos: interações sociais, trabalho concluído, conflitos, descobertas, negações GM importantes.
+- Preserve fatos significativos: interações sociais, trabalho concluído, conflitos, descobertas, negações Validador importantes.
 - Ignore: deslocamentos curtos (< 15 tiles), ociosidade trivial, micro-ações repetitivas.
 - NÃO use "hoje", "agora", "este dia" — escreva como memória consolidada.
 - Marcantes do buffer: incluir intactos ou referenciados claramente.

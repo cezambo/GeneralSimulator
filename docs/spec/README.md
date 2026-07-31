@@ -13,7 +13,7 @@ Requisitos atômicos, identificados e verificáveis. Cada um é uma unidade fech
 | `B-` | [SPEC-B-corpo.md](SPEC-B-corpo.md) | Anatomia, condições, capacidades, lesão, doença, cuidado |
 | `C-` | [SPEC-C-cognicao.md](SPEC-C-cognicao.md) | Pensamento, memória, opiniões, objetivos |
 | `S-` | [SPEC-S-interacao.md](SPEC-S-interacao.md) | Conversa, comunidade, conflito |
-| `G-` | [SPEC-G-gm.md](SPEC-G-gm.md) | Game Master e mediação |
+| `V-` | [SPEC-V-validador.md](SPEC-V-validador.md) | Validador e mediação |
 | `U-` | [SPEC-U-ui.md](SPEC-U-ui.md) | Interface |
 | `L-` | [SPEC-L-llm.md](SPEC-L-llm.md) | Camada LLM |
 | `X-` | [SPEC-X-transversal.md](SPEC-X-transversal.md) | Persistência, testes, observabilidade, performance |

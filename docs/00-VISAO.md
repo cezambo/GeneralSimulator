@@ -6,9 +6,9 @@
 
 Um simulador de vida social em vista de cima, num mundo em grid com tiles, onde um número escolhido de agentes controlados por LLM vivem, percebem, pensam, formam memórias e opiniões, interagem entre si e com o ambiente, e evoluem psicologicamente ao longo de dias, estações e anos simulados.
 
-Um Game Master invisível, também LLM, media toda tentativa de ação e altera o mundo para corresponder ao que os agentes tentam fazer.
+Um Validador invisível, também LLM, media toda tentativa de ação e altera o mundo para corresponder ao que os agentes tentam fazer.
 
-O usuário observa, pausa, constrói, edita mentes e instrui o GM.
+O usuário observa, pausa, constrói, edita mentes e instrui o Validador.
 
 ---
 
@@ -28,7 +28,7 @@ Se a tese estiver certa, a narrativa não precisa ser escrita. Ela acontece.
 
 ## 3. O que faz este projeto diferente
 
-**O GM é permissivo, não é porteiro.** A postura padrão é materializar. Diante de uma ação improvável, o GM prefere executar com custo, ou reinterpretar, antes de negar. Isso substitui a validação binária do documento original e é o que permite que um agente tente qualquer coisa.
+**O Validador é permissivo, não é porteiro.** A postura padrão é materializar. Diante de uma ação improvável, o Validador prefere executar com custo, ou reinterpretar, antes de negar. Isso substitui a validação binária do documento original e é o que permite que um agente tente qualquer coisa.
 
 **A engine decide o possível, a LLM decide a intenção.** Geometria, pathfinding, colisão e affordances são computados. O agente escolhe o que querer, nunca como calcular. Isso mantém a LLM fazendo o que ela faz bem e fora do que ela faz mal.
 
@@ -44,7 +44,7 @@ Se a tese estiver certa, a narrativa não precisa ser escrita. Ela acontece.
 
 **O observador.** Aperta play e assiste. Precisa de leitura clara do que está acontecendo sem abrir painel nenhum.
 
-**O experimentador.** Liga cones de visão, lê pensamentos crus, inspeciona traces de LLM, instrui o GM, exporta logs, compara rodadas.
+**O experimentador.** Liga cones de visão, lê pensamentos crus, inspeciona traces de LLM, instrui o Validador, exporta logs, compara rodadas.
 
 São três modos do mesmo usuário, não três pessoas.
 
@@ -55,7 +55,7 @@ São três modos do mesmo usuário, não três pessoas.
 1. **Preparar** — informar quantidade de pessoas e, opcionalmente, descrever o cenário. Mundo, cidade e habitantes são gerados a partir disso.
 2. **Simular** — agentes vivem ciclos diários autônomos, trabalham, conversam, mudam de ideia, perseguem objetivos.
 3. **Intervir** — editar memória, personalidade ou meta de alguém; arrastar pessoas e objetos; construir e demolir.
-4. **Pressionar** — instruir o GM, provocar escassez, introduzir um evento e observar a resposta coletiva.
+4. **Pressionar** — instruir o Validador, provocar escassez, introduzir um evento e observar a resposta coletiva.
 5. **Investigar** — abrir uma mente, ler a cascata de memórias, ver qual opinião rompeu e qual meta isso invalidou.
 
 ---
@@ -93,7 +93,7 @@ Fora de escopo, com a razão:
 | Multiplayer ou rede | não serve à tese |
 | 3D ou animação elaborada | o custo visual não retorna em emergência narrativa |
 | Economia com moeda, mercado e preços | complexidade alta, ganho narrativo baixo no início |
-| Árvore de crafting profunda | o GM cobre combinação de itens sem sistema dedicado |
+| Árvore de crafting profunda | o Validador cobre combinação de itens sem sistema dedicado |
 | Modding por terceiros | a arquitetura não impede, mas nada será exposto como API pública |
 | Combate tático detalhado | conflito existe, mas a escolha é de agência, não de posicionamento fino |
 | Geração de sprites por IA | arte é placeholder até que o resto funcione |

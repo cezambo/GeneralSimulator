@@ -26,7 +26,7 @@ Curta, mas não pulável. Duas coisas que são caras de retrofitar depois:
 - `schemas/` como fonte única, com geração de tipos TS
 - **Protocolo WebSocket** do `05-PROTOCOLO.md`, com handshake, snapshot e reconexão
 - **Camada LLM completa**: OpenRouter, resolução de tier→modelo, validação de schema, passe de reparo, cassetes de gravação/replay, contabilidade de custo
-- **Spike cognitivo descartável**: script headless, sala fake 5×5 sem render, 2 agentes, loop pensamento→GM→memória rodando 3 dias simulados
+- **Spike cognitivo descartável**: script headless, sala fake 5×5 sem render, 2 agentes, loop pensamento→Validador→memória rodando 3 dias simulados
 
 O spike roda inteiramente dentro do `sim-core`, sem Godot aberto. É a primeira prova de que a separação funciona.
 
@@ -83,20 +83,20 @@ O primeiro entregável que é genuinamente utilizável.
 
 ---
 
-## V4 — GM e ações
+## V4 — Validador e ações
 
 Primeira LLM no laço principal da simulação.
 
-- Pipeline colapsado: pensamento → GM único (`gm.evaluate_high`); affordance-first sem LLM (W-031)
+- Pipeline colapsado: pensamento → Validador único (`gm.evaluate_high`); affordance-first sem LLM (W-031)
 - Verdicts `executed` / `partial` / `reinterpreted` / `denied` + `generalization` cross-domain
-- Exposição do substrato ao GM e resumo da matriz em linguagem natural
+- Exposição do substrato ao Validador e resumo da matriz em linguagem natural
 - Mutação `engine_effect` com regra de não-duplicação
 - Validador de causa contra derivado
 - Registro de plausibilidade do cenário
 - Promoção generalizada: regras provisórias por domínio, revisáveis no painel
-- UI de instruções do usuário ao GM
+- UI de instruções do usuário ao Validador
 
-**Pronto quando:** ação com affordance resolve sem GM; ação criativa passa por `evaluate_high` com `generalization`; arremesso de tocha em palha gera zero invocação.
+**Pronto quando:** ação com affordance resolve sem Validador; ação criativa passa por `evaluate_high` com `generalization`; arremesso de tocha em palha gera zero invocação.
 
 ---
 
@@ -108,7 +108,7 @@ Aqui entra o motor mental completo.
 - Pensamento nos três níveis, com gatilhos reativo, contemplativo, espontâneo e agendado
 - Substrato biológico comprimido: catálogo único, capacidades derivadas, odor/descritores
 - Órgãos como partes com mais campos: funcionamento derivado por sensibilidade e resiliência, vascularização governando sangramento, e as capacidades agrupadas em sistemas nomeados
-- Exposição do corpo ao GM com `transmute_part` atrás do registro de plausibilidade
+- Exposição do corpo ao Validador com `transmute_part` atrás do registro de plausibilidade
 - `cognition.goal_revise` parametrizado (substitui metas separadas por período)
 - Classificador de dissonância, ruptura com `stance`, reavaliação de metas
 - Waterfall de memória: marcantes, diária, sazonal, `longterm_summary` parametrizado
@@ -147,7 +147,7 @@ Aqui entra o motor mental completo.
 
 ## Estado da especificação
 
-Os dez domínios estão escritos: `W` mundo, `R` substrato, `A` agente, `B` corpo, `C` cognição, `S` interação, `G` GM, `U` interface, `L` camada LLM e `X` transversal. Somados, 343 requisitos com critério de aceite.
+Os dez domínios estão escritos: `W` mundo, `R` substrato, `A` agente, `B` corpo, `C` cognição, `S` interação, `G` Validador, `U` interface, `L` camada LLM e `X` transversal. Somados, 343 requisitos com critério de aceite.
 
 O que falta não é mais especificação, e sim código: nenhum requisito foi implementado. `V0` é o próximo passo real.
 

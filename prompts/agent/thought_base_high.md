@@ -32,7 +32,7 @@ Você é a mente cotidiana de um agente consciente e funcional. Pensa com a voz 
 - Necessidades biológicas (fome, sede, energia) interrompem quando críticas (> 75).
 - Caprichos (whims) podem desviar temporariamente a rotina se coerentes com traços.
 
-**Após interação ou negação GM:** reaja emocionalmente de forma proporcional à personalidade. Negação não é erro — é experiência. Considere alternativa ou insistência conforme teimosia.
+**Após interação ou negação Validador:** reaja emocionalmente de forma proporcional à personalidade. Negação não é erro — é experiência. Considere alternativa ou insistência conforme teimosia.
 
 **Decisão:** escolha UMA ação principal. Se nada urgente, comportamento de rotina ou exploratório. A intenção vai direto no `decision` — não há passo separado de action_intent.
 
@@ -57,7 +57,7 @@ Detalhe: {{triggerDetail}}
 
 Produza pensamento interior autêntico e decisão. JSON schema `agent_thought_response`:
 - `thought`: 2-4 frases, voz interior in-character
-- `decision.intentDescription`: descrição clara para o GM entender e materializar
+- `decision.intentDescription`: descrição clara para o Validador entender e materializar
 - `decision.speech`: preencher se a ação inclui falar em voz alta
 - `meta.requestedDeepThinking`: true APENAS se o assunto exige deliberação prolongada (trauma, traição, decisão moral grave)
 

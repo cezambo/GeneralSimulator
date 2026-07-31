@@ -81,7 +81,7 @@ O volume segue o mesmo princípio: soma dos volumes dos componentes, com o PEM d
 
 Isto é o que torna montagem improvisada (O-019) segura de permitir. Um objeto que ninguém previu nasce com peso e volume corretos porque eles não foram declarados por ninguém — foram contados.
 
-**Aceite:** substituir um componente por outro de material mais denso altera o peso do composto sem edição de campo, e uma mutação que escreva direto no peso de um composto é rejeitada pelo validador como escrita em derivado.
+**Aceite:** substituir um componente por outro de material mais denso altera o peso do composto sem edição de campo, e uma mutação que escreva direto no peso de um composto é rejeitada pela validação de schema como escrita em derivado.
 
 ### O-006 — A junta conduz calor
 `P1` · `V2` · decisão · dep: O-004, R-008

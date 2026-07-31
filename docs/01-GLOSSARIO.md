@@ -36,13 +36,13 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Campo calculado** | — | Recomputado a cada tick sem memória: luz, som, odor. Distinto de estado, que persiste. |
 | **Cobertura** | `Covering` | Substância que reveste uma entidade: sangue, fuligem, lama. Perceptível por terceiros. |
 | **Matriz de reação** | — | As regras de reescrita que a engine avalia sozinha, em `config/reactions.json`. |
-| **Efeito nomeado** | `effectId` | Transição de estado do vocabulário fechado, invocável por identificador tanto pela matriz quanto pelo GM. |
+| **Efeito nomeado** | `effectId` | Transição de estado do vocabulário fechado, invocável por identificador tanto pela matriz quanto pelo Validador. |
 | **Transmutação** | `transmute` | Trocar o material de um alvo preservando identidade e estado. Vale para tile, objeto e parte de corpo. |
-| **Causação nova** | — | Método plausível de criar um estado que nenhuma regra modela. É a **única** coisa que o GM faz no substrato. |
-| **Dívida de matriz** | — | Método improvisado que o GM repete com frequência, candidato a virar regra determinística. |
+| **Causação nova** | — | Método plausível de criar um estado que nenhuma regra modela. É a **única** coisa que o Validador faz no substrato. |
+| **Dívida de matriz** | — | Método improvisado que o Validador repete com frequência, candidato a virar regra determinística. |
 | **Promoção generalizada** | `generalization` | Mecanismo único cross-domain: improviso vira regra provisória com `domain` + vocabulário fechado. |
-| **Regra provisória** | — | Regra emitida pelo GM com `verdict: systemic`; entra viva, revisável no painel. |
-| **Registro de plausibilidade** | — | Conjunto de operações que o GM pode invocar num cenário (B-044). Portão da promoção. |
+| **Regra provisória** | — | Regra emitida pelo Validador com `verdict: systemic`; entra viva, revisável no painel. |
+| **Registro de plausibilidade** | — | Conjunto de operações que o Validador pode invocar num cenário (B-044). Portão da promoção. |
 | **Stance** | — | Viés relacional comprimido (`trust`, `distrust`, …) em opiniões; pré-filtro por `topic`. |
 | **Domain** | — | Domínio da promoção: `substrate`, `body`, `social`, `cognition`, `community`. |
 
@@ -57,7 +57,7 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Capacidade** | `Capacities` | Função corporal agregada: consciência, manipulação, visão, locomoção, fala. **Todas derivadas** de partes e condições. |
 | **Matriz de lesão** | — | Tipo de dano cruzado com propriedade do material, produzindo condição. Mesmo formato da matriz de reação. |
 | **Corrida de infecção** | — | Severidade contra imunidade, ambas de 0 a 1. A primeira a chegar vence. |
-| **Registro de plausibilidade** | — | Conjunto de operações que o GM está autorizado a invocar num cenário. Guarda contra deriva tonal. |
+| **Registro de plausibilidade** | — | Conjunto de operações que o Validador está autorizado a invocar num cenário. Guarda contra deriva tonal. |
 
 ## Tempo
 
@@ -92,7 +92,7 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Pensamento corriqueiro** | — | Rotineiro. Roda no tier `narrative`, ou `compact` se debilitado (consciência < 0.70). |
 | **Pensamento aprofundado** | — | Deliberação longa. Roda em `agent.thought.reasoning` quando `requestedDeepThinking` ou gatilho grave. |
 | **Gatilho** | `ThoughtTrigger` | O que provocou o pensamento: reativo, contemplativo, espontâneo, agendado, pós-interação, pós-veredito. |
-| **Intenção** | `Intent` | O que o agente quer fazer, enviado ao GM. Não é ação ainda. |
+| **Intenção** | `Intent` | O que o agente quer fazer, enviado ao Validador. Não é ação ainda. |
 | **Log de atividades** | `ActivityLog` | Cronologia factual e privada do que o agente de fato fez. Fonte da verdade contra a qual mentiras são comparadas. |
 | **Buffer de curto prazo** | `ShortTermBuffer` | Acumulado bruto do dia, apagado ao dormir. |
 | **Marcante** | `Marcante` | Evento de alto impacto emocional. 0 a 5 por dia. Sobe intacto pelas camadas. ⚑ termo mantido em português por não ter equivalente natural. |
@@ -130,21 +130,21 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Assembleia** | — | Reunião de todos os agentes conscientes. |
 | **Comitê** | — | Reunião de especialistas por habilidade. |
 | **Ata** | `MeetingVerdict` | Saída estruturada da reunião. Altera leis e metas comunitárias. |
-| **Lei da comunidade** | `CommunityLaw` | Norma vigente. Entra no contexto do GM e dos agentes. |
+| **Lei da comunidade** | `CommunityLaw` | Norma vigente. Entra no contexto do Validador e dos agentes. |
 | **Grito** | `Shout` | Fala de alcance ampliado. A engine o entrega como fato perceptível a cada ouvinte, com viés derivado da relação. ⚑ não há chamada de LLM por ouvinte. S-031, S-032. |
 | **Opção tática** | — | ⚑ **aposentado.** Conflito é escolha de agência decidida no pensamento normal, sem prompt tático nem lista pré-calculada. S-030. |
 
-## Game Master
+## Validador
 
 | Termo | Código | Significado |
 |-------|--------|-------------|
-| **GM** | `GameMaster` | Mediador invisível. Interpreta intenção, decide e altera o mundo. |
+| **Validador** | `GameMaster` | Mediador invisível. Interpreta intenção, decide e altera o mundo. |
 | **Veredito** | `verdict` | `executed`, `partial`, `reinterpreted`, `denied`. ⚑ substitui a aprovação binária do documento original. |
-| **Mutação de mundo** | `WorldMutation` | Alteração concreta emitida pelo GM e aplicada pela engine. |
+| **Mutação de mundo** | `WorldMutation` | Alteração concreta emitida pelo Validador e aplicada pela engine. |
 | **Retorno diegético** | `agentFeedback` | O que o agente percebe. Nunca linguagem de sistema. |
-| **Lei inviolável** | `InviolableLaw` | Regra do cenário que o GM não contorna. |
-| **Instrução do usuário** | `userInstruction` | Orientação com prioridade máxima sobre o GM. |
-| **Memória do GM** | — | ⚑ **aposentado.** A coerência entre dias vem do estado do mundo, que é autoritativo na engine, e do log causal determinístico (`R-048`) — ambos grátis. Um resumo em prosa seria uma segunda fonte de verdade inflando o prompt mais chamado. |
+| **Lei inviolável** | `InviolableLaw` | Regra do cenário que o Validador não contorna. |
+| **Instrução do usuário** | `userInstruction` | Orientação com prioridade máxima sobre o Validador. |
+| **Memória do Validador** | — | ⚑ **aposentado.** A coerência entre dias vem do estado do mundo, que é autoritativo na engine, e do log causal determinístico (`R-048`) — ambos grátis. Um resumo em prosa seria uma segunda fonte de verdade inflando o prompt mais chamado. |
 
 ## Camada LLM
 

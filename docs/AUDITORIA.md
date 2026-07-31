@@ -56,7 +56,7 @@ Reconciliação concluída: pipeline colapsado (2 chamadas/ação), contratos al
 
 | 12 | Promoção só substrato | R-046/B-045 estendidos; `generalization` no `gm_response` |
 
-| 13 | Sem validador de contratos | `scripts/validate-contracts.mjs` criado |
+| 13 | Sem verificador de contratos | `scripts/validate-contracts.mjs` criado |
 
 
 
@@ -118,7 +118,7 @@ Reconciliação concluída: pipeline colapsado (2 chamadas/ação), contratos al
 
 
 
-Especificação e contratos estão coerentes para implementação. Próximo passo: V0 (spike headless) com pipeline de 2 chamadas e validador rodando no CI.
+Especificação e contratos estão coerentes para implementação. Próximo passo: V0 (spike headless) com pipeline de 2 chamadas e verificador de contratos rodando no CI.
 
 
 

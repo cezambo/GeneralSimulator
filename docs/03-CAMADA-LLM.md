@@ -27,7 +27,7 @@ Três tiers substituem os oito anteriores. Cada prompt declara tier + `temperatu
 | Tier | Papel | Capacidades exigidas | Perfil desejado |
 |------|-------|---------------------|-----------------|
 | `compact` | Classificadores, pensamento instintivo (B-014), utilitários | JSON estruturado, saída curta | ultra-rápido e barato; maior volume |
-| `narrative` | Pensamento corriqueiro e profundo, social, GM único | JSON estruturado (+ reasoning quando necessário) | coerência de persona; cavalo de batalha |
+| `narrative` | Pensamento corriqueiro e profundo, social, Validador único | JSON estruturado (+ reasoning quando necessário) | coerência de persona; cavalo de batalha |
 | `longform` | Waterfall de memória, construção agentica do mundo | JSON estruturado + contexto ≥ 128k (+ tools no builder) | síntese; roda em lote ou pré-jogo |
 
 ### Profundidade determinística (sem thought_router)
@@ -47,13 +47,13 @@ affordance match?  ──sim──► engine executa (zero LLM)
        ▼
 agent.thought.*  ──► decision (intentDescription + actionType)  [1 chamada]
        │
-       GM necessário?
+       Validador necessário?
        ▼
 gm.evaluate_high  ──► verdict + mutations + generalization  [0–1 chamada]
 ```
 
 - **Removidos:** `thought_router`, `action_intent`, `gm.evaluate_low`, `combat.*`, `memory.report_vs_log`, `gm.memory_consolidation`.
-- **GM trivial:** affordance declarada resolve na engine (W-031) — sem LLM.
+- **Validador trivial:** affordance declarada resolve na engine (W-031) — sem LLM.
 - **Metas:** um prompt `cognition.goal_revise` parametrizado por nível e gatilho.
 - **Grito de combate:** fato perceptível registrado pela engine; viés de relação via A-029, sem prompt dedicado.
 - **Relato verbal:** coberto por `social.conversation_turn` + ActivityLog (R-048 é grátis).
@@ -272,7 +272,7 @@ Consequência direta de testar com open-weights baratos: **os prompts precisam s
 
 | Problema | Mitigação |
 |----------|-----------|
-| JSON inválido | `response_format` nativo; passe de reparo com a mensagem do validador; no fim, fallback heurístico |
+| JSON inválido | `response_format` nativo; passe de reparo com a mensagem da validação de schema; no fim, fallback heurístico |
 | Ignora instruções longas | System curto, campos poucos, exemplo de saída embutido |
 | Vaza inglês ou quebra persona | Regra de idioma no system + exemplos em português (e corrigir o vazamento já detectado em `opinion_burst.md`) |
 | Escreve demais | `maxTokens` por tier + limite explícito de frases no prompt |
@@ -304,7 +304,7 @@ Com pipeline colapsado, o custo por ação típica cai de 3–4 chamadas para 1�
 
 ```
 custo_dia ≈  agentes × pensamentos_por_dia × custo(narrative)
-           + ações_sem_affordance × custo(narrative)   # GM
+           + ações_sem_affordance × custo(narrative)   # Validador
            + eventos_sociais × (turnos × participantes + pós-conversa) × custo(narrative)
            + impressões × custo(compact)               # dissonância, lote
            + agentes × custo(longform)                 # sumarização noturna
@@ -314,7 +314,7 @@ Estimativa conservadora (10 agentes, preset gratuito):
 
 | Componente | Chamadas/agente/dia | Total/dia (10 agentes) |
 |------------|---------------------|------------------------|
-| Pensamentos (8/dia, 70% affordance → sem GM) | 8 thought + 2.4 GM ≈ **10.4** | 104 |
+| Pensamentos (8/dia, 70% affordance → sem Validador) | 8 thought + 2.4 Validador ≈ **10.4** | 104 |
 | Social (1 conversa, 3 turnos × 2 agentes) | +6 turn + 2 pós + 2 dissonância ≈ **10** | 100 |
 | Noturno (reflexão + apreciação + diária, mais auto-entendimento amortizado) | +3,1 compact/longform | 31 |
 | **Total** | **~23** | **~234 chamadas/dia simulado** |

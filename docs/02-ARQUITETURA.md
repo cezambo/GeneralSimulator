@@ -26,7 +26,7 @@ Toda decisão estrutural abaixo deriva disso.
 sim-core  (sem renderização, sem UI, roda em terminal)
    ├── mundo, grid, tiles, materiais, pathfinding
    ├── agentes, cognição, memória, opiniões, metas
-   ├── GM, mediação, mutações de mundo
+   ├── Validador, mediação, mutações de mundo
    ├── orquestrador de LLM (filas, budget, retry, cassetes)
    └── relógio de simulação + barramento de eventos
         ▲
@@ -35,7 +35,7 @@ sim-core  (sem renderização, sem UI, roda em terminal)
 sim-client  (renderização + UI)
    ├── mapa top-down, câmera, hover, drag
    ├── modo construção
-   ├── painéis (agente, GM, debug, seletor de modelos)
+   ├── painéis (agente, Validador, debug, seletor de modelos)
    └── timeline e visualizador de trace
 ```
 
@@ -70,7 +70,7 @@ Cada requisito vira uma entrada atômica e testável:
   e um evento `goal.reevaluate` é emitido para metas secundária e terciária.
 ```
 
-Prefixos por domínio: `W-` mundo, `A-` agente, `C-` cognição, `S-` social, `G-` GM, `U-` UI, `L-` camada LLM, `X-` transversal.
+Prefixos por domínio: `W-` mundo, `A-` agente, `C-` cognição, `S-` social, `G-` Validador, `U-` UI, `L-` camada LLM, `X-` transversal.
 
 Isso dá a cadeia: **requisito → prompt → módulo → teste**. Quando algo dá errado no playtest, o caminho de volta existe.
 
@@ -131,7 +131,7 @@ Cada parte do sistema usa a ferramenta que é melhor naquilo:
 
 | Parte | Tecnologia | Por quê |
 |-------|-----------|---------|
-| **`sim-core`** — simulação, cognição, GM, LLM | TypeScript / Node | Lógica complexa e tipada, orquestração assíncrona, manipulação de JSON. Melhor assistência de IA. Testável isolado com `vitest`, sem editor nem render. |
+| **`sim-core`** — simulação, cognição, Validador, LLM | TypeScript / Node | Lógica complexa e tipada, orquestração assíncrona, manipulação de JSON. Melhor assistência de IA. Testável isolado com `vitest`, sem editor nem render. |
 | **`client-godot`** — mundo, câmera, input, UI in-world | Godot 4 + GDScript | Tilemap, transforms contínuos, câmera e pathfinding prontos. Cliente fino, onde GDScript é adequado. Não precisa da build .NET nem de `.csproj`. |
 | **`panel-web`** — painéis densos de dados | React | Inspetor de 10 abas, seletor de 364 modelos, timeline, visualizador de trace, dashboard de custo. Rápido de construir e o agente consegue inspecionar via ferramentas de navegador. |
 
@@ -141,7 +141,7 @@ O que fica em cada lado não é arbitrário:
 
 **No Godot** — tudo que precisa estar sobre o mapa: tooltip de hover, estados do cursor (mão aberta/fechada), arrastar e soltar, menu de contexto do botão direito, paleta do modo construção, barra de play/pause/velocidade.
 
-**No painel web** — tudo que é leitura e edição densa: inspetor completo do agente, configuração de modelos, instruções ao GM, timeline de eventos, visualizador de trace, custo. Abre em janela separada ao lado do jogo. Clique num agente no Godot foca o painel naquele agente.
+**No painel web** — tudo que é leitura e edição densa: inspetor completo do agente, configuração de modelos, instruções ao Validador, timeline de eventos, visualizador de trace, custo. Abre em janela separada ao lado do jogo. Clique num agente no Godot foca o painel naquele agente.
 
 ### O custo real deste arranjo
 
@@ -167,7 +167,7 @@ simulador-interacoes/
 │   │   ├── SPEC-A-agente.md
 │   │   ├── SPEC-C-cognicao.md
 │   │   ├── SPEC-S-social.md
-│   │   ├── SPEC-G-gm.md
+│   │   ├── SPEC-V-validador.md
 │   │   ├── SPEC-U-ui.md
 │   │   ├── SPEC-L-llm.md
 │   │   └── SPEC-X-transversal.md

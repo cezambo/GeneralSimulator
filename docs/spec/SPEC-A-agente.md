@@ -80,7 +80,7 @@ Raio circular independente do cone de visão, sem oclusão direcional mas atenua
 
 Ações exigem distância dentro do alcance de interação, exceto ações que declaram alcance próprio — gritar, acenar, arremessar.
 
-**Aceite:** tentar pegar objeto distante é rejeitado por distância antes de chegar ao GM; gritar para alguém distante não é.
+**Aceite:** tentar pegar objeto distante é rejeitado por distância antes de chegar ao Validador; gritar para alguém distante não é.
 
 ### A-011 — Índice espacial
 `P0` · `V1` · derivado · dep: W-001
@@ -95,7 +95,7 @@ Consultas de proximidade e percepção resolvidas por particionamento espacial, 
 
 Migrado para [SPEC-B-corpo.md](SPEC-B-corpo.md).
 
-O que era `A-012` a `A-019` virou um substrato biológico completo — árvore de partes, condições unificadas, capacidades derivadas, lesão, infecção, cuidado e fronteira com o GM — e ganhou documento próprio. Os requisitos correspondentes agora são `B-001` a `B-063`.
+O que era `A-012` a `A-019` virou um substrato biológico completo — árvore de partes, condições unificadas, capacidades derivadas, lesão, infecção, cuidado e fronteira com o Validador — e ganhou documento próprio. Os requisitos correspondentes agora são `B-001` a `B-063`.
 
 A faixa `A-012` a `A-019` fica **aposentada** e não deve ser reutilizada.
 

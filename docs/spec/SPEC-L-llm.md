@@ -33,7 +33,7 @@ Cada entrada do registro declara tier, capacidades exigidas e, opcionalmente, te
 ### L-003 — Três tiers
 `P0` · `V0` · decisão · dep: L-002
 
-`compact` para classificadores e pensamento instintivo; `narrative` para pensamento corriqueiro, social e GM; `longform` para sumarização e construção do mundo.
+`compact` para classificadores e pensamento instintivo; `narrative` para pensamento corriqueiro, social e Validador; `longform` para sumarização e construção do mundo.
 
 Tier é **qual modelo**. Parâmetros de amostragem são do prompt, não do tier — foi a confusão entre as duas dimensões que produziu oito tiers colapsando em três modelos.
 
@@ -67,7 +67,7 @@ A degradação é **sempre visível**: agente coerente mas inerte, sem aviso, é
 ### L-007 — Validação e reparo
 `P0` · `V0` · decisão · dep: L-004
 
-Toda resposta é validada contra o schema declarado. Inválida, passa por até duas tentativas de reparo com a mensagem do validador. Persistindo, o chamador recebe falha explícita e resolve por caminho degradado.
+Toda resposta é validada contra o schema declarado. Inválida, passa por até duas tentativas de reparo com a mensagem da validação de schema. Persistindo, o chamador recebe falha explícita e resolve por caminho degradado.
 
 **Aceite:** uma resposta malformada nunca é entregue ao chamador como se fosse válida, e a contagem de reparos aparece na telemetria.
 
@@ -81,11 +81,11 @@ O renderizador resolve inclusões de fragmentos compartilhados, substitui variá
 ### L-009 — Fragmentos de regra por tipo
 `P1` · `V0` · decisão · dep: L-008
 
-As regras compartilhadas são fatiadas em universal, agente e GM. Cada prompt recebe apenas o que lhe cabe: classificadores recebem só idioma e disciplina de JSON.
+As regras compartilhadas são fatiadas em universal, agente e Validador. Cada prompt recebe apenas o que lhe cabe: classificadores recebem só idioma e disciplina de JSON.
 
-Injetar as oito regras do GM na frente de uma tarefa de classificação de três linhas é o que faz modelo pequeno errar, e este projeto declara que vai testar em modelo pequeno.
+Injetar as oito regras do Validador na frente de uma tarefa de classificação de três linhas é o que faz modelo pequeno errar, e este projeto declara que vai testar em modelo pequeno.
 
-**Aceite:** um prompt utilitário renderizado não contém nenhuma regra de GM nem de persona.
+**Aceite:** um prompt utilitário renderizado não contém nenhuma regra de Validador nem de persona.
 
 ---
 

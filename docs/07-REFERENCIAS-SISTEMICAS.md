@@ -2,7 +2,7 @@
 
 Pesquisa sobre como jogos com emergência real constroem o substrato sobre o qual tudo o mais acontece, e o que deste projeto se apoia em cada um.
 
-O objetivo desta leitura não foi copiar mecânicas. Foi encontrar os **poucos mecanismos genéricos** que, em cada um desses jogos, geram a maior parte do comportamento interessante — porque é exatamente esse substrato que o GM deste projeto precisa ter debaixo dele para poder improvisar sem inventar física.
+O objetivo desta leitura não foi copiar mecânicas. Foi encontrar os **poucos mecanismos genéricos** que, em cada um desses jogos, geram a maior parte do comportamento interessante — porque é exatamente esse substrato que o Validador deste projeto precisa ter debaixo dele para poder improvisar sem inventar física.
 
 ---
 
@@ -17,7 +17,7 @@ Na segunda, objetos pertencem a classes com propriedades globais, e as regras li
 > "Systemic LD involves linking interactions on a class to class basis, where possible. Instead of linking interactions between individual unique game elements on a per instance basis."
 > — Harvey Smith, *Systemic Level Design*
 
-Para este projeto a escolha nem é uma escolha. O usuário pode inventar objetos em tempo de execução (W-034) e o GM pode inventar situações. Nenhum dos dois pode depender de alguém ter escrito o par antes.
+Para este projeto a escolha nem é uma escolha. O usuário pode inventar objetos em tempo de execução (W-034) e o Validador pode inventar situações. Nenhum dos dois pode depender de alguém ter escrito o par antes.
 
 ---
 
@@ -217,9 +217,9 @@ Em todos esses jogos o substrato existe para o **jogador** explorar. Aqui existe
 
 **Para o agente perceber e pensar sobre.** Fumaça não bloqueia só a linha de visão — bloqueia a testemunha. Sangue não é só uma mancha — é uma evidência que produz impressão, opinião e objetivo. O substrato só se justifica se seus produtos chegarem à cognição.
 
-**Para o GM ter vocabulário.** O GM não simula física; ele decide se um efeito começa, e só quando nenhuma regra já responderia isso. Quanto mais completo o substrato, menos ele é chamado — e cada chamada evitada é uma chamada de LLM economizada e um comportamento a mais que virou determinístico e testável.
+**Para o Validador ter vocabulário.** O Validador não simula física; ele decide se um efeito começa, e só quando nenhuma regra já responderia isso. Quanto mais completo o substrato, menos ele é chamado — e cada chamada evitada é uma chamada de LLM economizada e um comportamento a mais que virou determinístico e testável.
 
-Disso sai a regra operacional que fecha o ciclo: **invocação recorrente do GM é dívida de matriz.** Se o GM inventa a mesma coisa três vezes, aquilo deveria ser uma linha em `config/reactions.json`.
+Disso sai a regra operacional que fecha o ciclo: **invocação recorrente do Validador é dívida de matriz.** Se o Validador inventa a mesma coisa três vezes, aquilo deveria ser uma linha em `config/reactions.json`.
 
 E há uma diferença de economia que muda o que vale a pena simular. Nesses jogos o recurso escasso é CPU. Aqui não é: uma chamada de modelo custa entre centenas de milissegundos e alguns segundos, e o substrato inteiro de vinte agentes custa frações de milissegundo. O que é escasso aqui é **token de contexto**.
 

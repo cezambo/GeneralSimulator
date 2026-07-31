@@ -176,17 +176,17 @@ Custo acumulado da sessão, custo por dia simulado, projeção, e marcação exp
 
 **Aceite:** um agente que estourou o teto aparece marcado com a hora simulada em que degradou.
 
-### U-021 — Instruções ao GM
-`P1` · `V4` · derivado de G-034 · dep: G-034
+### U-021 — Instruções ao Validador
+`P1` · `V4` · derivado de V-034 · dep: V-034
 
-Edição das instruções ativas ao GM durante a simulação.
+Edição das instruções ativas ao Validador durante a simulação.
 
 **Aceite:** alterar a instrução muda o comportamento na próxima invocação, sem reiniciar.
 
 ### U-022 — Painel de regras provisórias
-`P1` · `V4` · derivado de G-025 · dep: G-025, G-028
+`P1` · `V4` · derivado de V-025 · dep: V-025, V-028
 
-Lista das regras promovidas pelo GM com origem, contagem de disparos e ações de promover ou rejeitar; e a lista de métodos recorrentes que ainda não viraram regra.
+Lista das regras promovidas pelo Validador com origem, contagem de disparos e ações de promover ou rejeitar; e a lista de métodos recorrentes que ainda não viraram regra.
 
 É o único painel de observabilidade do projeto que se paga em dinheiro: cada regra promovida é uma chamada que deixa de existir.
 
@@ -204,7 +204,7 @@ Número de agentes e descrição livre do cenário, alimentando a geração de t
 **Aceite:** uma descrição em texto livre produz mundo e elenco coerentes com ela.
 
 ### U-024 — Linha do tempo
-`P2` · `V7` · derivado de G-033 · dep: G-033
+`P2` · `V7` · derivado de V-033 · dep: V-033
 
 Eventos narrados em ordem cronológica, com filtro por agente e por tipo, navegáveis até o trace.
 
@@ -218,7 +218,7 @@ Visão reduzida do mapa com posição dos agentes e do enquadramento corrente.
 **Aceite:** clicar no minimapa move a câmera para o ponto correspondente.
 
 ### U-026 — Exportação narrativa
-`P2` · `V7` · derivado de G-033 · dep: G-033
+`P2` · `V7` · derivado de V-033 · dep: V-033
 
 Exportar a partida como texto legível em ordem cronológica.
 

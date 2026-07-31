@@ -2,7 +2,7 @@
 #
 # MUDANCA (31/07/2026): pipeline colapsado — profundidade por consciencia (B-014)
 # + escalada por requestedDeepThinking. Roteador e intent removidos.
-# GM unico (gm.evaluate_high). Metas unificadas em cognition.goal_revise.
+# Validador unico (gm.evaluate_high). Metas unificadas em cognition.goal_revise.
 #
 # Modelo nao e declarado aqui — apenas tier e capacidades.
 # Binding tier -> modelo vive em config/models.json. Ver docs/03-CAMADA-LLM.md.
@@ -22,7 +22,7 @@ tiers:
     defaultTemperature: 0.2
     defaultMaxTokens: 400
   narrative:
-    desc: "Pensamento, social, GM. Cavalo de batalha."
+    desc: "Pensamento, social, Validador. Cavalo de batalha."
     caps: [structured_outputs, reasoning]
     defaultTemperature: 0.85
     defaultMaxTokens: 1200
@@ -276,7 +276,7 @@ prompts:
     variables: [meetingType, meetingTranscript, participants, colonyState]
 
   # ── GAME MASTER ──────────────────────────────────────────────────────
-  # GM trivial: affordance declarada resolve na engine — sem LLM.
+  # Validador trivial: affordance declarada resolve na engine — sem LLM.
   # Grito de combate: fato perceptivel + viés de relação (A-029), sem prompt extra.
 
   gm.evaluate_high:
@@ -286,5 +286,5 @@ prompts:
     maxTokens: 1500
     schema: gm_response
     status: ok
-    description: "Unico GM — emite generalization cross-domain"
+    description: "Unico Validador — emite generalization cross-domain"
     variables: [intent, agentSnapshot, targetSnapshot, worldSnapshot, userInstructions, substrateSnapshot, matrixSummary, bodySnapshot, injurySummary, allowedOperations, plausibilityRegistry]

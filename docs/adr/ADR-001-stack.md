@@ -31,7 +31,7 @@ Restrição relevante: o desenvolvimento será conduzido por agentes de IA, não
 
 | Parte | Tecnologia |
 |-------|-----------|
-| `sim-core` — simulação, cognição, GM, camada LLM | TypeScript / Node |
+| `sim-core` — simulação, cognição, Validador, camada LLM | TypeScript / Node |
 | `client-godot` — mundo, câmera, input, UI sobre o mapa | Godot 4 + GDScript |
 | `panel-web` — painéis densos de leitura e configuração | React |
 

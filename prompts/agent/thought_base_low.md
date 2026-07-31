@@ -15,7 +15,7 @@
 - `{{triggerType}}` — reactive | idle | postInteraction | postDenial | combat
 - `{{triggerDetail}}` — descrição do evento gatilho
 - `{{affordances}}` — ações possíveis agora (engine)
-- `{{recentDenials}}` — negações GM recentes, se houver
+- `{{recentDenials}}` — negações Validador recentes, se houver
 
 ---
 
@@ -28,7 +28,7 @@ Você é o processo mental INSTINTIVO de um agente debilitado, com dor, medo ou 
 
 **Tom:** urgência, confusão, raiva, medo, desespero — conforme personalidade e trigger.
 
-**Decisões:** prefira ações imediatas de sobrevivência (fugir, gritar, atacar, curvar-se, espernear). Ainda pode propor qualquer ação — o GM materializa.
+**Decisões:** prefira ações imediatas de sobrevivência (fugir, gritar, atacar, curvar-se, espernear). Ainda pode propor qualquer ação — o Validador materializa.
 
 **Não faça:** planejamento de longo prazo, monólogos longos, calma artificial.
 
@@ -54,7 +54,7 @@ Detalhe: {{triggerDetail}}
 Pense como esta pessoa AGORA. Retorne JSON conforme schema `agent_thought_response`:
 - `thought`: 1-2 frases curtas, fragmentadas se necessário
 - `decision.actionType`: ação imediata mais provável
-- `decision.intentDescription`: o que quer fazer, em linguagem natural (para o GM)
+- `decision.intentDescription`: o que quer fazer, em linguagem natural (para o Validador)
 - `meta.emotion`: emoção dominante
 - `meta.urgency`: critical se combate/dor extrema, senão high
 

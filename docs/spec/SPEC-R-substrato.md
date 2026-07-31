@@ -1,6 +1,6 @@
 # SPEC-R — Substrato reativo
 
-A engine base do simulador: o conjunto de sistemas que produz consequência física, química, perceptual e fisiológica **sozinho**, sem consultar LLM, e cujo vocabulário fica inteiramente exposto ao GM.
+A engine base do simulador: o conjunto de sistemas que produz consequência física, química, perceptual e fisiológica **sozinho**, sem consultar LLM, e cujo vocabulário fica inteiramente exposto ao Validador.
 
 Fundamentação e origem das escolhas em [07-REFERENCIAS-SISTEMICAS.md](../07-REFERENCIAS-SISTEMICAS.md).
 
@@ -44,7 +44,7 @@ A terceira é a que impede a explosão combinatória: sem ela, o espaço de regr
 
 Isto **não** proíbe que dois objetos interajam. Pedra ainda quebra vidro. Interação mecânica — impacto, peso, atrito, corte — é física resolvida por escalares (R-006), não química resolvida pela matriz. A proibição é específica: dois materiais não reagem *quimicamente* entre si sem um elemento no meio.
 
-**Aceite:** o validador de `config/reactions.json` rejeita, com erro nomeado, qualquer regra cujos dois lados sejam materiais.
+**Aceite:** o verificador de contratos rejeita, com erro nomeado, qualquer regra cujos dois lados sejam materiais.
 
 ### R-004 — Estado transiente
 `P0` · `V1` · decisão · dep: R-002
@@ -141,11 +141,11 @@ Uma reação é: duas entradas, duas saídas, uma probabilidade e uma ocasião. 
 }
 ```
 
-Identificadores em inglês, como no resto dos contratos de dado. O campo `porque` é a exceção deliberada: é prosa, e é obrigatório, porque tem dois leitores — o humano que ajusta e o GM, que recebe a matriz resumida em linguagem natural (R-042).
+Identificadores em inglês, como no resto dos contratos de dado. O campo `porque` é a exceção deliberada: é prosa, e é obrigatório, porque tem dois leitores — o humano que ajusta e o Validador, que recebe a matriz resumida em linguagem natural (R-042).
 
 Exemplo completo em [`config/reactions.example.json`](../../config/reactions.example.json).
 
-**Aceite:** acrescentar uma entrada ao arquivo passa a valer sem recompilar, e o validador recusa entrada sem `porque`.
+**Aceite:** acrescentar uma entrada ao arquivo passa a valer sem recompilar, e o verificador de contratos recusa entrada sem `porque`.
 
 ### R-013 — Ocasiões de avaliação
 `P0` · `V1` · decisão · dep: R-012
@@ -160,7 +160,7 @@ Cinco ocasiões, e a regra declara em qual vale:
 | **imersão** | quando uma entidade entra ou é posta dentro de outra | item cai no rio |
 | **ingresso** | quando uma criatura pisa ou entra no tile | pisa na poça eletrificada |
 
-A ocasião de **contato** é a que garante que ações físicas óbvias não precisem do GM. Encostar, derrubar, arremessar, empurrar contra e mergulhar são caminhos causais modelados — o GM não é consultado para nenhum deles.
+A ocasião de **contato** é a que garante que ações físicas óbvias não precisem do Validador. Encostar, derrubar, arremessar, empurrar contra e mergulhar são caminhos causais modelados — o Validador não é consultado para nenhum deles.
 
 **Aceite:** uma reação de contato dispara no mesmo tick da colisão, e arremessar objeto em chamas contra tile inflamável acende sem nenhuma chamada de LLM.
 
@@ -178,11 +178,11 @@ Conjunto fechado de transições de estado, implementadas uma vez na engine e in
 
 `ignite` · `extinguish` · `wet` · `dry` · `freeze` · `melt` · `electrify` · `shatter` · `stain` · `contaminate` · `illuminate` · `emit_gas` · `smother` · `corrode` · `rot` · `transmute`
 
-Cada um carrega também um nome em português, usado na exibição e na descrição entregue ao GM.
+Cada um carrega também um nome em português, usado na exibição e na descrição entregue ao Validador.
 
-Todo efeito aceita **três espécies de alvo**: tile, objeto e parte de corpo. Não há vocabulário separado para corpo, porque o corpo é feito dos mesmos materiais (B-003). Molhar funciona nos três, corroer funciona nos três, e `transmute` — trocar o material do alvo preservando sua identidade e seu estado — é o que permite ao GM transformar tanto uma parede quanto um fêmur.
+Todo efeito aceita **três espécies de alvo**: tile, objeto e parte de corpo. Não há vocabulário separado para corpo, porque o corpo é feito dos mesmos materiais (B-003). Molhar funciona nos três, corroer funciona nos três, e `transmute` — trocar o material do alvo preservando sua identidade e seu estado — é o que permite ao Validador transformar tanto uma parede quanto um fêmur.
 
-Tanto a matriz quanto o GM invocam pelo mesmo identificador e obtêm exatamente o mesmo comportamento.
+Tanto a matriz quanto o Validador invocam pelo mesmo identificador e obtêm exatamente o mesmo comportamento.
 
 **Aceite:** o mesmo efeito invocado pelos dois caminhos produz estado idêntico, e o mesmo efeito aplicado a um tile e a uma parte de corpo do mesmo material produz a mesma transição.
 
@@ -252,7 +252,7 @@ Líquido é medido em volume, não em presença. Uma poça tem quantidade, escor
 ### R-021 — Mistura de líquidos
 `P2` · `V3` · decisão de Qud · dep: R-020
 
-Poça comprimida: **material dominante** (maior volume) + **descritor** opcional de 1–3 palavras quando a mistura importa narrativamente ("óleo na água"). Componentes internos existem para simulação, mas o que entra em percepção e no GM é dominante + descritor — não lista de volumes.
+Poça comprimida: **material dominante** (maior volume) + **descritor** opcional de 1–3 palavras quando a mistura importa narrativamente ("óleo na água"). Componentes internos existem para simulação, mas o que entra em percepção e no Validador é dominante + descritor — não lista de volumes.
 
 **Aceite:** água misturada com óleo, deixada em repouso, termina como óleo puro na representação perceptível; poça composta aparece como "poça de óleo" ou "poça de água com óleo", nunca como tabela de volumes.
 
@@ -300,7 +300,7 @@ Coberturas saem por lavagem, chuva, fricção ou tempo, cada substância no seu 
 ### R-027 — Integridade e destruição
 `P1` · `V1` · derivado · dep: R-006
 
-Tiles e objetos têm integridade de 0 a 100. Zero destrói e substitui pelo escombro declarado no material. Dano vem de fogo, corrosão, impacto, degradação e mutação do GM, e cada material tem resistência própria por tipo de dano.
+Tiles e objetos têm integridade de 0 a 100. Zero destrói e substitui pelo escombro declarado no material. Dano vem de fogo, corrosão, impacto, degradação e mutação do Validador, e cada material tem resistência própria por tipo de dano.
 
 **Aceite:** uma parede de madeira queima até zero e vira escombro atravessável.
 
@@ -430,47 +430,47 @@ Clima não é decoração. Chuva molha tudo o que está exposto, apaga fogo desp
 
 ---
 
-## Fronteira com o GM
+## Fronteira com o Validador
 
 ### R-041 — O substrato é exposto por inteiro
-`P0` · `V4` · decisão · dep: R-015, G-005
+`P0` · `V4` · decisão · dep: R-015, V-005
 
-O contexto do GM inclui, para tudo em escopo: material e propriedades, estados ativos com intensidade, coberturas, temperatura, integridade, affordances, e **a lista de efeitos invocáveis sobre aquele alvo**.
+O contexto do Validador inclui, para tudo em escopo: material e propriedades, estados ativos com intensidade, coberturas, temperatura, integridade, affordances, e **a lista de efeitos invocáveis sobre aquele alvo**.
 
 "Tudo em escopo" inclui os corpos dos agentes presentes, pelas mesmas regras e no mesmo formato — a exposição biológica está detalhada em B-034, e não é um canal à parte.
 
-Sem o display, o GM não sabe que alavancas existem.
+Sem o display, o Validador não sabe que alavancas existem.
 
-**Aceite:** ao mediar uma ação perto de uma cortina, o prompt do GM mostra que a cortina é inflamável e que `ignite` é invocável sobre ela.
+**Aceite:** ao mediar uma ação perto de uma cortina, o prompt do Validador mostra que a cortina é inflamável e que `ignite` é invocável sobre ela.
 
 ### R-042 — Resumo da matriz em linguagem natural
 `P1` · `V4` · derivado · dep: R-012, R-041
 
-O GM recebe também um resumo do que a matriz já resolve sozinha, gerado a partir do campo `porque` das regras aplicáveis ao escopo.
+O Validador recebe também um resumo do que a matriz já resolve sozinha, gerado a partir do campo `porque` das regras aplicáveis ao escopo.
 
-É o que permite ao GM saber quando **não** agir.
+É o que permite ao Validador saber quando **não** agir.
 
 **Aceite:** o resumo é gerado a partir do arquivo de reações e acompanha qualquer alteração dele sem edição manual do prompt.
 
-### R-043 — Invocação de efeito pelo GM
+### R-043 — Invocação de efeito pelo Validador
 `P0` · `V4` · decisão · dep: R-041
 
-O GM pode acionar qualquer efeito do vocabulário como mutação de tipo `engine_effect`. A partir da invocação **a engine assume**: o GM acende, e quem propaga, consome e apaga é a matriz.
+O Validador pode acionar qualquer efeito do vocabulário como mutação de tipo `engine_effect`. A partir da invocação **a engine assume**: o Validador acende, e quem propaga, consome e apaga é a matriz.
 
-O papel é preciso: o GM é a fonte de **causação nova**. A matriz sabe o que acontece dado que um estado existe; ela não sabe enumerar todas as maneiras que uma pessoa pode inventar de criar aquele estado. É essa lacuna, e só ela, que o GM preenche.
+O papel é preciso: o Validador é a fonte de **causação nova**. A matriz sabe o que acontece dado que um estado existe; ela não sabe enumerar todas as maneiras que uma pessoa pode inventar de criar aquele estado. É essa lacuna, e só ela, que o Validador preenche.
 
-**Invocação legítima:** um agente diz que está esfregando gravetos com força e velocidade. Não existe chama em lugar nenhum e nenhuma regra liga atrito a fogo. O GM julga o método plausível, invoca `ignite` com intensidade baixa nos gravetos, e daí em diante a matriz cuida de tudo.
+**Invocação legítima:** um agente diz que está esfregando gravetos com força e velocidade. Não existe chama em lugar nenhum e nenhuma regra liga atrito a fogo. O Validador julga o método plausível, invoca `ignite` com intensidade baixa nos gravetos, e daí em diante a matriz cuida de tudo.
 
-**Contraexemplo, onde o GM não invoca nada:** um agente arremessa uma lamparina acesa contra uma cortina. Existe fonte de ignição, alvo inflamável e contato. A matriz resolve sozinha (R-018). O GM apenas autoriza o arremesso.
+**Contraexemplo, onde o Validador não invoca nada:** um agente arremessa uma lamparina acesa contra uma cortina. Existe fonte de ignição, alvo inflamável e contato. A matriz resolve sozinha (R-018). O Validador apenas autoriza o arremesso.
 
 **Aceite:** `engine_effect` com `ignite` produz comportamento subsequente idêntico ao de uma ignição disparada pela matriz.
 
 ### R-044 — Não-duplicação
 `P0` · `V4` · decisão · dep: R-043
 
-Antes de invocar, o GM verifica se já existe caminho causal modelado para o resultado. Havendo, ele não invoca — autoriza a ação e deixa a matriz agir. Invocar sobre algo que a matriz já resolveria aplica o efeito duas vezes.
+Antes de invocar, o Validador verifica se já existe caminho causal modelado para o resultado. Havendo, ele não invoca — autoriza a ação e deixa a matriz agir. Invocar sobre algo que a matriz já resolveria aplica o efeito duas vezes.
 
-**Aceite:** arremessar objeto aceso contra inflamável não gera nenhuma invocação do GM em uma amostra de execuções.
+**Aceite:** arremessar objeto aceso contra inflamável não gera nenhuma invocação do Validador em uma amostra de execuções.
 
 ### R-045 — A fronteira, enunciada
 `P0` · `V4` · PDF 116-118 refinado por decisão · dep: R-014, R-043
@@ -479,17 +479,17 @@ Antes de invocar, o GM verifica se já existe caminho causal modelado para o res
 |---|---|
 | Dado que um estado existe, o que acontece | matriz |
 | Métodos **modelados** de criar um estado — contato, impacto, imersão, ingresso, adjacência | matriz |
-| Métodos **não modelados** de criar um estado — atrito, lente e sol, improviso | GM invoca, matriz continua |
+| Métodos **não modelados** de criar um estado — atrito, lente e sol, improviso | Validador invoca, matriz continua |
 | Simular a consequência depois que o estado existe | matriz, sempre |
 
-O GM nunca simula física. Decide apenas *se* um efeito começa, e só quando nenhuma regra já responderia isso.
+O Validador nunca simula física. Decide apenas *se* um efeito começa, e só quando nenhuma regra já responderia isso.
 
 **Aceite:** existe teste para cada linha da tabela.
 
 ### R-046 — Promoção generalizada
 `P1` · `V4` · decisão · dep: R-043, B-045, X-006
 
-Mecanismo **único** para improviso que vira regra — vale para substrato, corpo, social, cognição e comunidade. Contrato na saída do GM (`generalization`):
+Mecanismo **único** para improviso que vira regra — vale para substrato, corpo, social, cognição e comunidade. Contrato na saída do Validador (`generalization`):
 
 ```json
 {
@@ -527,7 +527,7 @@ Toda aleatoriedade do substrato vem de um gerador semeado. Mesma seed e mesmas a
 ### R-048 — Log causal
 `P1` · `V1` · derivado · dep: R-014
 
-Todo efeito registra o que o causou: qual regra, qual entidade de origem, qual ocasião, ou qual invocação do GM. O log alimenta a timeline e a depuração.
+Todo efeito registra o que o causou: qual regra, qual entidade de origem, qual ocasião, ou qual invocação do Validador. O log alimenta a timeline e a depuração.
 
 Sem isso, uma cadeia de seis passos é indistinguível de um bug.
 

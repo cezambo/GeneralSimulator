@@ -2,7 +2,7 @@
 
 Conversa, comunidade e conflito. É onde a cognição de um agente encontra a de outro e vira acontecimento social.
 
-A mente que entra na conversa está em [SPEC-C](SPEC-C-cognicao.md). O corpo que ela percebe está em [SPEC-B](SPEC-B-corpo.md). A mediação das ações que ela produz está em [SPEC-G](SPEC-G-gm.md).
+A mente que entra na conversa está em [SPEC-C](SPEC-C-cognicao.md). O corpo que ela percebe está em [SPEC-B](SPEC-B-corpo.md). A mediação das ações que ela produz está em [SPEC-V](SPEC-V-validador.md).
 
 ---
 
@@ -12,7 +12,7 @@ Conversa é o gasto mais concentrado do projeto: uma conversa de cinco turnos en
 
 **A engine decide quem pode falar; o modelo decide o que se diz.** Elegibilidade, distância, bloqueadores e orçamento de turnos são determinísticos.
 
-**Conflito não tem prompt próprio.** Briga é ação decidida no pensamento normal e mediada pelo GM. Grito é fato perceptível gerado pela engine, não chamada por ouvinte.
+**Conflito não tem prompt próprio.** Briga é ação decidida no pensamento normal e mediada pelo Validador. Grito é fato perceptível gerado pela engine, não chamada por ouvinte.
 
 **O pós-conversa é um lote, não um laço.** Impressões de todos os participantes viram uma passagem pelo classificador de dissonância, não uma por par.
 
@@ -211,9 +211,9 @@ Ao fim da reunião, uma chamada produz a ata: narrativa do consenso, operações
 ### S-025 — Lei da comunidade
 `P1` · `V7` · PDF 541-545 · dep: S-024
 
-Conforme `CommunityLaw`. Norma vigente com texto, momento de promulgação e reunião de origem. Entra no contexto dos agentes e do GM.
+Conforme `CommunityLaw`. Norma vigente com texto, momento de promulgação e reunião de origem. Entra no contexto dos agentes e do Validador.
 
-**Aceite:** uma lei promulgada aparece no contexto de pensamento dos agentes e no do GM a partir do ciclo seguinte.
+**Aceite:** uma lei promulgada aparece no contexto de pensamento dos agentes e no do Validador a partir do ciclo seguinte.
 
 ### S-026 — Efeito mecânico da lei
 `P2` · `V7` · PDF 541-545 · dep: S-025
@@ -252,13 +252,13 @@ Lei que a engine impõe não produz drama. Lei que se pode quebrar, e cuja quebr
 ## Conflito
 
 ### S-030 — Conflito sem prompt dedicado
-`P0` · `V6` · decisão · dep: C-001, G-001
+`P0` · `V6` · decisão · dep: C-001, V-001
 
-Agressão, defesa e fuga são decididas no pensamento normal, como qualquer ação, e mediadas pelo GM quando não há affordance. Não existe prompt de escolha tática nem de narração de combate.
+Agressão, defesa e fuga são decididas no pensamento normal, como qualquer ação, e mediadas pelo Validador quando não há affordance. Não existe prompt de escolha tática nem de narração de combate.
 
 O documento de visão lista combate tático detalhado como não-objetivo. Conflito aqui é escolha de agência — atacar, fugir, intervir, assistir — não posicionamento.
 
-**Aceite:** uma agressão completa percorre pensamento e GM pelo mesmo caminho de qualquer outra ação, sem prompt específico de combate.
+**Aceite:** uma agressão completa percorre pensamento e Validador pelo mesmo caminho de qualquer outra ação, sem prompt específico de combate.
 
 ### S-031 — Grito como fato perceptível
 `P0` · `V6` · decisão · dep: A-009, S-017
@@ -310,11 +310,11 @@ Quem assistiu sem agir vira assunto. Isso não precisa de sistema.
 
 ---
 
-## Fronteira com o GM
+## Fronteira com o Validador
 
-O GM medeia as ações que a interação produz, não a interação em si. Ele não escreve fala, não decide quem fala e não altera transcrição.
+O Validador medeia as ações que a interação produz, não a interação em si. Ele não escreve fala, não decide quem fala e não altera transcrição.
 
-A promoção de regra no domínio `social`, especificada em [SPEC-G](SPEC-G-gm.md), permite que um julgamento vire template de fato perceptível com viés de relação — o mesmo mecanismo do grito, generalizado para outros gestos que se repetem.
+A promoção de regra no domínio `social`, especificada em [SPEC-V](SPEC-V-validador.md), permite que um julgamento vire template de fato perceptível com viés de relação — o mesmo mecanismo do grito, generalizado para outros gestos que se repetem.
 
 ---
 

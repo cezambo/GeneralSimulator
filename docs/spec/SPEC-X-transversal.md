@@ -47,16 +47,16 @@ Toda aleatoriedade vem de geradores semeados e nomeados por subsistema. Nada usa
 ### X-005 — Log causal
 `P0` · `V1` · decisão · dep: X-004
 
-Todo efeito registra o que o causou: regra da matriz, invocação do GM, decisão de agente ou passagem de tempo.
+Todo efeito registra o que o causou: regra da matriz, invocação do Validador, decisão de agente ou passagem de tempo.
 
-É a memória do mundo, é determinística e é grátis — e é por isso que não existe resumo em prosa do GM.
+É a memória do mundo, é determinística e é grátis — e é por isso que não existe resumo em prosa do Validador.
 
 **Aceite:** qualquer estado do mundo pode ser rastreado até a causa que o produziu.
 
 ### X-006 — Observabilidade
 `P0` · `V4` · decisão · dep: X-005, L-016
 
-Painel com custo, chamadas por agente, degradações, regras provisórias, métodos recorrentes e trilha de auditoria do GM.
+Painel com custo, chamadas por agente, degradações, regras provisórias, métodos recorrentes e trilha de auditoria do Validador.
 
 **Aceite:** cada um desses itens é consultável durante a simulação, sem pausá-la.
 

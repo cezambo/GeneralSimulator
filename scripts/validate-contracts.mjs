@@ -141,7 +141,9 @@ for (const file of textTargets) {
     for (const p of OBSOLETE_PROMPTS) {
       if (line.includes(p)) fail(`${rel}:${n}: referência a prompt aposentado "${p}"`);
     }
-    if (/mem[óo]ria do GM/i.test(line)) warn(`${rel}:${n}: cita "memória do GM", que é não-objetivo declarado`);
+    if (/mem[óo]ria (do GM|do Validador)/i.test(line)) {
+      warn(`${rel}:${n}: cita "memória do Validador", que é não-objetivo declarado`);
+    }
   }
 }
 if (errors === 0) ok('nenhum termo aposentado em uso');

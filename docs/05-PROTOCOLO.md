@@ -96,8 +96,8 @@ Coisas que aconteceram e merecem retorno visual ou sonoro.
 |------|-----|
 | `event.speech` | balão de fala sobre o agente |
 | `event.thought` | indicador de pensamento (opcional, debug) |
-| `event.gm.narration` | narrativa do GM, vai para timeline |
-| `event.mutation` | mutação de mundo aplicada pelo GM (fogo, dano, destruição) |
+| `event.gm.narration` | narrativa do Validador, vai para timeline |
+| `event.mutation` | mutação de mundo aplicada pelo Validador (fogo, dano, destruição) |
 | `event.combat` | ataque, grito semântico com raio |
 | `event.social` | conversa iniciada, encerrada, realocação |
 | `event.cognition` | ruptura de opinião, meta trocada, capricho disparado |
@@ -169,7 +169,7 @@ cmd.agent.setGoal        { agentId, level, text }
 cmd.agent.editOpinion    { agentId, opinionId, nuanceDescription }
 ```
 
-### 5.6 GM e configuração
+### 5.6 Validador e configuração
 
 ```
 cmd.gm.setInstructions   { text, expiresAtSimTime? }

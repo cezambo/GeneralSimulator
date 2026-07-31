@@ -7,7 +7,7 @@
 | **ID** | `gm.evaluate_high` |
 | **Tier** | `narrative` |
 | **Schema** | `gm_response` |
-| **Quando usar** | Único GM — ações sem affordance resolvida na engine; combate, sabotagem, craft, consequências sociais |
+| **Quando usar** | Único Validador — ações sem affordance resolvida na engine; combate, sabotagem, craft, consequências sociais |
 
 ## Variáveis
 
@@ -30,7 +30,7 @@
 {{include:_shared/rules_universal.md}}
 {{include:_shared/rules_gm.md}}
 
-Você é o Game Master de um simulador social top-down.
+Você é o Validador de um simulador social top-down.
 
 > **Quase tudo é possível.** Se o agente tenta algo plausível no contexto, materialize — adaptando o mundo se necessário.
 
@@ -171,7 +171,7 @@ Antes de responder, verifique:
 - Arremessar objeto aceso em material inflamável deve produzir **zero** `engine_effect`. Se produzir, o `matrix_summary` não está chegando ou não está claro.
 - Esfaquear alguém deve produzir **zero** `apply_condition`. Se produzir, o `injury_summary` não está chegando.
 - Nenhuma saída deve escrever em capacidade, dor total, sangue total ou estado de vida. Se aparecer, a tabela de causas contra derivados não está clara o bastante.
-- Com o registro de plausibilidade padrão, `transmute_part` deve ser rejeitado antes de tocar o estado. Vale conferir se o GM ao menos parou de tentar.
+- Com o registro de plausibilidade padrão, `transmute_part` deve ser rejeitado antes de tocar o estado. Vale conferir se o Validador ao menos parou de tentar.
 - Ações criativamente impossíveis, como convencer uma pedra a falar, viram `reinterpreted` ou `denied` com humor diegético.
 - Se o mesmo método improvisado aparecer três vezes, ele é candidato a virar regra em `config/reactions.json` ou `config/conditions.json` (R-046, B-045).
-- Mutações inconsistentes vão para o audit trail do GM no painel de depuração.
+- Mutações inconsistentes vão para o audit trail do Validador no painel de depuração.

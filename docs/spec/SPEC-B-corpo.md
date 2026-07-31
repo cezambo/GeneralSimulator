@@ -20,11 +20,11 @@ O corpo não é um sistema novo. É o [substrato reativo](SPEC-R-substrato.md) r
 | matriz de reação | matriz de lesão: tipo de dano × propriedade do material |
 | propagação por vizinhança | cascata pela árvore de partes |
 | promoção de tile | progressão de condição |
-| efeito nomeado invocável pelo GM | operação nomeada invocável pelo GM |
+| efeito nomeado invocável pelo Validador | operação nomeada invocável pelo Validador |
 | trocar o material de um tile | trocar o material de uma parte |
 | só tiles com estado ativo são avaliados | só agentes com condição ativa são avaliados |
 
-A segunda linha é literal, e não uma analogia: **é o mesmo catálogo de materiais**, não um paralelo (B-003). Osso é uma entrada só, e serve tanto para um porrete quanto para um fêmur. Daí sai a penúltima linha — o GM pode transmutar o material de uma parte do corpo (B-038) porque a operação já existia para tiles e não precisou de nada novo.
+A segunda linha é literal, e não uma analogia: **é o mesmo catálogo de materiais**, não um paralelo (B-003). Osso é uma entrada só, e serve tanto para um porrete quanto para um fêmur. Daí sai a penúltima linha — o Validador pode transmutar o material de uma parte do corpo (B-038) porque a operação já existia para tiles e não precisou de nada novo.
 
 Outras consequências práticas de reaproveitar o motor: as mesmas ferramentas de depuração servem, o mesmo log causal serve, a mesma disciplina de dado-em-vez-de-código serve, e as substâncias de R-029 já aterrissam aqui sem tradutor no meio.
 
@@ -71,7 +71,7 @@ Material inicial, não material fixo: o material corrente vive no estado do agen
 
 A soma das coberturas é 1 **exatamente**, e não aproximadamente. A seleção da parte atingida sorteia sobre ela (B-021), e um total diferente de 1 enviesa a distribuição inteira sem produzir sintoma nenhum — o defeito mais barato de introduzir e mais caro de encontrar deste documento.
 
-**Aceite:** a soma das coberturas das partes externas é 1 dentro da tolerância que o validador declara, e a distribuição de acertos ao longo de mil golpes aleatórios converge para ela.
+**Aceite:** a soma das coberturas das partes externas é 1 dentro da tolerância que o verificador de contratos declara, e a distribuição de acertos ao longo de mil golpes aleatórios converge para ela.
 
 ### B-003 — Tecidos são o mesmo catálogo de materiais
 `P0` · `V5` · decisão · dep: B-002, R-001, W-011
@@ -94,7 +94,7 @@ Três consequências, e as três são a razão da decisão:
 
 **Todo o substrato de SPEC-R já se aplica ao corpo.** Carne queima porque é inflamável. Nervo conduz porque é condutivo. Corrosivo come pele. Frio fragiliza. Nada disso precisou ser escrito duas vezes — é o mesmo `config/reactions.json`.
 
-**O GM pode transmutar o material de uma parte** (B-038) e o comportamento novo emerge sozinho, porque tudo que a lesão consulta veio do material.
+**O Validador pode transmutar o material de uma parte** (B-038) e o comportamento novo emerge sozinho, porque tudo que a lesão consulta veio do material.
 
 Exemplo completo em [`config/materials.example.json`](../../config/materials.example.json).
 
@@ -136,7 +136,7 @@ Uma condição declara: identificador, parte alvo ou corpo inteiro, severidade d
 
 Exemplo completo em [`config/conditions.example.json`](../../config/conditions.example.json).
 
-**Aceite:** o validador recusa condição sem cadência declarada.
+**Aceite:** o verificador de contratos recusa condição sem cadência declarada.
 
 ### B-008 — Estágios por severidade
 `P0` · `V5` · decisão de RimWorld · dep: B-007
@@ -265,7 +265,7 @@ Assim necessidade e saúde deixam de ser dois sistemas. Fome extrema não "drena
 ### B-020 — Matriz de lesão
 `P0` · `V5` · decisão · dep: B-003, R-012 · dados: `config/conditions.json`
 
-Tipo de dano cruzado com **propriedade do material** produz condição. Mesma forma de regra de reescrita da matriz de reação, mesmo formato de arquivo, mesmo validador — inclusive o campo `porque` obrigatório e a proibição de R-001 de nomear material por identificador.
+Tipo de dano cruzado com **propriedade do material** produz condição. Mesma forma de regra de reescrita da matriz de reação, mesmo formato de arquivo, mesmo verificador de contratos — inclusive o campo `porque` obrigatório e a proibição de R-001 de nomear material por identificador.
 
 | Dano | Material | Condição |
 |------|----------|----------|
@@ -309,14 +309,14 @@ Sete tipos, e só sete: contusão, corte, perfuração, queimadura, frio, elétr
 
 Este é o único pedaço da lesão que **não** é dado ajustável: a lista é fechada no schema de domínio, porque material e matriz consultam a mesma enumeração e a única forma de garantir que não divirjam é não haver duas cópias. Acrescentar um tipo de dano é mudança de contrato, e obriga a matriz a ganhar linha no mesmo passo.
 
-Daí saem duas invariantes que o validador cobra:
+Daí saem duas invariantes que o verificador de contratos cobra:
 
 - toda chave de resistência por dano declarada num material é um dos sete;
-- todo um dos sete tem ao menos uma linha na matriz de lesão. Um tipo de dano sem linha é uma agressão que não resolve em nada — o pior desfecho possível, porque não falha, apenas não acontece.
+- cada um dos sete tem ao menos uma linha na matriz de lesão. Um tipo de dano sem linha é uma agressão que não resolve em nada — o pior desfecho possível, porque não falha, apenas não acontece.
 
 O curinga `*` da regra de fallback de B-020 não é um tipo de dano e não entra na lista.
 
-**Aceite:** o validador recusa material cuja resistência cite dano fora da lista, e recusa matriz de lesão que deixe qualquer um dos sete sem nenhuma linha.
+**Aceite:** o verificador de contratos recusa material cuja resistência cite dano fora da lista, e recusa matriz de lesão que deixe qualquer um dos sete sem nenhuma linha.
 
 ---
 
@@ -328,7 +328,7 @@ Esta seção acrescenta o que faltava sem acrescentar sistema: **órgão é a me
 
 O que se compra com isso é possibilidade narrativa: alguém que bebe há vinte anos tem fígado de cinquenta aos trinta; quem perde os dois rins não morre do rim, morre de intoxicação lenta e sistêmica com todo mundo assistindo; um veneno bem escolhido mata devagar sem nunca produzir um ferimento.
 
-Os identificadores começam em `B-052` porque `B-046` a `B-051` já estavam em uso pela seção de custo, e identificador não se recicla — a ordem do documento é temática, não numérica.
+Os identificadores desta seção começam em `B-053` porque `B-046` a `B-051` já estavam em uso pela seção de custo e `B-052` ficou com o vocabulário de dano. Identificador não se recicla, e a ordem deste documento é temática, não numérica.
 
 ### B-053 — Órgão é parte, com mais campos
 `P0` · `V5` · decisão · dep: B-002, B-003 · dados: `config/body.json`
@@ -348,7 +348,7 @@ Cada parte declara sua **classe** — `flesh`, `bone`, `organ`, `sense` — e a 
 
 Classe não é material, e a diferença importa: **classe sobrevive à transmutação, material não.** Um fêmur virado ferro continua sendo `bone` como classe, e o que muda é que perdeu a etiqueta `living` e portanto parou de regenerar, pela regra de fallback de B-020 e sem cláusula nova. Se as constantes morassem no material, a transmutação apagaria a identidade da parte junto com a matéria, e um osso de ferro passaria a envelhecer como ferro envelhece — o que não quer dizer nada.
 
-Quatro classes, e não vinte e cinco entradas de parte: o retorno de calibrar rim e fígado separadamente é menor que o custo de manter vinte e cinco linhas coerentes, e onde o retorno existe a sobrescrita cobre.
+Quatro classes, e não vinte e oito entradas de parte: o retorno de calibrar cada nó separadamente é menor que o custo de manter vinte e oito linhas coerentes entre si, e onde o retorno existe a sobrescrita cobre.
 
 **Aceite:** as seis constantes são lidas de dado; trocar a classe declarada de uma parte muda sua regeneração, seu acúmulo tóxico e seu funcionamento sem tocar em código; e uma sobrescrita na parte vence a constante da classe.
 
@@ -394,7 +394,7 @@ Cada parte carrega idade biológica própria, em anos, independente da idade do 
 
 Idade biológica não é a idade cronológica de B-028, e as duas coexistem sem se sobrepor. B-028 continua sorteando condições crônicas por faixa de idade; aqui a perda é contínua, silenciosa e local, e chega ao agente pelo funcionamento. Um bebedor de trinta anos com fígado de cinquenta é a frase que este requisito existe para tornar verdadeira.
 
-A idade biológica é escrita por eventos — intoxicação sustentada, doença, esforço prolongado — e avaliada por cadência lenta (B-063). Ela nunca é escrita pelo GM diretamente, pela mesma razão de B-036: é causa de um derivado, e o caminho legítimo é a condição ou a substância que a move.
+A idade biológica é escrita por eventos — intoxicação sustentada, doença, esforço prolongado — e avaliada por cadência lenta (B-063). Ela nunca é escrita pelo Validador diretamente, pela mesma razão de B-036: é causa de um derivado, e o caminho legítimo é a condição ou a substância que a move.
 
 **Aceite:** dois agentes de mesma idade cronológica, um deles com idade biológica de fígado elevada, apresentam filtragem sanguínea mensuravelmente diferente, sem que exista sistema de envelhecimento dedicado.
 
@@ -412,7 +412,7 @@ Substância tóxica de R-029 entra por aqui, e não por caminho novo: o payload 
 ### B-060 — Falência excretora é sistêmica
 `P1` · `V6` · decisão · dep: B-059, B-024, B-061
 
-Quando a remoção cai abaixo do acúmulo, a toxicidade sobe **em toda parte ao mesmo tempo**, e o que era local passa a ser sistêmico: não morre o rim, morre o agente. É a mesma corrida assimétrica de B-024, com os mesmos papéis e a mesma assimetria:
+Quando a remoção cai abaixo do acúmulo, a toxicidade sobe **em toda parte ao mesmo tempo**, e o que era local passa a ser sistêmico: não morre o rim, morre o agente. É a mesma corrida assimétrica de B-024, com dois competidores diferentes e a mesma assimetria:
 
 | | Efeito |
 |---|---|
@@ -434,7 +434,7 @@ As capacidades de B-011 já são sistemas na prática. Este requisito torna o ag
 
 Não substitui as capacidades e não muda nenhum número de B-012. É camada de leitura, e serve a três coisas:
 
-**Legibilidade.** "O sistema excretor está falhando" é uma frase que a UI, o log causal e o prompt do GM podem dizer. "Filtragem sanguínea em 0,3" não é, e é a mesma informação.
+**Legibilidade.** "O sistema excretor está falhando" é uma frase que a UI, o log causal e o prompt do Validador podem dizer. "Filtragem sanguínea em 0,3" não é, e é a mesma informação.
 
 **Prosa barata.** O resumo corporal de B-030 pode nomear o sistema em vez de enumerar capacidade por capacidade — menos token e mais informação por token, que é o orçamento que de fato escasseia neste projeto.
 
@@ -593,61 +593,61 @@ Dor, doença, fome e exaustão entram no contexto como estado, e reduzem paciên
 
 ---
 
-## Fronteira com o GM
+## Fronteira com o Validador
 
-O corpo é substrato, e substrato é território do GM pelas mesmas regras de R-041 a R-046. Esta seção não abre exceção nenhuma: apenas diz o que, no corpo, corresponde a cada peça daquele contrato.
+O corpo é substrato, e substrato é território do Validador pelas mesmas regras de R-041 a R-046. Esta seção não abre exceção nenhuma: apenas diz o que, no corpo, corresponde a cada peça daquele contrato.
 
-A tese é curta. **O GM mexe em causas; a engine deriva o resto.** Ele pode trocar o material de um osso, mas não pode escrever quanta consciência alguém tem.
+A tese é curta. **O Validador mexe em causas; a engine deriva o resto.** Ele pode trocar o material de um osso, mas não pode escrever quanta consciência alguém tem.
 
-### B-034 — O corpo é exposto ao GM
-`P0` · `V5` · decisão · dep: R-041, G-005
+### B-034 — O corpo é exposto ao Validador
+`P0` · `V5` · decisão · dep: R-041, V-005
 
-O contexto do GM inclui, para cada agente em escopo:
+O contexto do Validador inclui, para cada agente em escopo:
 
 - a **árvore de partes**, com o material corrente de cada uma e suas propriedades relevantes;
 - as **condições ativas**, com severidade e estágio;
 - as **capacidades**, cada uma com as partes e condições de que ela deriva;
 - o **vocabulário de operações invocáveis** sobre aquele corpo (B-037).
 
-A última linha é a que faz as outras valerem alguma coisa: sem o display das alavancas, o GM não sabe que elas existem, e o mesmo raciocínio de R-041 se aplica. Mostrar que o fêmur é de osso e que osso é frágil é o que permite ao GM entender por que uma queda o quebrou.
+A última linha é a que faz as outras valerem alguma coisa: sem o display das alavancas, o Validador não sabe que elas existem, e o mesmo raciocínio de R-041 se aplica. Mostrar que o fêmur é de osso e que osso é frágil é o que permite ao Validador entender por que uma queda o quebrou.
 
-**Aceite:** ao mediar um golpe, o prompt do GM mostra o material da parte atingida, as condições que aquele material aceita e as capacidades que a parte serve.
+**Aceite:** ao mediar um golpe, o prompt do Validador mostra o material da parte atingida, as condições que aquele material aceita e as capacidades que a parte serve.
 
 ### B-035 — Resumo da matriz de lesão em linguagem natural
 `P1` · `V5` · derivado de R-042 · dep: B-020, B-034
 
-O GM recebe um resumo do que a matriz de lesão já resolve sozinha, gerado a partir do campo `porque` das regras aplicáveis ao escopo — exatamente como R-042 faz para as reações do mundo.
+O Validador recebe um resumo do que a matriz de lesão já resolve sozinha, gerado a partir do campo `porque` das regras aplicáveis ao escopo — exatamente como R-042 faz para as reações do mundo.
 
-É o que permite ao GM saber quando **não** agir.
+É o que permite ao Validador saber quando **não** agir.
 
 **Aceite:** o resumo é gerado a partir de `config/conditions.json` e acompanha qualquer alteração dele sem edição manual do prompt.
 
-### B-036 — O GM muta causas, nunca valores derivados
+### B-036 — O Validador muta causas, nunca valores derivados
 `P0` · `V5` · decisão · dep: B-012, R-045
 
 Esta é a regra que mantém o corpo coerente sob intervenção narrativa.
 
-| O GM pode escrever | O GM nunca escreve |
+| O Validador pode escrever | O Validador nunca escreve |
 |---|---|
 | condição — adicionar, agravar, aliviar, remover | capacidade (consciência, manipulação, visão…) |
 | material de uma parte | dor total, sangue total, temperatura corporal |
 | vida, ausência ou presença de uma parte | `isAlive` |
 | substância aplicada por uma via | qualquer campo marcado como derivado no schema |
 
-A coluna da direita é composta inteiramente de valores recalculados a partir da coluna da esquerda (B-012, B-015). Escrever neles produz um valor que o próximo recálculo apaga — um no-op silencioso, que é a pior classe de defeito possível, e que ainda por cima faria o GM mentir para si mesmo no tick seguinte.
+A coluna da direita é composta inteiramente de valores recalculados a partir da coluna da esquerda (B-012, B-015). Escrever neles produz um valor que o próximo recálculo apaga — um no-op silencioso, que é a pior classe de defeito possível, e que ainda por cima faria o Validador mentir para si mesmo no tick seguinte.
 
-Então a tradução é obrigatória e é sempre possível: se o GM quer alguém inconsciente, ele aplica uma condição que derruba consciência. Se quer alguém morto, destrói uma parte vital ou aplica uma condição fatal.
+Então a tradução é obrigatória e é sempre possível: se o Validador quer alguém inconsciente, ele aplica uma condição que derruba consciência. Se quer alguém morto, destrói uma parte vital ou aplica uma condição fatal.
 
-Consequência boa e não planejada: **morte por intervenção do GM nasce com cadeia causal completa**, porque passou pelo mesmo caminho de qualquer outra morte. B-029 continua verdadeiro mesmo quando quem matou foi a narrativa.
+Consequência boa e não planejada: **morte por intervenção do Validador nasce com cadeia causal completa**, porque passou pelo mesmo caminho de qualquer outra morte. B-029 continua verdadeiro mesmo quando quem matou foi a narrativa.
 
-É o mesmo princípio de R-045 — o GM não simula física, decide se um efeito começa — aplicado ao corpo: o GM não calcula fisiologia, decide o que muda.
+É o mesmo princípio de R-045 — o Validador não simula física, decide se um efeito começa — aplicado ao corpo: o Validador não calcula fisiologia, decide o que muda.
 
-**Aceite:** uma mutação do GM que aponte para um campo derivado é rejeitada pelo validador com erro nomeado, e a mensagem sugere qual condição produz aquele efeito.
+**Aceite:** uma mutação do Validador que aponte para um campo derivado é rejeitada pela validação de schema com erro nomeado, e a mensagem sugere qual condição produz aquele efeito.
 
 ### B-037 — Vocabulário de operações biológicas
 `P0` · `V5` · decisão · dep: B-034, R-015
 
-O corpo expõe um vocabulário fechado e nomeado, análogo ao vocabulário de efeitos de R-015. Toda intervenção do GM no corpo é uma dessas, emitida como mutação `engine_effect`:
+O corpo expõe um vocabulário fechado e nomeado, análogo ao vocabulário de efeitos de R-015. Toda intervenção do Validador no corpo é uma dessas, emitida como mutação `engine_effect`:
 
 | Operação | Efeito |
 |---|---|
@@ -659,14 +659,14 @@ O corpo expõe um vocabulário fechado e nomeado, análogo ao vocabulário de ef
 | `sever_part` / `attach_part` | remove ou acopla uma parte, incluindo próteses |
 | `apply_substance` | introduz uma substância por uma via de R-030 |
 
-Fechado, e não aberto, pela mesma razão de R-015: o que não está na lista não é invocável, e a saída do GM é validável contra schema antes de tocar o estado.
+Fechado, e não aberto, pela mesma razão de R-015: o que não está na lista não é invocável, e a saída do Validador é validável contra schema antes de tocar o estado.
 
-**Aceite:** o schema de saída do GM aceita exatamente estas operações e rejeita qualquer outra pelo nome.
+**Aceite:** o schema de saída do Validador aceita exatamente estas operações e rejeita qualquer outra pelo nome.
 
 ### B-038 — Transmutação de material de parte
 `P1` · `V6` · decisão · dep: B-003, B-036
 
-O GM pode trocar o material corrente de uma parte do corpo por **qualquer entrada do catálogo de materiais** — inclusive entradas sem nenhuma característica biológica.
+O Validador pode trocar o material corrente de uma parte do corpo por **qualquer entrada do catálogo de materiais** — inclusive entradas sem nenhuma característica biológica.
 
 Transformar os ossos de alguém em ferro, vidro ou pedra é uma operação de uma linha, e ela é possível não porque foi prevista, mas porque tecidos e materiais do mundo são o mesmo catálogo desde B-003. Não há código para "ossos de ferro" em lugar nenhum.
 
@@ -684,7 +684,7 @@ Nada é calculado especialmente para uma parte transmutada. Tudo que a lesão, a
 | osso → **vidro** | perde `living`: para de cicatrizar e de infeccionar. Continua frágil, mas a resistência a impacto cai de 0,1 para 0,0 — quebra com quase nada. Ganha `transparent`, e portanto vira sinal visível (B-032) e assunto na comunidade. |
 | osso → **ferro** | deixa de ser frágil e praticamente não fratura. Ganha `conductive`: um choque que antes morria no nervo agora percorre o esqueleto. Densidade salta de 1,9 para 7,8 — o agente pesa muito mais e carrega muito menos. Não cicatriza. |
 | pele → **pedra** | deixa de ser inflamável: fogo para de queimar e passa só a aquecer. Corte deixa de lacerar. Calor específico cai de 3500 para 840 — a região esquenta e esfria rápido, e a regulação térmica ali se perde. |
-| músculo → **gelo** | ponto de fusão 0. Em ambiente acima de zero a parte simplesmente derrete e se destrói em poucos ticks, por R-009. **O GM não precisava saber disso**, e provavelmente não sabia. |
+| músculo → **gelo** | ponto de fusão 0. Em ambiente acima de zero a parte simplesmente derrete e se destrói em poucos ticks, por R-009. **O Validador não precisava saber disso**, e provavelmente não sabia. |
 
 A última linha é o teste do desenho. Uma intervenção narrativa gerou uma consequência física que ninguém escreveu, ninguém previu e é perfeitamente explicável pelo log causal.
 
@@ -692,59 +692,59 @@ E o ciclo fecha na cognição: a parte transmutada entra na prosa do prompt do p
 
 **Aceite:** transmutar músculo para `gelo` num ambiente a 20 °C destrói a parte por fusão dentro do prazo previsto por R-009, sem nenhuma regra escrita para o caso, e a cadeia aparece completa no log causal.
 
-### B-040 — Invocação de condição pelo GM
+### B-040 — Invocação de condição pelo Validador
 `P0` · `V5` · decisão · dep: B-034, R-043
 
-O GM pode iniciar qualquer condição do catálogo. A partir da invocação **a engine assume**: o GM aplica a fratura, e quem faz a dor subir, a capacidade cair, a infecção correr e o osso consolidar é B-009 a B-024.
+O Validador pode iniciar qualquer condição do catálogo. A partir da invocação **a engine assume**: o Validador aplica a fratura, e quem faz a dor subir, a capacidade cair, a infecção correr e o osso consolidar é B-009 a B-024.
 
-O papel é o mesmo de R-043: o GM é fonte de **causação nova**. A matriz de lesão sabe o que acontece dado que um dano ocorreu; ela não sabe enumerar todas as maneiras que uma pessoa pode inventar de se machucar.
+O papel é o mesmo de R-043: o Validador é fonte de **causação nova**. A matriz de lesão sabe o que acontece dado que um dano ocorreu; ela não sabe enumerar todas as maneiras que uma pessoa pode inventar de se machucar.
 
-**Invocação legítima:** um agente diz que desceu correndo uma escada improvisada de tábuas. Nenhuma regra liga isso a nada. O GM julga plausível e invoca `apply_condition` de entorse no tornozelo. Daí em diante o corpo cuida sozinho.
+**Invocação legítima:** um agente diz que desceu correndo uma escada improvisada de tábuas. Nenhuma regra liga isso a nada. O Validador julga plausível e invoca `apply_condition` de entorse no tornozelo. Daí em diante o corpo cuida sozinho.
 
-**Contraexemplo, onde o GM não invoca nada:** um agente esfaqueia outro. Existe dano cortante, existe parte atingida, existe material vivo. A matriz resolve (B-020). O GM apenas autoriza o golpe.
+**Contraexemplo, onde o Validador não invoca nada:** um agente esfaqueia outro. Existe dano cortante, existe parte atingida, existe material vivo. A matriz resolve (B-020). O Validador apenas autoriza o golpe.
 
-**Aceite:** esfaquear alguém produz zero invocações de condição pelo GM.
+**Aceite:** esfaquear alguém produz zero invocações de condição pelo Validador.
 
 ### B-041 — Dano, remoção e restauração de parte
 `P1` · `V6` · derivado · dep: B-037, B-004
 
-O GM pode ferir, destruir, decepar, recolocar ou substituir uma parte diretamente, quando o método descrito não tem caminho modelado.
+O Validador pode ferir, destruir, decepar, recolocar ou substituir uma parte diretamente, quando o método descrito não tem caminho modelado.
 
-Destruir uma parte dispara a cascata estrutural de B-004 normalmente, inclusive a morte se a parte for vital. O GM não decide que alguém morreu; ele destrói o coração, e a morte é consequência com causa registrada.
+Destruir uma parte dispara a cascata estrutural de B-004 normalmente, inclusive a morte se a parte for vital. O Validador não decide que alguém morreu; ele destrói o coração, e a morte é consequência com causa registrada.
 
 **Aceite:** uma invocação que destrói o coração produz morte por cadeia causal ordinária, indistinguível no log de uma morte causada por golpe.
 
-### B-042 — Aplicação de substância pelo GM
+### B-042 — Aplicação de substância pelo Validador
 `P2` · `V6` · dep: R-030, R-031
 
-O GM pode introduzir uma substância por qualquer via de R-030 — ingestão, inalação, contato, injeção. A partir daí valem integralmente as regras de substância, incluindo incubação, efeitos cognitivos e contágio. Nada específico aqui.
+O Validador pode introduzir uma substância por qualquer via de R-030 — ingestão, inalação, contato, injeção. A partir daí valem integralmente as regras de substância, incluindo incubação, efeitos cognitivos e contágio. Nada específico aqui.
 
 **Aceite:** conforme R-030 e R-031.
 
 ### B-043 — Não-duplicação
 `P0` · `V5` · decisão · dep: B-035, R-044
 
-Antes de invocar, o GM verifica se a matriz de lesão já cobre o resultado. Havendo caminho modelado — faca, queda, fogo, frio, corrosivo, veneno ingerido —, ele **autoriza e não invoca**. Invocar por cima aplica o dano duas vezes.
+Antes de invocar, o Validador verifica se a matriz de lesão já cobre o resultado. Havendo caminho modelado — faca, queda, fogo, frio, corrosivo, veneno ingerido —, ele **autoriza e não invoca**. Invocar por cima aplica o dano duas vezes.
 
-**Aceite:** numa amostra de execuções com combate e acidentes comuns, a taxa de invocação biológica do GM fica abaixo do limiar declarado em `tuning.json`.
+**Aceite:** numa amostra de execuções com combate e acidentes comuns, a taxa de invocação biológica do Validador fica abaixo do limiar declarado em `tuning.json`.
 
 ### B-044 — Operações extraordinárias e registro de plausibilidade
-`P1` · `V6` · decisão · dep: B-038, G-004
+`P1` · `V6` · decisão · dep: B-038, V-004
 
 Transmutar ossos é mecanicamente trivial e narrativamente enorme. As duas coisas precisam ficar separadas.
 
-O cenário declara um **registro de plausibilidade**: o conjunto de operações que o GM está autorizado a invocar naquele mundo. Um vilarejo comum autoriza condição, dano e substância, e não autoriza transmutação nem recolocação de membro. Um cenário sobrenatural autoriza tudo.
+O cenário declara um **registro de plausibilidade**: o conjunto de operações que o Validador está autorizado a invocar naquele mundo. Um vilarejo comum autoriza condição, dano e substância, e não autoriza transmutação nem recolocação de membro. Um cenário sobrenatural autoriza tudo.
 
-A engine **sempre** suporta a operação inteira. O registro governa apenas o que o GM pode escolher fazer, e o padrão é conservador. A separação existe porque a alternativa — deixar o modelo julgar o gênero do mundo a cada chamada — produz deriva tonal, que é o modo de falha mais comum e mais irrecuperável de um GM de LLM.
+A engine **sempre** suporta a operação inteira. O registro governa apenas o que o Validador pode escolher fazer, e o padrão é conservador. A separação existe porque a alternativa — deixar o modelo julgar o gênero do mundo a cada chamada — produz deriva tonal, que é o modo de falha mais comum e mais irrecuperável de um Validador de LLM.
 
-Duas camadas, e elas fazem coisas diferentes. Operação **fora** do registro é rejeitada pelo validador, sem chegar ao estado. Operação **dentro** do registro mas irreversível — decepar, destruir parte vital, transmutar — exige o tier alto (L-004) e justificativa explícita registrada.
+Duas camadas, e elas fazem coisas diferentes. Operação **fora** do registro é rejeitada pela validação de schema, sem chegar ao estado. Operação **dentro** do registro mas irreversível — decepar, destruir parte vital, transmutar — exige o tier alto (L-004) e justificativa explícita registrada.
 
 **Aceite:** com o registro padrão, uma invocação de `transmute_part` é rejeitada antes de tocar o estado e a rejeição aparece no painel com o motivo; com o registro sobrenatural, a mesma invocação passa, mas só a partir do tier alto e com justificativa preenchida.
 
 ### B-045 — Promoção generalizada (corpo)
 `P1` · `V5` · derivado de R-046 · dep: B-040, X-006
 
-Extensão do mecanismo único de R-046 ao domínio `body`. Toda invocação biológica registra método + operação; `generalization` na saída do GM segue o mesmo contrato. Repetição além do limiar → candidato a linha em `config/conditions.json`.
+Extensão do mecanismo único de R-046 ao domínio `body`. Toda invocação biológica registra método + operação; `generalization` na saída do Validador segue o mesmo contrato. Repetição além do limiar → candidato a linha em `config/conditions.json`.
 
 **Aceite:** painel lista métodos improvisados com regra sugerida colável; regra provisória entra viva e é revisável.
 

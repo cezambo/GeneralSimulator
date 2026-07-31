@@ -11,7 +11,7 @@ Todos os prompts do projeto vivem aqui como arquivos Markdown editáveis. **Não
 2. **Regras compartilhadas** — injetadas por include:
    - `_shared/rules_universal.md` — JSON, idioma, concisão (todos)
    - `_shared/rules_agent.md` — persona, agência, atemporalidade (agente)
-   - `_shared/rules_gm.md` — permissivo, mutar não bloquear (GM)
+   - `_shared/rules_gm.md` — permissivo, mutar não bloquear (Validador)
 
 3. **`prompts/**/*.md`** — templates com blocos `## System` e `## User Template`.
 
@@ -21,7 +21,7 @@ Todos os prompts do projeto vivem aqui como arquivos Markdown editáveis. **Não
 
 - **Sem** `thought_router` nem `action_intent` — pensamento emite `decision` direto.
 - **Profundidade:** consciência (B-014) escolhe `base_low` vs `base_high`; `requestedDeepThinking` escala para `reasoning`.
-- **GM único:** `gm.evaluate_high`. Affordance resolvida na engine → zero LLM.
+- **Validador único:** `gm.evaluate_high`. Affordance resolvida na engine → zero LLM.
 - **Metas:** `cognition.goal_revise` unifica daily/seasonal/annual/reactive.
 - **Combate:** sem prompts dedicados — grito como fato perceptível + viés de relação (A-029).
 
@@ -51,7 +51,7 @@ prompts/
 | `{{agentContext}}` | Identidade, corpo, personalidade, memórias, opiniões, objetivos, inventário |
 | `{{affordances}}` | Lista do que o agente pode fazer agora (engine) |
 | `{{worldSnapshot}}` | Tiles, objetos e agentes num raio relevante |
-| `{{userInstructions}}` | Instruções ativas do usuário ao GM |
+| `{{userInstructions}}` | Instruções ativas do usuário ao Validador |
 | `{{triggerType}}` | reactive / idle / scheduled / postInteraction / postDenial |
 
 ### Estado do corpo e do mundo entra como prosa
@@ -71,5 +71,5 @@ Verifica: arquivos existem, schemas referenciados, includes válidos, variáveis
 - **Idioma diegético:** português (BR) em narrativa e fala.
 - **JSON:** camelCase, sem markdown fence.
 - **Atemporalidade:** memórias e opiniões sem marcadores temporais relativos.
-- **GM permissivo:** preferir `executed` / `partial` / `reinterpreted` sobre `denied`.
+- **Validador permissivo:** preferir `executed` / `partial` / `reinterpreted` sobre `denied`.
 

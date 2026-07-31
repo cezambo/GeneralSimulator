@@ -131,7 +131,7 @@ O Validador escreve **causas**: condição, material de parte, presença de part
 
 O motivo imediato é que escrever em campo derivado é apagado no recálculo seguinte. O efeito colateral é melhor que o motivo: para matar alguém, ele precisa destruir uma parte vital, então morte narrativa nasce com a mesma cadeia causal auditável de qualquer outra.
 
-**Aceite:** o validador de mutações rejeita qualquer caminho marcado como derivado no schema.
+**Aceite:** a validação de mutações rejeita qualquer caminho marcado como derivado no schema.
 
 ### V-014 — Leis invioláveis
 `P0` · `V4` · PDF 82-87 · dep: V-004

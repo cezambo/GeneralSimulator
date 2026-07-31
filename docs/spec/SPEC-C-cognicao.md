@@ -2,7 +2,7 @@
 
 Pensamento, memória, opiniões e objetivos. É o motor mental do agente: o que entra na cabeça dele, o que fica, o que ele passa a acreditar e o que ele decide perseguir.
 
-O corpo que condiciona esse motor está em [SPEC-B](SPEC-B-corpo.md). A conversa que o alimenta está em [SPEC-S](SPEC-S-interacao.md). A mediação das ações que ele decide está em [SPEC-G](SPEC-G-gm.md).
+O corpo que condiciona esse motor está em [SPEC-B](SPEC-B-corpo.md). A conversa que o alimenta está em [SPEC-S](SPEC-S-interacao.md). A mediação das ações que ele decide está em [SPEC-V](SPEC-V-validador.md).
 
 ---
 
@@ -89,7 +89,7 @@ O consumo é debitado quando a deliberação acontece, no ciclo seguinte, e não
 
 A intenção sai no mesmo objeto do pensamento: `actionType`, alvo, destino, `intentDescription` em linguagem natural e fala opcional. Não existe passo separado de intenção.
 
-A `intentDescription` é o que o GM lê quando é chamado, e é o que o registro de atividade guarda quando não é.
+A `intentDescription` é o que o Validador lê quando é chamado, e é o que o registro de atividade guarda quando não é.
 
 **Aceite:** nenhum caminho do código emite uma segunda chamada para converter pensamento em ação.
 
@@ -109,9 +109,9 @@ O lote noturno tem teto próprio, declarado à parte em `tuning.json` e contabil
 
 As ações suportadas pelos objetos e pelo ambiente ao alcance entram no contexto como lista curta. É o que ancora a decisão no que o mundo de fato oferece.
 
-Affordance disponível resolve sem GM (`W-031`); o contexto existe para que o agente escolha entre o que existe antes de inventar o que não existe.
+Affordance disponível resolve sem Validador (`W-031`); o contexto existe para que o agente escolha entre o que existe antes de inventar o que não existe.
 
-**Aceite:** o contexto de pensamento lista as affordances ao alcance, e uma decisão que casa com uma delas não gera chamada de GM.
+**Aceite:** o contexto de pensamento lista as affordances ao alcance, e uma decisão que casa com uma delas não gera chamada de Validador.
 
 ### C-009 — Pensamento corrente exposto
 `P1` · `V5` · PDF 88-90 · dep: C-001
@@ -125,7 +125,7 @@ O último monólogo interior fica acessível para inspeção na UI e para o bal�
 
 Log privado e determinístico do que o agente **de fato** fez: tempo, ação, alvo, setor, veredito e desfecho. Não passa por LLM e não é memória — é o fato contra o qual relato e mentira são comparados.
 
-**Aceite:** toda ação resolvida, com ou sem GM, gera entrada no registro, e o registro nunca é reescrito.
+**Aceite:** toda ação resolvida, com ou sem Validador, gera entrada no registro, e o registro nunca é reescrito.
 
 ---
 
@@ -543,13 +543,13 @@ Quando a revisão devolve níveis invalidados, eles são revisados em seguida �
 
 ---
 
-## Fronteira com o GM
+## Fronteira com o Validador
 
-O GM não escreve na cognição. Ele produz fatos e vereditos; a cognição os interpreta.
+O Validador não escreve na cognição. Ele produz fatos e vereditos; a cognição os interpreta.
 
-Uma negação do GM entra como impressão comum e pode virar dissonância — é assim que um agente frustrado repetidamente muda de crença sobre o que é possível no mundo. O GM nunca reescreve opinião, meta ou memória diretamente.
+Uma negação do Validador entra como impressão comum e pode virar dissonância — é assim que um agente frustrado repetidamente muda de crença sobre o que é possível no mundo. O Validador nunca reescreve opinião, meta ou memória diretamente.
 
-A exceção é a promoção de regra no domínio `cognition`, especificada em [SPEC-G](SPEC-G-gm.md): o GM pode propor que um tópico passe a produzir um `stance` de forma determinística, e essa regra é revisável no painel como qualquer outra.
+A exceção é a promoção de regra no domínio `cognition`, especificada em [SPEC-V](SPEC-V-validador.md): o Validador pode propor que um tópico passe a produzir um `stance` de forma determinística, e essa regra é revisável no painel como qualquer outra.
 
 ---
 

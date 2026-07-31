@@ -99,7 +99,7 @@ Carregado de dados, não hardcoded. Inicial: carvalho, pinho, pedra, ferro, cobr
 
 Cada entrada é classificada como **material** ou **elemento** conforme R-002 — água e gelo são elementos, carvalho e pedra são materiais — porque a matriz de reação depende dessa distinção para não explodir combinatoriamente.
 
-Este catálogo é **um só para todo o simulador**. Os tecidos do corpo — pele, músculo, órgão, nervo, gordura — são entradas dele, no mesmo formato (B-003). `osso` já estava na lista acima antes de existir sistema de corpo, e continua sendo uma entrada única que serve tanto para um porrete quanto para um fêmur. É essa unificação que permite ao GM transmutar o material de uma parte do corpo sem código novo (B-038).
+Este catálogo é **um só para todo o simulador**. Os tecidos do corpo — pele, músculo, órgão, nervo, gordura — são entradas dele, no mesmo formato (B-003). `osso` já estava na lista acima antes de existir sistema de corpo, e continua sendo uma entrada única que serve tanto para um porrete quanto para um fêmur. É essa unificação que permite ao Validador transmutar o material de uma parte do corpo sem código novo (B-038).
 
 Exemplo completo em [`config/materials.example.json`](../../config/materials.example.json).
 
@@ -125,12 +125,12 @@ Mais os **limiares térmicos** de R-009 e o calor específico de R-008, que subs
 
 **Aceite:** dureza afeta arrombamento; velocidade de combustão afeta a taxa de propagação de fogo; e um material sem ponto de ignição declarado nunca acende por temperatura.
 
-### W-014 — Descrição textual para o GM
+### W-014 — Descrição textual para o Validador
 `P1` · `V4` · PDF 119-120 · dep: W-011, R-041
 
-Materiais complexos carregam descrição em prosa, injetada no contexto do GM.
+Materiais complexos carregam descrição em prosa, injetada no contexto do Validador.
 
-**Aceite:** ao mediar ação sobre mármore antigo, o prompt do GM contém a descrição.
+**Aceite:** ao mediar ação sobre mármore antigo, o prompt do Validador contém a descrição.
 
 ---
 
@@ -165,7 +165,7 @@ Instâncias com posição, rotação, integridade e estados transientes próprio
 
 Cada objeto declara as ações que suporta. Alimenta as opções apresentadas ao agente.
 
-**Affordance-first (determinístico):** se a intenção do agente mapeia a uma affordance declarada, a **engine executa sem LLM de GM**. O GM só entra quando não há affordance que cubra a ação.
+**Affordance-first (determinístico):** se a intenção do agente mapeia a uma affordance declarada, a **engine executa sem LLM de Validador**. O Validador só entra quando não há affordance que cubra a ação.
 
 **Aceite:** sentar numa cadeira com affordance `sentar` resolve na engine; contexto do agente inclui affordances disponíveis.
 
