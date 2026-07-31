@@ -236,6 +236,8 @@ export async function startLiveServe(opts?: {
       hub.broadcastDelta({
         tiles: [...uniq.values()].map((d) => cellPayload(d.gridId, d.x, d.y)),
       });
+      // Parede que virou escombro (ou porta queimada) reabre caminhos.
+      revalidatePaths();
     }
     hub.pushFrame();
   }, frameMs);

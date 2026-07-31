@@ -118,6 +118,10 @@ func apply_tool(effect: String, cells: Array) -> void:
 	send_command("cmd.tool.apply", {"effect": effect, "cells": cells})
 
 
+func toggle_door(x: int, y: int) -> void:
+	send_command("cmd.world.toggleDoor", {"x": x, "y": y})
+
+
 func send_command(type: String, payload: Dictionary, req_id: String = "") -> void:
 	if not is_core_connected():
 		return

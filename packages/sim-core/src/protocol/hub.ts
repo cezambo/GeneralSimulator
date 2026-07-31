@@ -15,6 +15,7 @@ import {
   agentsUpdatePayload,
   buildWorldSnapshot,
   clockPayload,
+  tileCellSnapshot,
   type AgentMotionLookup,
 } from './snapshot.js';
 import type {
@@ -339,6 +340,40 @@ export class ProtocolHub {
         this.broadcastDelta(delta);
         if (env.reqId) {
           this.#sendTo(client, 'res.ok', { ok: true, effect, cells: cells.length }, env.reqId);
+        }
+        return;
+      }
+      case 'cmd.world.toggleDoor': {
+        if (this.#mode === 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'porta só alterna em modo normal');
+        }
+        const x = Math.floor(Number(p['x']));
+        const y = Math.floor(Number(p['y']));
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          throw new ProtocolError('BAD_CELL', 'toggleDoor exige x, y');
+        }
+        const gridId = this.#world.mainGridId;
+        if (!this.#world.inBounds(gridId, x, y)) {
+          throw new ProtocolError('OUT_OF_BOUNDS', `célula (${x},${y}) fora do mapa`);
+        }
+        const tile = this.#world.tileAt(gridId, x, y);
+        if (tile.type !== 'door') {
+          throw new ProtocolError('NOT_DOOR', `célula (${x},${y}) não é porta`);
+        }
+        const open = Boolean(tile.state?.isOpen);
+        if (open) this.#world.closeDoor(gridId, x, y);
+        else this.#world.openDoor(gridId, x, y);
+        const after = this.#world.tileAt(gridId, x, y);
+        this.#afterGeometryEdit({
+          tiles: [tileCellSnapshot(this.#sim, this.#world, gridId, x, y)],
+        });
+        if (env.reqId) {
+          this.#sendTo(
+            client,
+            'res.ok',
+            { ok: true, isOpen: Boolean(after.state?.isOpen) },
+            env.reqId,
+          );
         }
         return;
       }

@@ -50,8 +50,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			if pawn:
 				agents.set_selected(pawn.agent_id)
 				hud.set_selection(pawn.describe())
-			elif agents.get_selected_id() != "":
-				var cell := WorldScale.px_to_cell(world_pos)
+				return
+			var cell := WorldScale.px_to_cell(world_pos)
+			var info := world_view.tile_info_at(cell)
+			if String(info.get("type", "")) == "door":
+				core.toggle_door(cell.x, cell.y)
+				hud.set_selection("Porta (%d,%d) — alternando…" % [cell.x, cell.y])
+				return
+			if agents.get_selected_id() != "":
 				core.move_agent(agents.get_selected_id(), cell.x, cell.y)
 				var sel := agents.get_selected_id()
 				var p2 := agents.get_pawn(sel)
@@ -133,7 +139,8 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 		"door":
 			core.paint_tiles("door", "pinho", [{"x": cell.x, "y": cell.y}])
 		_:
-			core.paint_tiles("wall", "pedra", [{"x": cell.x, "y": cell.y}])
+			# Pinho: parede inflamável — o fogo pode consumir e virar escombro.
+			core.paint_tiles("wall", "pinho", [{"x": cell.x, "y": cell.y}])
 
 
 func _update_hover_inspect() -> void:

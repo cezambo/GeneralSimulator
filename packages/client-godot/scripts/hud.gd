@@ -124,14 +124,14 @@ func _refresh_help() -> void:
 		help_label.text = "C·sair · B/F/R parede/chão/porta · E ou botão direito: apagar tile · T cadeira · X móvel · Z/Y undo/redo"
 		set_selection(_selection_text)
 	else:
-		help_label.text = "Clique: sel./andar · G água · Q apagar fogo · C construir · Espaço pausa · 1–4 vel · V cone · WASD câmera"
+		help_label.text = "Clique: sel./andar · porta: clique nela · G água · Q apagar fogo · C construir · Espaço pausa · 1–4 vel · V cone · WASD câmera"
 		set_selection(_selection_text)
 
 
 func _tool_label(tool_id: String) -> String:
 	match tool_id:
 		"wall":
-			return "parede (pedra)"
+			return "parede (pinho)"
 		"floor":
 			return "chão (pinho)"
 		"door":
@@ -160,6 +160,14 @@ func _set_tool(tool_id: String) -> void:
 	_build_tool = tool_id
 	_refresh_help()
 	build_tool_changed.emit(_build_tool)
+
+
+func clear_sandbox_tool() -> void:
+	if _sandbox_tool == "":
+		return
+	_sandbox_tool = ""
+	_refresh_help()
+	sandbox_tool_changed.emit(_sandbox_tool)
 
 
 func _set_sandbox_tool(tool_id: String) -> void:

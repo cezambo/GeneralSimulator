@@ -143,6 +143,7 @@ cmd.build.redo        { }
 cmd.build.createCustomItem { name, description, category, materialId }
 
 cmd.tool.apply        { effect: "wet" | "extinguish", cells: [{x,y}] }  // GM em tempo real (modo normal)
+cmd.world.toggleDoor  { x, y }  // abre/fecha porta; revalida path (modo normal)
 ```
 
 O histórico de undo vive no núcleo, não no cliente. É a única forma de manter consistência quando o mesmo mundo é editado por comando e por LLM.

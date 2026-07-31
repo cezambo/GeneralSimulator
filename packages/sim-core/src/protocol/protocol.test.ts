@@ -358,6 +358,55 @@ describe('ProtocolHub (X-007)', () => {
     expect(delta.tiles[0]!.states?.some((s) => s.type === 'wet')).toBe(true);
   });
 
+  it('cmd.world.toggleDoor abre e fecha e notifica geometria', () => {
+    let geomCalls = 0;
+    const cfg = loadConfig();
+    const { sim, world } = buildSpikeRoom(cfg, 'proto-door');
+    const clock = new SimClock(sim.state.clock, {
+      minutesPerTick: cfg.tuning.minutesPerTick,
+      hoursPerDay: cfg.tuning.hoursPerDay,
+      daysPerSeason: cfg.tuning.daysPerSeason,
+      seasonsPerYear: cfg.tuning.seasonsPerYear,
+      availableSpeeds: cfg.tuning.availableSpeeds,
+    });
+    const hub = new ProtocolHub({
+      sim,
+      world,
+      clock,
+      onGeometryChanged: () => {
+        geomCalls += 1;
+      },
+    });
+    const doorX = Math.floor(world.grid(world.mainGridId).width / 2);
+    // Sala spike nasce com a porta aberta.
+    expect(world.blocksMovementAt(world.mainGridId, doorX, 0)).toBe(false);
+
+    const c = new MemorySink('c');
+    hub.connect(c);
+    c.clear();
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.world.toggleDoor',
+      seq: 1,
+      simTime: 0,
+      reqId: 'door1',
+      payload: { x: doorX, y: 0 },
+    });
+    expect(c.last('res.ok')?.reqId).toBe('door1');
+    expect(world.blocksMovementAt(world.mainGridId, doorX, 0)).toBe(true);
+    expect(geomCalls).toBe(1);
+
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.world.toggleDoor',
+      seq: 2,
+      simTime: 0,
+      payload: { x: doorX, y: 0 },
+    });
+    expect(world.blocksMovementAt(world.mainGridId, doorX, 0)).toBe(false);
+    expect(geomCalls).toBe(2);
+  });
+
   it('cmd.agent.move chama o handler e empurra agents.update com motion', () => {
     let moved: { id: string; x: number; y: number } | undefined;
     const cfg = loadConfig();

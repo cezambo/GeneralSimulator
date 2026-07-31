@@ -36,12 +36,13 @@ godot --path packages/client-godot
 | 1 / 2 / 3 / 4 | Velocidade 1, 2, 5, 20 |
 | Clique no agente | Selecionar |
 | Clique no chão (com seleção) | Pedir caminho (`cmd.agent.move`) |
+| Clique na porta | Abrir / fechar (`cmd.world.toggleDoor`) |
 | Hover | Info do tile (e do pawn selecionado) no HUD |
 | G | Ferramenta RT: água (`wet`) — molha; apaga fogo se houver |
 | Q | Ferramenta RT: apagar fogo (`extinguish`) |
 | Botão direito (com ferramenta RT) | Cancela a ferramenta |
 | C | Entrar/sair do modo construção (pausa) |
-| B / F / R | Parede / chão / porta |
+| B / F / R | Parede (pinho) / chão / porta |
 | E ou botão direito | Apagar tile (volta a chão) — não apaga fogo |
 | T | Colocar cadeira |
 | X | Remover móvel na célula |

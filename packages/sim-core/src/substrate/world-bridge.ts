@@ -8,6 +8,7 @@
 
 import type { Simulation } from '../state/index.js';
 import type { TransientState } from '../types/domain.js';
+import { blocksMovement } from '../world/tiles.js';
 import type { World } from '../world/grid.js';
 import type { ReactiveTarget } from './target.js';
 
@@ -76,26 +77,57 @@ export class TileReactiveBridge {
 
   /**
    * Espelha mutações do substrato de volta às camadas densas / overlay.
-   * Devolve células que mudaram estado visualmente (para world.delta).
+   * Devolve células que mudaram (para world.delta).
+   *
+   * R-027 / aceite V1: integridade 0 em tile que bloqueava movimento vira chão
+   * de resíduo — o A* volta a passar pelo buraco.
    */
   commit(): { x: number; y: number; gridId: string }[] {
     const dirty: { x: number; y: number; gridId: string }[] = [];
     for (const t of this.#targets.values()) {
       if (t.gridId === undefined || t.x === undefined || t.y === undefined) continue;
       const overlay = this.#sim.overlayAt(t.gridId, t.x, t.y, true);
-      const before = fingerprint(overlay.states, overlay.integrity, overlay.temperature, t.materialId);
+      const tileBefore = this.#world.tileAt(t.gridId, t.x, t.y);
+      const before = fingerprint(
+        overlay.states,
+        overlay.integrity,
+        overlay.temperature,
+        tileBefore.materialId,
+        tileBefore.type,
+      );
 
       overlay.states = t.states;
       if (t.integrity !== undefined) overlay.integrity = t.integrity;
       if (t.temperature !== undefined) overlay.temperature = t.temperature;
       else delete overlay.temperature;
 
-      const tile = this.#world.tileAt(t.gridId, t.x, t.y);
-      if (tile.materialId !== t.materialId) {
+      if (tileBefore.materialId !== t.materialId) {
         this.#world.setMaterial(t.gridId, t.x, t.y, t.materialId);
       }
 
-      const after = fingerprint(overlay.states, overlay.integrity, overlay.temperature, t.materialId);
+      // Estrutura consumida pelo fogo vira escombro atravessável.
+      const integrity = t.integrity ?? overlay.integrity ?? 100;
+      if (
+        integrity <= 0 &&
+        blocksMovement(tileBefore.type, tileBefore.state) &&
+        tileBefore.type !== 'floor'
+      ) {
+        this.#world.setType(t.gridId, t.x, t.y, 'floor');
+        if (overlay.state) {
+          const { isOpen: _o, isLocked: _l, ...rest } = overlay.state;
+          overlay.state = Object.keys(rest).length > 0 ? rest : undefined;
+          if (overlay.state === undefined) delete overlay.state;
+        }
+      }
+
+      const tileAfter = this.#world.tileAt(t.gridId, t.x, t.y);
+      const after = fingerprint(
+        overlay.states,
+        overlay.integrity,
+        overlay.temperature,
+        tileAfter.materialId,
+        tileAfter.type,
+      );
       if (before !== after) dirty.push({ gridId: t.gridId, x: t.x, y: t.y });
     }
     return dirty;
@@ -115,6 +147,7 @@ function fingerprint(
   integrity: number | undefined,
   temperature: number | undefined,
   materialId: string,
+  tileType: string,
 ): string {
-  return JSON.stringify({ states: states ?? [], integrity, temperature, materialId });
+  return JSON.stringify({ states: states ?? [], integrity, temperature, materialId, tileType });
 }
