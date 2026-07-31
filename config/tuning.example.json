@@ -21,7 +21,12 @@
     "raioGritoMetros": 100,
     "raioSussurroMetros": 2,
     "alcanceInteracaoMetros": 1.5,
-    "alcanceOdorMetros": 6
+    "alcanceOdorMetros": 6,
+
+    "orcamentoTokensRelatoPercepcao": 350,
+    "maxFatosNoRelato": 18,
+    "porqueCorteTemOrdem": "A-032. Quando nao cabe, corta-se pela ordem de saliencia declarada (perigo, pessoas, mudanca, affordance util, ambiente, fundo), e nunca por proximidade nem por ordem de varredura do grid. Sem ordem declarada o corte depende de qual estrutura o codigo varreu primeiro, e duas execucoes com a mesma semente divergem, quebrando X-004. O corte por proximidade, que e o palpite natural, e o pior: o fogo do outro lado do comodo perde para a cadeira ao lado.",
+    "porqueMontagemNaoUsaModelo": "A-031. Havia a ideia de filtrar percepcao por um modelo pequeno. Era uma chamada por agente por pensamento — dobrava o custo do sistema para produzir texto que a engine ja sabe escrever, e punha nao-determinismo na unica parte do laco que precisa ser reproduzivel pelo cassete."
   },
 
   "movimento": {

@@ -34,7 +34,7 @@ Não há chamada de roteamento antes nem chamada de tradução depois. O ciclo c
 ### C-002 — Contexto de pensamento
 `P0` · `V5` · derivado de PDF 74-90 · dep: C-001, A-027, B-030
 
-Bloco montado pela engine antes de cada pensamento: identidade, aparência, personalidade, corpo em prosa curta (`B-030`), necessidades salientes, rotina (`A-027`), função, metas correntes, opiniões filtradas (`C-030`), fatos salientes do banco (`C-054`), auto-entendimento (`C-050`), memórias recuperadas (`C-018`), inventário, relações comprimidas (`A-029`) e percepção corrente.
+Bloco montado pela engine antes de cada pensamento: identidade, aparência, personalidade, corpo em prosa curta (`B-030`), necessidades salientes, rotina (`A-027`), função, metas correntes, opiniões filtradas (`C-030`), fatos salientes do banco (`C-054`), auto-entendimento (`C-050`), memórias recuperadas (`C-018`), inventário, relações comprimidas (`A-029`) e o relato de percepção corrente (`A-031`).
 
 A rotina entra **sempre**, sem exceção, e o auto-entendimento entra sempre que existe — os dois são curtos e são o que ancora o agente justamente quando o resto do bloco foi omitido por saliência. O resto entra por saliência: o que não afeta a decisão corrente é omitido.
 

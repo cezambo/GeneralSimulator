@@ -10,6 +10,7 @@ Os arquivos `*.example.json` são referência comentada e são versionados. Os a
 | `reactions.example.json` | matriz de reação e vocabulário de efeitos | [SPEC-R](../docs/spec/SPEC-R-substrato.md) |
 | `body.example.json` | árvore de partes do corpo | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
 | `conditions.example.json` | condições e matriz de lesão | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
+| `objects.example.json` | catálogo de tipos de objeto, com as duas descrições e o Funcionamento inicial | [O-021, O-028](../docs/spec/SPEC-O-objetos.md) |
 | `models.example.json` | provedor e modelo por tier (`compact` / `narrative` / `longform`) | [03-CAMADA-LLM](../docs/03-CAMADA-LLM.md) |
 | `tuning.example.json` | todos os números ajustáveis | [SPEC-X](../docs/spec/SPEC-X-transversal.md) |
 
@@ -44,6 +45,16 @@ Toda entrada declara `category`: **material** é matéria estável, **elemento**
 Nenhuma regra, em nenhum arquivo, referencia um material pelo identificador. Sempre por etiqueta. É o que faz um material inventado em tempo de execução participar de todos os sistemas no instante em que recebe suas etiquetas.
 
 Toda regra carrega um campo `porque`. Ele não é comentário: é dele que se gera o resumo em linguagem natural entregue ao GM, que é como o GM sabe quando **não** agir.
+
+## A fronteira das duas descrições
+
+Em `objects.example.json`, todo tipo declara uma descrição **sensorial** e uma **funcional**, e essa é a fronteira mais fácil de perder por descuido (`O-020`).
+
+A sensorial é pública: é o que entra na percepção de quem quer que veja o objeto (`A-031`), e **nunca** diz como a coisa funciona. A funcional é oculta de todo agente e só o Validador a lê (`V-043`).
+
+Basta alguém escrever "serve para cortar" na sensorial para que ver o objeto passe a revelar o que ele faz — e aí a crença por indivíduo (`O-022`) vira mecanismo morto, porque não sobra nada a descobrir, deduzir, ensinar ou perguntar. O verificador rejeita as duas descrições idênticas, mas não tem como julgar vazamento sutil: isso é revisão humana.
+
+O `amuleto_cobre` está no catálogo como caso de teste dessa fronteira. A descrição sensorial dele é rica e específica, e não entrega nada — porque não há nada. Dois agentes que o encontrem formam crenças divergentes sobre um objeto que não faz coisa alguma, e nenhuma delas jamais será confirmada nem desmentida pelo mundo.
 
 ## Compressão de representação
 

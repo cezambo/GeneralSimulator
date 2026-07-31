@@ -405,6 +405,8 @@ Todo produto do substrato — estado, cobertura, campo, dano, mudança — entra
 
 Este é o requisito que justifica a existência de todos os outros. Um sistema físico que a cognição não enxerga é custo sem retorno.
 
+O **como** está em `A-031`: cada produto vira um `PerceptibleFact` em prosa, montado deterministicamente e sem modelo. Este requisito diz que nada do substrato fica invisível; aquele diz como o visível chega ao prompt.
+
 **Aceite:** para cada sistema deste documento existe pelo menos um fato correspondente que aparece no relato de percepção de um agente.
 
 ---

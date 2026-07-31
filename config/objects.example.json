@@ -1,0 +1,529 @@
+{
+  "version": 1,
+
+  "_leiaMe": {
+    "oQueE": "Catalogo de ObjectDef: o molde reutilizavel de cada tipo de coisa. O que e constante ao tipo vive aqui; o que varia por exemplar vive em WorldObject. W-030, O-028.",
+    "porQueExiste": "SPEC-O inteiro pressupunha este arquivo e ele nao existia. O-021 manda o Funcionamento inicial vir daqui, O-028 manda peso, volume, PEM, pilha, volume interno, fittedFor e juntas virem daqui, e W-031 e V-002 nao tem como resolver affordance-first sem um catalogo de partida. Sem ele nao ha comodo mobiliado, e o spike de V0 nao tem o que dois agentes manipulem.",
+    "duasDescricoes": "O-020, e e a fronteira mais importante do documento. sensoryDescription e publica e vai a percepcao de quem quer que perceba o objeto (A-031, A-033); NUNCA diz como a coisa funciona. functionalDescription e oculta dos agentes e so o Validador le (V-043). A separacao e o que torna o erro possivel e plausivel: o agente decide pela aparencia e pela propria crenca (O-022), nunca pela verdade. `description` e a glosa de uma linha para listas e menus, e nao e nenhuma das duas.",
+    "unidades": "weight em quilogramas. volume e containerVolume e liquidCapacity em metros cubicos. size em tiles (W-057: o tile mede 0,5 m). packingEfficiency e multiplicador de 1 a 10, nao unidade.",
+    "pem": "O-002. Quao trambolhudo o objeto e quando guardado. Cubo perfeito vale 1. O volume efetivo ocupado e volume x PEM. fittedFor derruba o PEM para o valor de tuning quando o objeto e guardado no recipiente feito para ele — e o que faz uma aljava valer mais que um saco para flechas.",
+    "funcionamento": "O-021. functionRules intercepta tentativas de uso e resolve sem modelo. A recusa importa tanto quanto a permissao: 'a lamina desliza na pedra sem morder' e resposta que ensina, e e dado, nao chamada. Este catalogo traz so o Funcionamento INICIAL; ele cresce na partida por promocao (O-024, V-041).",
+    "efeitos": "effectId referencia efeito nomeado de config/reactions.json (R-015). Validos: ignite, extinguish, wet, dry, freeze, melt, electrify, shatter, stain, contaminate, illuminate, emit_gas, smother, corrode, rot, transmute.",
+    "escopo": "Comodo domestico, o suficiente para o spike de V0 e para o modo construcao de V2. Nao pretende ser exaustivo."
+  },
+
+  "objects": {
+
+    "_notaMobilia": "Mobilia: nao se pega, ancora affordance de lugar. E o que faz o comodo ter o que fazer.",
+
+    "mesa_madeira": {
+      "id": "mesa_madeira",
+      "name": "Mesa de madeira",
+      "description": "Mesa retangular de carvalho, gasta pelo uso.",
+      "sensoryDescription": "Uma mesa larga de carvalho escuro, com a superficie marcada por cortes antigos e manchas de gordura. Range um pouco quando alguem se apoia. Cheira levemente a cera velha.",
+      "functionalDescription": "Superficie de trabalho e de refeicao. Suporta ate cerca de oitenta quilos distribuidos antes de as pernas cederem. Nao e fixada ao chao: pode ser virada de lado e usada como barricada, o que bloqueia passagem mas nao para projetil.",
+      "category": "furniture",
+      "materialId": "carvalho",
+      "size": { "w": 4, "h": 2 },
+      "weight": 32,
+      "volume": 0.35,
+      "packingEfficiency": 4.0,
+      "grabbable": false,
+      "equippable": false,
+      "slot": "none",
+      "isContainer": false,
+      "affordances": ["pousar_objeto", "sentar_a_mesa", "comer_a_mesa", "trabalhar", "virar_de_lado", "esconder_se_embaixo"]
+    },
+
+    "cadeira_madeira": {
+      "id": "cadeira_madeira",
+      "name": "Cadeira",
+      "description": "Cadeira simples de pinho, sem estofado.",
+      "sensoryDescription": "Cadeira de pinho claro, leve, com o assento levemente concavo de tanto uso. Uma das pernas e mais nova que as outras e nao combina de cor.",
+      "functionalDescription": "Assento para uma pessoa. A perna reposta e mal encaixada e cede sob peso lateral brusco; quem se inclina muito para tras cai. Leve o bastante para ser erguida com uma mao e usada como arma improvisada de impacto.",
+      "category": "furniture",
+      "materialId": "pinho",
+      "size": { "w": 1, "h": 1 },
+      "weight": 4.2,
+      "volume": 0.06,
+      "packingEfficiency": 5.5,
+      "grabbable": true,
+      "equippable": false,
+      "slot": "none",
+      "isContainer": false,
+      "affordances": ["sentar", "levantar", "arrastar", "subir_em_cima"]
+    },
+
+    "cama_palha": {
+      "id": "cama_palha",
+      "name": "Cama de palha",
+      "description": "Estrado de madeira com colchao de palha e manta de pano.",
+      "sensoryDescription": "Estrado baixo com um colchao de palha comprimida coberto por manta de pano cru. Cheira a palha seca e a poeira. Estala a cada movimento de quem deita.",
+      "functionalDescription": "Local de sono. Recupera descanso mais rapido que dormir no chao e protege do frio do solo. A palha e inflamavel e seca: uma fonte de chama proxima a incendeia rapido, e o incendio se alastra para o estrado.",
+      "category": "furniture",
+      "materialId": "palha",
+      "size": { "w": 4, "h": 2 },
+      "weight": 18,
+      "volume": 0.6,
+      "packingEfficiency": 3.0,
+      "grabbable": false,
+      "equippable": false,
+      "slot": "none",
+      "isContainer": false,
+      "affordances": ["dormir", "deitar", "descansar", "revistar"]
+    },
+
+    "lareira_pedra": {
+      "id": "lareira_pedra",
+      "name": "Lareira",
+      "description": "Lareira de pedra encaixada na parede.",
+      "sensoryDescription": "Boca de pedra enegrecida na parede, com cinzas acumuladas no fundo e marcas de fuligem subindo pelo reboco. Quando acesa, ilumina o comodo inteiro e o calor chega de longe.",
+      "functionalDescription": "Fonte de calor e de luz. Aquece o comodo por raio, cozinha o que for posto sobre ela e mantem a chama contida enquanto houver lenha. Contida e a palavra: a pedra impede que o fogo se propague para os tiles vizinhos, o que a distingue de uma fogueira no chao.",
+      "category": "furniture",
+      "materialId": "pedra",
+      "size": { "w": 2, "h": 1 },
+      "weight": 210,
+      "volume": 0.5,
+      "packingEfficiency": 1.2,
+      "grabbable": false,
+      "equippable": false,
+      "slot": "none",
+      "isContainer": false,
+      "affordances": ["acender", "apagar", "cozinhar", "aquecer_se", "atear_tocha", "remexer_cinzas"],
+      "functionRules": [
+        {
+          "id": "lareira_acende_com_chama",
+          "trigger": { "action": "acender", "requiresHeldTag": "fonte_de_chama" },
+          "outcome": "effect",
+          "effectId": "ignite",
+          "diegeticText": "A lenha pega devagar, solta fumaca branca e entao abre em chama. O calor bate no seu rosto.",
+          "state": "permanent"
+        },
+        {
+          "id": "lareira_recusa_sem_chama",
+          "trigger": { "action": "acender", "requiresHeldTag": "fonte_de_chama", "negate": true },
+          "outcome": "refuse",
+          "diegeticText": "Voce remexe a lenha, mas nao tem com que atear fogo. A madeira continua fria.",
+          "state": "permanent"
+        },
+        {
+          "id": "lareira_ilumina_acesa",
+          "trigger": { "action": "acender", "post": true },
+          "outcome": "effect",
+          "effectId": "illuminate",
+          "diegeticText": "A luz alcanca os cantos do comodo.",
+          "state": "permanent"
+        }
+      ]
+    },
+
+    "_notaRecipientes": "Recipientes: containerVolume limita por volume efetivo somado, nunca por contagem de itens (O-003). liquidCapacity e independente de volume, porque a parede do cantil ocupa espaco na mochila e nao segura agua (O-029).",
+
+    "bau_madeira": {
+      "id": "bau_madeira",
+      "name": "Bau",
+      "description": "Bau de carvalho com dobradicas de ferro.",
+      "sensoryDescription": "Bau pesado de carvalho, com dobradicas de ferro enferrujadas que rangem alto ao abrir. A tampa tem uma marca funda, como se algo tivesse batido ali com forca.",
+      "functionalDescription": "Armazenamento fixo. As dobradicas rangem tao alto que abrir o bau e audivel do comodo inteiro — quem revista as escondidas e ouvido. Nao tranca.",
+      "category": "container",
+      "materialId": "carvalho",
+      "size": { "w": 2, "h": 1 },
+      "weight": 24,
+      "volume": 0.3,
+      "packingEfficiency": 2.0,
+      "grabbable": false,
+      "equippable": false,
+      "slot": "none",
+      "isContainer": true,
+      "containerVolume": 0.24,
+      "affordances": ["abrir", "fechar", "guardar", "retirar", "revistar"]
+    },
+
+    "cesto_palha": {
+      "id": "cesto_palha",
+      "name": "Cesto",
+      "description": "Cesto de palha trancada, sem tampa.",
+      "sensoryDescription": "Cesto de palha trancada a mao, com a borda desfiando de um lado. Leve. Deixa ver o que tem dentro.",
+      "functionalDescription": "Armazenamento portatil e aberto. O conteudo e visivel de fora, entao guardar aqui nao esconde nada de quem olha. A palha nao segura liquido e amolece se molhada.",
+      "category": "container",
+      "materialId": "palha",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.6,
+      "volume": 0.04,
+      "packingEfficiency": 2.5,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": true,
+      "containerVolume": 0.05,
+      "affordances": ["guardar", "retirar", "carregar", "despejar"]
+    },
+
+    "balde_madeira": {
+      "id": "balde_madeira",
+      "name": "Balde",
+      "description": "Balde de aduelas com arco de ferro.",
+      "sensoryDescription": "Balde de aduelas de pinho apertadas por um arco de ferro, com alca de corda. As aduelas estao encharcadas e escuras na base.",
+      "functionalDescription": "Transporte de liquido a granel. Aberto no topo: entorna se o portador correr ou cair, e perde o conteudo se virado. Nao isola termicamente — a agua dentro segue a temperatura ambiente.",
+      "category": "container",
+      "materialId": "pinho",
+      "size": { "w": 1, "h": 1 },
+      "weight": 1.8,
+      "volume": 0.02,
+      "packingEfficiency": 3.0,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": true,
+      "containerVolume": 0.012,
+      "liquidCapacity": 0.012,
+      "affordances": ["encher", "despejar", "carregar", "apagar_fogo_com"],
+      "functionRules": [
+        {
+          "id": "balde_apaga_fogo",
+          "trigger": { "action": "apagar_fogo_com", "requiresLiquid": "agua" },
+          "outcome": "effect",
+          "effectId": "extinguish",
+          "diegeticText": "A agua bate na chama de uma vez. Sobe vapor e um cheiro forte de queimado molhado.",
+          "state": "permanent"
+        },
+        {
+          "id": "balde_recusa_vazio",
+          "trigger": { "action": "apagar_fogo_com", "requiresLiquid": "agua", "negate": true },
+          "outcome": "refuse",
+          "diegeticText": "Voce vira o balde sobre o fogo e nada sai. Esta vazio.",
+          "state": "permanent"
+        }
+      ]
+    },
+
+    "panela_ferro": {
+      "id": "panela_ferro",
+      "name": "Panela de ferro",
+      "description": "Panela funda de ferro fundido, com alca.",
+      "sensoryDescription": "Panela funda de ferro fundido, preta de fuligem por fora. Pesada mesmo vazia. A alca e de ferro macico e esquenta junto com o resto.",
+      "functionalDescription": "Cozinha o conteudo quando exposta a fogo. Conduz calor rapido e o retem depois de tirada da chama, o que significa que a alca queima a mao desprotegida por um bom tempo. Ferro fundido nao quebra por impacto, amassa.",
+      "category": "container",
+      "materialId": "ferro",
+      "size": { "w": 1, "h": 1 },
+      "weight": 3.4,
+      "volume": 0.015,
+      "packingEfficiency": 2.8,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": true,
+      "containerVolume": 0.006,
+      "liquidCapacity": 0.006,
+      "affordances": ["cozinhar", "encher", "despejar", "carregar", "golpear_com"]
+    },
+
+    "cantil_couro": {
+      "id": "cantil_couro",
+      "name": "Cantil",
+      "description": "Odre de couro costurado, com rolha de madeira.",
+      "sensoryDescription": "Odre de couro escuro, costurado a mao e amarrado com tira. A rolha de madeira esta lascada na borda. Balanca com um som abafado quando tem liquido dentro.",
+      "functionalDescription": "Transporte pessoal de liquido. Fechado por rolha: nao entorna se o portador correr ou cair. O couro isola bem, entao o conteudo demora a acompanhar a temperatura ambiente — agua fresca continua fresca por horas.",
+      "category": "container",
+      "materialId": "couro",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.3,
+      "volume": 0.002,
+      "packingEfficiency": 1.4,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "worn",
+      "isContainer": true,
+      "containerVolume": 0.0015,
+      "liquidCapacity": 0.0015,
+      "affordances": ["beber", "encher", "despejar", "carregar", "oferecer"]
+    },
+
+    "_notaFerramentas": "Ferramentas: e onde o Funcionamento paga mais, porque uso de ferramenta e a tentativa mais frequente que chegaria ao Validador.",
+
+    "faca_ferro": {
+      "id": "faca_ferro",
+      "name": "Faca",
+      "description": "Faca de lamina curta com cabo de madeira.",
+      "sensoryDescription": "Faca de lamina curta, com o fio irregular de tantas afiacoes. O cabo de madeira esta escurecido de suor na parte onde a mao fecha.",
+      "functionalDescription": "Corta materiais moles: pano, couro, corda, carne, madeira verde. Nao corta pedra, metal nem osso grosso — a lamina desliza ou lasca. Como arma, faz dano de perfuracao e de corte a curta distancia, e e a arma mais facil de esconder sob roupa.",
+      "category": "tool",
+      "materialId": "ferro",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.24,
+      "volume": 0.0004,
+      "packingEfficiency": 1.6,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "stackLimit": 4,
+      "affordances": ["cortar", "esfaquear", "raspar", "descascar", "entalhar"],
+      "functionRules": [
+        {
+          "id": "faca_recusa_material_duro",
+          "trigger": { "action": "cortar", "targetMaterialTag": "#hard" },
+          "outcome": "refuse",
+          "diegeticText": "A lamina desliza na superficie sem morder. Voce sente o tranco subir pelo pulso.",
+          "state": "permanent"
+        },
+        {
+          "id": "faca_corta_material_mole",
+          "trigger": { "action": "cortar", "targetMaterialTag": "#soft" },
+          "outcome": "afford",
+          "diegeticText": "A lamina entra facil e o material se abre.",
+          "state": "permanent"
+        }
+      ]
+    },
+
+    "machado_ferro": {
+      "id": "machado_ferro",
+      "name": "Machado",
+      "description": "Machado de lenhador, cabeca de ferro e cabo longo.",
+      "sensoryDescription": "Machado de cabo longo, com a cabeca de ferro presa por cunhas. O fio tem uma mossa perto do talao. O cabo e liso de uso.",
+      "functionalDescription": "Derruba arvores e racha lenha. Como arma, faz dano de corte pesado, mas o balanco e lento e deixa quem erra exposto. A cunha esta folgada: com uso continuado a cabeca solta do cabo, e ha risco de ela voar na direcao do golpe.",
+      "category": "tool",
+      "materialId": "ferro",
+      "size": { "w": 1, "h": 2 },
+      "weight": 2.1,
+      "volume": 0.003,
+      "packingEfficiency": 3.4,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "affordances": ["cortar_arvore", "rachar_lenha", "golpear_com", "arrombar"]
+    },
+
+    "corda_canhamo": {
+      "id": "corda_canhamo",
+      "name": "Corda",
+      "description": "Rolo de corda de fibra trancada.",
+      "sensoryDescription": "Rolo de corda grossa de fibra trancada, aspera ao toque e com farpas soltas. Cheira a fibra seca. Um dos cabos esta desfiando.",
+      "functionalDescription": "Amarra, iça e prende. Aguenta o peso de uma pessoa, mas o cabo desfiado e o ponto fraco: sob carga sustentada e ali que arrebenta. Absorve agua e fica muito mais pesada e escorregadia quando molhada.",
+      "category": "tool",
+      "materialId": "pano",
+      "size": { "w": 1, "h": 1 },
+      "weight": 1.1,
+      "volume": 0.005,
+      "packingEfficiency": 2.2,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "affordances": ["amarrar", "escalar", "prender", "arrastar_com", "estrangular"]
+    },
+
+    "pederneira": {
+      "id": "pederneira",
+      "name": "Pederneira",
+      "description": "Pedra de isqueiro com fisga de ferro.",
+      "sensoryDescription": "Uma pedra escura de bordas lascadas e uma fisga de ferro curvada, presas juntas por uma tira de couro. Batidas uma na outra soltam um estalo seco e faisca.",
+      "functionalDescription": "Fonte de ignicao. Produz faisca a cada batida, mas so acende material seco e fino — palha, lascas, fibra desfiada. Nao acende lenha grossa direto, nem nada molhado.",
+      "category": "tool",
+      "materialId": "pedra",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.08,
+      "volume": 0.0001,
+      "packingEfficiency": 1.3,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "affordances": ["acender", "faiscar"],
+      "functionRules": [
+        {
+          "id": "pederneira_acende_seco_e_fino",
+          "trigger": { "action": "acender", "targetMaterialTag": "#inflammable", "targetIsDry": true },
+          "outcome": "effect",
+          "effectId": "ignite",
+          "diegeticText": "A faisca cai, prende num fio de fibra e vira chama.",
+          "state": "permanent"
+        },
+        {
+          "id": "pederneira_recusa_molhado",
+          "trigger": { "action": "acender", "targetIsWet": true },
+          "outcome": "refuse",
+          "diegeticText": "As faiscas caem e morrem uma a uma no que esta molhado. Nada pega.",
+          "state": "permanent"
+        }
+      ]
+    },
+
+    "tocha": {
+      "id": "tocha",
+      "name": "Tocha",
+      "description": "Bastao com a ponta enrolada em pano embebido.",
+      "sensoryDescription": "Bastao de madeira com a ponta enrolada em pano encharcado de gordura. Cheira forte a sebo. Acesa, chia e pinga.",
+      "functionalDescription": "Iluminacao portatil e fonte de chama. Queima por cerca de uma hora antes de consumir o pano. Pinga gordura em chamas enquanto carregada, o que acende o que estiver embaixo — carregar tocha acesa sobre palha e como atear fogo andando.",
+      "category": "tool",
+      "materialId": "pinho",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.5,
+      "volume": 0.002,
+      "packingEfficiency": 2.6,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "stackLimit": 6,
+      "affordances": ["acender", "apagar", "iluminar", "atear_fogo_em", "golpear_com"],
+      "functionRules": [
+        {
+          "id": "tocha_acesa_ilumina",
+          "trigger": { "action": "iluminar", "requiresSelfState": "aceso" },
+          "outcome": "effect",
+          "effectId": "illuminate",
+          "diegeticText": "A chama abre um circulo de luz tremula ao seu redor.",
+          "state": "permanent"
+        },
+        {
+          "id": "tocha_ateia_inflamavel",
+          "trigger": { "action": "atear_fogo_em", "requiresSelfState": "aceso", "targetMaterialTag": "#inflammable" },
+          "outcome": "effect",
+          "effectId": "ignite",
+          "diegeticText": "O fogo passa da tocha para o material num instante.",
+          "state": "permanent"
+        }
+      ]
+    },
+
+    "_notaConsumiveis": "Consumiveis: empilham. stackLimit ausente significa que o tipo nao empilha (O-007).",
+
+    "pao": {
+      "id": "pao",
+      "name": "Pao",
+      "description": "Pao redondo de casca dura.",
+      "sensoryDescription": "Pao redondo de casca escura e dura, com farinha no fundo. Ainda cheira a forno. Pesa mais do que aparenta.",
+      "functionalDescription": "Alimento. Sacia bem e por bastante tempo. Endurece em dois dias e mofa em cinco se guardado em lugar umido; em lugar seco dura o dobro.",
+      "category": "consumable",
+      "materialId": "grama",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.45,
+      "volume": 0.0012,
+      "packingEfficiency": 1.5,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "stackLimit": 8,
+      "affordances": ["comer", "partir", "oferecer", "guardar"]
+    },
+
+    "carne_crua": {
+      "id": "carne_crua",
+      "name": "Carne crua",
+      "description": "Pedaco de carne nao preparada.",
+      "sensoryDescription": "Pedaco de carne vermelho-escura, umida, com um cheiro adocicado que fica mais forte de perto. Escorrega na mao.",
+      "functionalDescription": "Alimento que exige preparo. Comida crua, causa mal-estar e pode adoecer. Cozida sobre fogo, sacia melhor que pao. Apodrece em um dia fora do frio, e a carne podre adoece com certeza.",
+      "category": "consumable",
+      "materialId": "musculo",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.8,
+      "volume": 0.0008,
+      "packingEfficiency": 1.8,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": false,
+      "stackLimit": 6,
+      "affordances": ["comer", "cozinhar", "cortar", "oferecer"]
+    },
+
+    "_notaVestuario": "Vestuario: slot worn. Isolamento termico e cobertura de parte do corpo saem do material e de B-020, nao de campo proprio aqui.",
+
+    "tunica_pano": {
+      "id": "tunica_pano",
+      "name": "Tunica",
+      "description": "Tunica simples de pano cru.",
+      "sensoryDescription": "Tunica de pano cru sem tintura, larga nos ombros e puida nas mangas. Tem uma mancha escura perto da barra que nao sai.",
+      "functionalDescription": "Cobre tronco e bracos. Isolamento termico fraco: nao basta contra frio de verdade. Molhada, esfria em vez de aquecer. Nao oferece protecao contra dano.",
+      "category": "clothing",
+      "materialId": "pano",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.6,
+      "volume": 0.003,
+      "packingEfficiency": 1.7,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "worn",
+      "isContainer": false,
+      "affordances": ["vestir", "tirar", "rasgar_em_tiras"]
+    },
+
+    "manto_couro": {
+      "id": "manto_couro",
+      "name": "Manto de couro",
+      "description": "Manto pesado de couro com capuz.",
+      "sensoryDescription": "Manto pesado de couro rachado nas dobras, com capuz fundo. Range baixinho ao andar. Cheira a animal e a fumaca.",
+      "functionalDescription": "Cobre tronco, bracos e cabeca. Isolamento termico bom e repele chuva por algum tempo antes de encharcar. O couro reduz dano de corte raso, mas nao para perfuracao. O capuz fundo esconde o rosto a distancia.",
+      "category": "clothing",
+      "materialId": "couro",
+      "size": { "w": 1, "h": 1 },
+      "weight": 2.4,
+      "volume": 0.008,
+      "packingEfficiency": 2.4,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "worn",
+      "isContainer": false,
+      "affordances": ["vestir", "tirar", "cobrir_alguem", "abafar_fogo_com"]
+    },
+
+    "_notaEnigma": "O item abaixo existe de proposito para exercitar O-020 e O-022: a descricao sensorial e rica e nao entrega NADA da funcional. Dois agentes que o encontrem formam crencas divergentes, usam errado de forma plausivel, e o assunto vira conversa. E o caso de teste da fronteira mais importante do catalogo.",
+
+    "amuleto_cobre": {
+      "id": "amuleto_cobre",
+      "name": "Amuleto de cobre",
+      "description": "Disco de cobre gravado, furado para cordao.",
+      "sensoryDescription": "Disco de cobre do tamanho de uma moeda grande, furado na borda para passar cordao. Um dos lados tem linhas gravadas que nao formam desenho reconhecivel. Esta frio ao toque, mais frio que o ar, e continua frio mesmo depois de segurado.",
+      "functionalDescription": "Nao tem funcao nenhuma. E cobre gravado por alguem sem talento. A friagem e propriedade banal do metal com a espessura que ele tem, e nao significa coisa alguma. Existe no catalogo para que agentes atribuam a ele o poder que quiserem: o registro dessa atribuicao e ItemBelief (O-022), e nada no mundo jamais vai confirma-la.",
+      "category": "decoration",
+      "materialId": "cobre",
+      "size": { "w": 1, "h": 1 },
+      "weight": 0.03,
+      "volume": 0.00002,
+      "packingEfficiency": 1.1,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "worn",
+      "isContainer": false,
+      "stackLimit": 4,
+      "affordances": ["vestir", "tirar", "examinar", "oferecer", "esfregar"]
+    },
+
+    "_notaFragil": "Fragil: existe para o substrato ter o que quebrar, e para a matriz de lesao ter fonte de cacos.",
+
+    "jarro_ceramica": {
+      "id": "jarro_ceramica",
+      "name": "Jarro de ceramica",
+      "description": "Jarro bojudo de ceramica esmaltada.",
+      "sensoryDescription": "Jarro bojudo de ceramica com esmalte azul descascando no bico. Tem uma trinca fina que desce do gargalo e some no bojo. Soa oco quando batido de leve.",
+      "functionalDescription": "Guarda liquido. A trinca ja compromete a peca: uma queda de qualquer altura a estilhaca, e vaza devagar mesmo intacta se ficar cheia por horas. Estilhacada, deixa cacos cortantes no tile.",
+      "category": "container",
+      "materialId": "ceramica",
+      "size": { "w": 1, "h": 1 },
+      "weight": 1.2,
+      "volume": 0.008,
+      "packingEfficiency": 2.0,
+      "grabbable": true,
+      "equippable": true,
+      "slot": "hand",
+      "isContainer": true,
+      "containerVolume": 0.005,
+      "liquidCapacity": 0.005,
+      "affordances": ["encher", "despejar", "beber", "carregar", "arremessar"],
+      "functionRules": [
+        {
+          "id": "jarro_estilhaca_no_impacto",
+          "trigger": { "action": "arremessar", "onImpact": true },
+          "outcome": "effect",
+          "effectId": "shatter",
+          "diegeticText": "O jarro se parte com um estouro seco e os cacos espalham pelo chao.",
+          "state": "permanent"
+        }
+      ]
+    }
+  }
+}

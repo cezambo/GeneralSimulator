@@ -89,6 +89,60 @@ Consultas de proximidade e percepção resolvidas por particionamento espacial, 
 
 **Aceite:** o custo de consulta de vizinhança não cresce quadraticamente com o número de agentes.
 
+### A-031 — O mundo entra no prompt como prosa
+`P0` · `V2` · decisão · dep: A-007, R-037, B-030, O-020
+
+Irmão de `B-030`, e pela mesma razão. Assim como o corpo nunca entra como tabela de partes, **o mundo nunca entra como lista de tiles e entidades**. O que a engine monta antes de cada pensamento é um relato curto em linguagem natural do que é saliente ao redor.
+
+> "Você está na cozinha. A lareira está acesa e o cômodo está quente. Há pão na mesa e um balde de água ao lado da porta. Maria está de pé perto da janela, pálida, e tosse."
+
+Não:
+
+> `tile(3,4): temp=42.1 lit=0.8 · obj#221 ObjectDef=bread pos=(3,5) · agent#7 pos=(1,4) cond=[cough:2,pallor:1]`
+
+**A montagem é determinística e não passa por modelo.** Nenhuma chamada de LLM converte estado em relato — a mesma cena produz o mesmo texto, palavra por palavra, para a mesma semente. Isto é o que permite ao cassete (`X-002`) reproduzir a execução, e é o que impede que o custo de perceber cresça com o tamanho do que se percebe.
+
+Havia uma ideia de filtrar percepção por um modelo pequeno, e ela foi descartada: filtrar por LLM era **uma chamada por agente por pensamento**, dobrando o custo do sistema para produzir texto que a engine já sabe escrever, e introduzindo não-determinismo na única parte do laço que precisa ser reproduzível.
+
+Este requisito existia como promessa espalhada e sem dono. `R-037` prometia que todo produto do substrato vira fato observável, `O-020` prometia que a percepção leva a descrição sensorial e nunca a funcional, `C-002` listava "percepção corrente" como um dos blocos do contexto — e nenhum dos três dizia **como montar**. Deixar isso para quem implementa contraria `X-010`: três domínios apontavam para um algoritmo que não estava escrito em lugar nenhum.
+
+**Aceite:** a mesma cena montada duas vezes produz texto idêntico; nenhuma chamada de LLM acontece entre o estado do mundo e o relato; e para cada sistema de `SPEC-R` existe pelo menos uma frase correspondente que pode aparecer no relato.
+
+### A-032 — Ordem de saliência e corte por orçamento
+`P0` · `V2` · derivado de A-031 · dep: A-031, X-008
+
+O relato cabe num orçamento de tokens declarado em `tuning.json`. Quando o que se percebe não cabe, o corte é **por ordem de saliência declarada**, e não por proximidade nem por ordem de varredura do grid.
+
+A ordem, do que nunca cai para o que cai primeiro:
+
+| Ordem | O que | Por que tem precedência |
+|---|---|---|
+| 1 | Perigo imediato — fogo ao alcance, agente hostil, chão cedendo | É o que dispara gatilho reativo (`C-003`). Cortar isto é o agente não reagir a estar em perigo |
+| 2 | Pessoas presentes, com os sinais corporais visíveis (`B-032`) | A presença de outro muda toda decisão social, e quem some do relato deixa de existir para o agente |
+| 3 | Mudança desde a última percepção | Novidade é o que gera impressão. Cenário estável já está na memória de curto prazo |
+| 4 | Objetos com affordance útil à meta corrente (`C-008`, `W-031`) | É o que ancora a decisão no que o mundo de fato oferece |
+| 5 | Ambiente contínuo — temperatura, luz, cheiro, som de fundo | Entra como uma frase, não como leitura por tile |
+| 6 | Cenário estável de fundo | Primeiro a cair, e cai sem dano |
+
+Sem ordem declarada, o corte fica dependendo de qual estrutura o código varreu primeiro, e duas execuções com a mesma semente divergem — o que quebra `X-004`. E o corte por proximidade, que é o palpite natural, é o pior possível: o fogo do outro lado do cômodo perde para a cadeira ao lado.
+
+**Aceite:** o relato nunca passa do orçamento declarado; num cômodo com mais coisas do que cabe, perigo e pessoas aparecem e o mobiliário de fundo é o que some; e o corte é idêntico entre duas execuções da mesma cena.
+
+### A-033 — O que a percepção nunca carrega
+`P0` · `V2` · decisão · dep: A-031, O-020, O-025
+
+O relato carrega o que os sentidos alcançam, e nada além. Nunca entram:
+
+- **Descrição funcional de objeto** (`O-020`). A percepção leva a sensorial. Que a alavanca abra a comporta é coisa que se descobre, se deduz ou se ouve — e é por isso que existe crença por indivíduo (`O-025`), que seria inútil se ver o objeto já revelasse o que ele faz.
+- **Identificador interno.** Nem de agente, nem de objeto, nem de tile. O agente vê "uma mulher pálida", não `agent#7`.
+- **Número cru de simulação.** Volume, integridade, carga, coordenada. Temperatura vira "está quente", não `42.1`.
+- **Qualquer coisa fora do cone, ocluída, ou fora do alcance do sentido** (`A-007`, `A-009`) — inclusive o que o jogador está vendo na tela.
+- **Estado interno de outro agente.** Meta, opinião, dor, intenção. Só o que o corpo dele denuncia por fora (`B-032`).
+
+O item mais fácil de violar por descuido é o último, porque no código o outro agente é um objeto com todos os campos à mão, e nada impede quem monta o relato de ler `goals` junto de `pos`. Um único vazamento desses apaga a mentira, a dedução e a formação de opinião de uma vez: não há o que descobrir sobre alguém cujo interior chega junto da aparência.
+
+**Aceite:** um agente que mente sobre a própria meta não é contradito pelo relato de percepção de quem o observa; e uma inspeção do relato não contém identificador interno nem número de simulação.
+
 ---
 
 ## Corpo e saúde

@@ -442,6 +442,80 @@ for (const m of asList(materials.materials).concat(asList(materials.elements))) 
     if (!damageTypes.has(k)) fail(`materials.example.json: ${m.id}.damageResistance usa "${k}", fora do vocabulário DamageType`);
   }
 }
+// Catálogo de objetos. SPEC-O inteiro o pressupõe (O-021, O-028) e ele não era
+// conferido por nada — uma auditoria achou o arquivo faltando e nem o verificador
+// nem config/README.md o mencionavam.
+const objectsPath = join(CONFIG_DIR, 'objects.example.json');
+if (!existsSync(objectsPath)) {
+  fail('config/objects.example.json ausente — O-021 e O-028 o pressupõem');
+} else {
+  const objects = readJson(objectsPath);
+  const defs = asList(objects.objects).filter((o) => !o.id.startsWith('_'));
+  const objectDefSchema = domain.$defs.ObjectDef;
+  const requiredFields = objectDefSchema.required;
+  const allowedFields = new Set(Object.keys(objectDefSchema.properties));
+  const categories = new Set(objectDefSchema.properties.category.enum);
+  const slots = new Set(objectDefSchema.properties.slot.enum);
+  const defIds = new Set(defs.map((d) => d.id));
+
+  if (defs.length === 0) fail('objects.example.json: catálogo vazio');
+
+  for (const d of defs) {
+    for (const f of requiredFields) {
+      if (d[f] === undefined) fail(`objects.example.json: ${d.id} sem campo obrigatório "${f}" (ObjectDef.required)`);
+    }
+    for (const f of Object.keys(d)) {
+      if (!allowedFields.has(f)) fail(`objects.example.json: ${d.id} tem campo "${f}", ausente de ObjectDef (additionalProperties: false)`);
+    }
+    if (d.materialId && !materialIds.has(d.materialId)) {
+      fail(`objects.example.json: ${d.id}.materialId "${d.materialId}" ausente do catálogo de materiais`);
+    }
+    if (d.category && !categories.has(d.category)) {
+      fail(`objects.example.json: ${d.id}.category "${d.category}" fora do enum de ObjectDef`);
+    }
+    if (d.slot && !slots.has(d.slot)) {
+      fail(`objects.example.json: ${d.id}.slot "${d.slot}" fora do enum de ObjectDef`);
+    }
+    if (d.packingEfficiency !== undefined && (d.packingEfficiency < 1 || d.packingEfficiency > 10)) {
+      fail(`objects.example.json: ${d.id}.packingEfficiency ${d.packingEfficiency} fora da faixa 1–10 (O-002)`);
+    }
+    if (d.stackLimit !== undefined && (d.stackLimit < 2 || d.stackLimit > 64)) {
+      fail(`objects.example.json: ${d.id}.stackLimit ${d.stackLimit} fora da faixa 2–64 (O-007)`);
+    }
+    // O-020 é a fronteira mais importante do documento, e é a que se perde por
+    // descuido: basta alguém escrever "serve para cortar" na sensorial para que
+    // ver o objeto passe a revelar o que ele faz, e a crença por indivíduo
+    // (O-022) vire mecanismo morto.
+    if (d.sensoryDescription && d.sensoryDescription === d.functionalDescription) {
+      fail(`objects.example.json: ${d.id} tem as duas descrições idênticas — O-020 exige que a sensorial não diga como a coisa funciona`);
+    }
+    if (d.isContainer && d.containerVolume === undefined && d.liquidCapacity === undefined) {
+      fail(`objects.example.json: ${d.id} é recipiente e não declara containerVolume nem liquidCapacity (O-003, O-029)`);
+    }
+    if (d.liquidCapacity !== undefined && !d.isContainer) {
+      fail(`objects.example.json: ${d.id} declara liquidCapacity sem ser recipiente`);
+    }
+    for (const fitted of d.fittedFor ?? []) {
+      if (!defIds.has(fitted)) fail(`objects.example.json: ${d.id}.fittedFor aponta para "${fitted}", ausente do catálogo (O-002)`);
+    }
+    for (const r of d.functionRules ?? []) {
+      if (r.outcome === 'effect' && !r.effectId) {
+        fail(`objects.example.json: ${d.id}, regra "${r.id}" tem outcome effect sem effectId`);
+      }
+      if (r.effectId && !effectIds.has(r.effectId)) {
+        fail(`objects.example.json: ${d.id}, regra "${r.id}" usa o efeito "${r.effectId}", não declarado em reactions (R-015)`);
+      }
+      // O-021 diz que a recusa importa tanto quanto a permissão, e o que a torna
+      // útil é o texto: recusa muda sem texto diegético é o Validador economizado
+      // ao custo de o agente não ficar sabendo de nada.
+      if ((r.outcome === 'refuse' || r.outcome === 'effect') && !r.diegeticText) {
+        fail(`objects.example.json: ${d.id}, regra "${r.id}" resolve sem texto diegético (O-021, V-006)`);
+      }
+    }
+  }
+  ok(`catálogo de objetos: ${defs.length} definições conferidas`);
+}
+
 ok('configs conferidos contra o catálogo');
 
 // ═══════════════════════════════════════════════════════════════════

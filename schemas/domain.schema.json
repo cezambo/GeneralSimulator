@@ -1106,6 +1106,43 @@
       "additionalProperties": false
     },
 
+    "PerceptibleFact": {
+      "type": "object",
+      "description": "Uma coisa que os sentidos alcançaram, já em prosa e ainda não fundida no relato. É o passo intermediário de A-031: a engine colhe fatos, ordena por saliência (A-032) e corta no orçamento antes de montar o texto que vai ao prompt. Existir como tipo é o que torna o corte auditável e reproduzível — ordenar prosa já montada seria ordenar parágrafo, e o corte deixaria de ser inspecionável.\n\nNão é impressão. `RawImpression` é o que o agente *concluiu* e carrega para a dissonância; isto aqui é o que estava lá para ser visto, e some assim que o relato é montado. O que decide se um fato vira impressão é o limiar de lembrabilidade (C-052).\n\nO campo `sourceId` é a única coisa aqui que nunca pode ser renderizada: A-033 proíbe identificador interno no relato, e ele existe só para a engine casar o fato com a entidade em passos posteriores.",
+      "required": ["text", "salienceTier", "sense"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Uma frase, do ponto de vista de quem percebe, sem número cru e sem identificador. A-033."
+        },
+        "salienceTier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6,
+          "description": "A ordem declarada em A-032: 1 perigo imediato, 2 pessoas, 3 mudança, 4 objeto com affordance útil, 5 ambiente contínuo, 6 cenário de fundo. O corte por orçamento come de 6 para 1."
+        },
+        "sense": {
+          "type": "string",
+          "enum": ["sight", "hearing", "smell", "touch", "taste", "proprioception"],
+          "description": "Qual sentido alcançou. Decide o que a oclusão e a escuridão apagam: parede tira a visão e deixa o som (A-007, A-009)."
+        },
+        "subjectKind": {
+          "type": "string",
+          "enum": ["agent", "object", "tile", "field", "weather", "self"],
+          "description": "Que espécie de coisa o fato descreve. Serve ao agrupamento na montagem — pessoas juntas, ambiente junto — e não vai ao prompt."
+        },
+        "sourceId": {
+          "type": ["string", "null"],
+          "description": "Identificador interno da entidade. NUNCA renderizado: A-033 proíbe identificador no relato. Existe para a engine casar o fato com a entidade depois."
+        },
+        "isChange": {
+          "type": "boolean",
+          "description": "O fato é novidade desde a última percepção deste agente. É o que sustenta a camada 3 de A-032 e o que distingue 'a lareira está acesa' de 'a lareira acabou de apagar'."
+        }
+      },
+      "additionalProperties": false
+    },
+
     "RawImpression": {
       "type": "object",
       "description": "Fato interpretado que o agente carrega antes de virar — ou não — dissonância. Produzido por pós-conversa, por reflexão noturna e por percepção saliente. Tem identificador próprio porque C-029 promete que é auditável qual impressão rompeu qual opinião, e o buffer precisa poder apontar de volta. C-011, C-025.",
