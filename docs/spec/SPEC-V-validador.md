@@ -389,9 +389,13 @@ Quando o julgamento é sobre o uso de um objeto, a promoção pode ter como dest
 
 É a mesma economia de `V-024` aplicada ao lugar onde ela rende mais: uso de objeto é a categoria de intenção mais repetida por agentes diferentes, e uma regra por tipo de objeto amortiza sobre a partida inteira.
 
+A regra nasce no **primeiro** julgamento, e não depois de repetição observada. Isso segue `V-021`, onde a decisão de generalizar acontece na própria invocação, e não é detalhe: esperar a segunda ocorrência para promover significa pagar duas vezes por todo caso que generaliza, e casos que generalizam são a maioria. O preço de promover cedo é uma regra ocasionalmente inútil, que o teto de `V-027` contém e o painel de `V-025` descarta; o preço de promover tarde é uma chamada desperdiçada por regra, para sempre.
+
 O Validador declara também se aquela tentativa habilita affordance nova no alvo, e nesse caso o objeto passa a oferecê-la pelo caminho de `V-002`, sem mediação.
 
-**Aceite:** negar ou permitir um uso improvisado de um tipo de objeto duas vezes seguidas produz uma regra de Funcionamento, e a terceira tentativa não invoca o Validador.
+A regra promovida é registrada como regra provisória de domínio `object`, com o `defId` do alvo, e materializada como `ItemRule` no Funcionamento daquele molde. Registro único e não dois: é o que faz o teto de regras vivas, a detecção de disparo anômalo e o painel de ciclo de vida valerem para as regras de objeto sem duplicar nenhum dos três.
+
+**Aceite:** o primeiro julgamento sobre um uso improvisado de um tipo de objeto já traz veredito de generalização preenchido, e quando ele generaliza a tentativa igual seguinte — sobre qualquer exemplar do mesmo molde, por qualquer agente — resolve pela regra sem invocar o Validador; a regra aparece no painel de ciclo de vida junto das dos outros domínios e conta para o teto de `V-027`.
 
 ### V-042 — Atualização de descrição
 `P1` · `V5` · decisão · dep: O-020, V-037

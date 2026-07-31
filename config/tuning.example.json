@@ -52,7 +52,33 @@
     "limiarDorPanico": 0.60,
     "limiarCapacidadeOmitirDoPrompt": 0.90,
     "orcamentoTokensDescricaoCorporal": 60,
-    "limiarInvocacaoBiologicaGm": 0.05,
+    "limiarInvocacaoBiologicaValidador": 0.05,
+    "toxicidade": {
+      "$comment": "B-055, B-059, B-060. Mesma corrida assimetrica da infeccao, aplicada ao corpo inteiro.",
+      "remocaoPorDiaComFiltragemPlena": 0.06,
+      "penalidadeFuncionamentoCargaPlena": 0.60,
+      "limiarCargaPerceptivel": 0.20
+    },
+    "idadeBiologica": {
+      "$comment": "B-058. O teto existe para velhice degradar sem matar sozinha.",
+      "tetoPerdaFuncionamento": 0.50,
+      "avancoAnosPorDiaComCargaAlta": 0.02
+    },
+    "regeneracao": {
+      "$comment": "B-056, B-057.",
+      "multiplicadorRepousoTotal": 1.5,
+      "multiplicadorNutricaoPlena": 1.25,
+      "pesoVascularizacao": 0.5
+    },
+    "sistemas": {
+      "$comment": "B-061. Limiares em que a frase que descreve o sistema muda de tom.",
+      "limiarComprometido": 0.70,
+      "limiarFalhando": 0.40
+    },
+    "radiacao": {
+      "$comment": "B-062. Radiacao e substancia com efeito toxicLoad, nao subsistema proprio.",
+      "cargaToxicaPorIntensidadePorDia": 0.03
+    },
     "necessidades": {
       "fomeQuedaPorDia": 1.0,
       "sedeQuedaPorDia": 1.6,
@@ -83,8 +109,16 @@
       "reativoCooldownMinutos": 10
     },
     "memoria": {
+      "$comment": "C-052, C-053. O limiar decide o que vira memoria; a nota vem de graca na resposta que ja decide a acao.",
       "tetoCurtoPrazoItens": 40,
       "maxMarcantesPorDia": 5,
+      "limiarLembrabilidadeBase": 6,
+      "pesoConscienciaNoLimiarLembrabilidade": 2.0,
+      "pesoAtencaoNoLimiarLembrabilidade": 2.0,
+      "limiarLembrabilidadeMinimo": 3,
+      "limiarLembrabilidadeMaximo": 9,
+      "notaMinimaParaMarcante": 8,
+      "faixasDeImpactoDaNota": [6, 7, 8, 9, 10],
       "tetoMemoriasNoContexto": 8,
       "pesoRecencia": 0.4,
       "pesoMarcante": 0.4,
@@ -104,6 +138,36 @@
       "maxNiveisCascataPorEvento": 1,
       "duracaoMaximaCaprichoMinutos": 120,
       "chanceCaprichoPorTedio": 0.25
+    },
+    "crivo": {
+      "$comment": "C-047 a C-049, C-054, C-055. Roda na apreciacao noturna, fundido com o classificador. Por tema seria o pior perfil de volume do sistema.",
+      "maxTemasPorApreciacao": 12,
+      "fontesParaPromoverPossivel": 2,
+      "diasParaExpirarPossivel": 30,
+      "confiancaMinimaParaEntrarNoBanco": 0.5,
+      "tetoFatosNoContexto": 10,
+      "orcamentoTokensBlocoFatos": 400,
+      "tetoMentirasOuvidas": 40
+    },
+    "autoEntendimento": {
+      "$comment": "C-050. Uma chamada a cada dez dias simulados: +0,1 por agente por dia.",
+      "cadenciaDiasAutoEntendimento": 10,
+      "tetoPalavrasAutoEntendimento": 120,
+      "minMemoriasParaGerar": 3
+    },
+    "pensamentoProfundo": {
+      "$comment": "C-051. Muda o tier, nao o volume. Abaixo do limiar de inteligencia a opcao nem e oferecida ao agente.",
+      "limiarInteligenciaParaDeliberar": 45,
+      "janelaOrcamentoDias": 5,
+      "deliberacoesPorJanelaBase": 1,
+      "deliberacoesPorJanelaPorPontoDeInteligencia": 0.05,
+      "deliberacoesMaximasPorJanela": 6
+    },
+    "voz": {
+      "$comment": "C-056. Sai na chamada de perfil que ja existe, custo marginal zero em jogo.",
+      "perguntasNaCartela": 8,
+      "tetoPalavrasPorRespostaDaCartela": 25,
+      "perguntasDaCartelaNoContextoDeFala": 3
     }
   },
 
@@ -121,8 +185,11 @@
     "viesGritoPorPontoDeSentimento": 0.01
   },
 
-  "gm": {
-    "$comment": "V-002, V-024, V-027, V-028.",
+  "validador": {
+    "$comment": "V-002, V-024, V-027, V-028, V-035, V-036.",
+    "dominiosDePorteiro": ["physicalLaw", "inviolableLaw", "userProhibition"],
+    "maxTentativasAposNegacao": 2,
+    "porqueDominios": "V-035. Fora destes dominios o Validador calcula consequencia em vez de barrar, e a negacao e final e diegetica. Negacao fora de porteiro e o caso comum: se ela gerasse nova tentativa, o laco deixaria de ser pagavel.",
     "maxRegrasProvisoriasVivas": 24,
     "invocacoesParaEntrarNaDivida": 3,
     "disparosPorDiaParaAlertaAnomalia": 50,
@@ -131,12 +198,34 @@
 
   "llm": {
     "$comment": "L-006, L-016, L-017. Espelha config/models.json quando houver conflito, models.json vence.",
-    "tetoChamadasPorAgentePorDiaSimulado": 20,
+    "tetoChamadasPorAgentePorDiaSimulado": 25,
+    "tetoChamadasDeLotePorAgentePorDiaSimulado": 5,
+    "porqueLoteSeparado": "C-007. O lote noturno preserva o estado que faz o agente existir amanha. Disputando o mesmo teto, o agente que passou o dia conversando perderia a memoria do dia.",
     "tetoGastoDiarioUsd": 5.0,
     "aoExceder": "degrade",
     "maxRequisicoesPorMinuto": 30,
     "recuoInicialMs": 500,
     "recuoMaximoMs": 30000
+  },
+
+  "objetos": {
+    "$comment": "O-002, O-007, O-008, O-011 a O-018, O-025, O-026. Valores iniciais sugeridos, nao medidos.",
+    "pemContainerSobMedida": 1.0,
+    "fatorPemPilha": 0.6,
+    "reducaoPemArrumadoMin": 0.05,
+    "reducaoPemArrumadoMax": 0.30,
+    "minutosParaArrumar": 20,
+    "volumeMaoM3": 0.004,
+    "pesoMaximoPorMaoKg": 8.0,
+    "alcanceMaximoArremessoMetros": 12,
+    "energiaImpactoMinimaParaDano": 5.0,
+    "fatorDanoPorEnergiaImpacto": 0.02,
+    "capacidadeCargaBaseKg": 35.0,
+    "limiarCargaSemPenalidadeFracao": 0.50,
+    "fatorVelocidadeMinimoPorCarga": 0.25,
+    "habilidadeMinimaDesmonteSemDano": 30,
+    "orcamentoTokensBlocoObjetos": 150,
+    "limiarDivergenciaTermicaC": 1.0
   },
 
   "mundo": {

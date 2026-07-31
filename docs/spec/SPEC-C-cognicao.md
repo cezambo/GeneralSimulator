@@ -551,6 +551,19 @@ Uma negação do Validador entra como impressão comum e pode virar dissonância
 
 A exceção é a promoção de regra no domínio `cognition`, especificada em [SPEC-V](SPEC-V-validador.md): o Validador pode propor que um tópico passe a produzir um `stance` de forma determinística, e essa regra é revisável no painel como qualquer outra.
 
+### C-046 — Tentativa frustrada
+`P1` · `V5` · derivado · dep: C-003, C-022, V-006, V-036
+
+Uma ação que não se materializou entra na cognição como impressão comum, com `sourceType` de negação, carregando o que foi tentado e o retorno diegético que o agente recebeu — nunca o motivo de sistema, que ele não tem como conhecer. Ela dispara um pensamento de gatilho `postDenial`.
+
+Vale ter requisito próprio, e não ficar implícita na impressão genérica, por causa do que a repetição faz. Uma frustração isolada é ruído. Frustrações repetidas sobre o mesmo tema são o único caminho pelo qual um agente **corrige a própria crença sobre o que é possível neste mundo** — e como ele não tem acesso às regras, é a única forma de aprendizado sobre física e sobre limite que o desenho oferece. Sem o gatilho, o agente tenta a mesma coisa impossível para sempre e nunca fica mais esperto; com ele, a teimosia vira personagem, porque quem insiste depois de aprender está insistindo de verdade.
+
+Nos domínios de porteiro, a sequência inteira de `V-036` — tentativa, motivo, nova tentativa, até esgotar — entra como **uma** impressão, e não uma por tentativa. O que frustra é ter batido na parede, não quantas vezes se bateu no mesmo instante.
+
+A tentativa frustrada é insumo do Crivo e da dissonância pelo caminho normal, sem tratamento especial: se ela contradiz uma opinião sobre a própria competência, é a dissonância que resolve.
+
+**Aceite:** uma ação negada produz exatamente uma impressão com o retorno diegético e nenhum vocabulário de sistema, e dispara um pensamento `postDenial`; uma negação em domínio de porteiro que consumiu três tentativas produz também exatamente uma impressão.
+
 ---
 
 ## Não-objetivos

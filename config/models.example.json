@@ -53,7 +53,7 @@
 
   "budget": {
     "dailyUsdLimit": 5.0,
-    "perAgentPerSimDayCallLimit": 20,
+    "perAgentPerSimDayCallLimit": 25,
     "onExceed": "degrade"
   },
 

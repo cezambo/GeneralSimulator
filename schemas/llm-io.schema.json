@@ -73,24 +73,13 @@
       "additionalProperties": false
     },
 
-    "marcantes_response": {
-      "description": "C-014. Zero a cinco por dia. Zero é resposta válida e comum.",
+    "nightly_appraisal_response": {
+      "description": "C-047 e C-025. A apreciação noturna: uma só chamada resolve o Crivo e a passagem noturna do classificador de dissonância. As duas tarefas leem o mesmo material do dia contra o mesmo contexto pessoal, e mantê-las separadas pagaria uma chamada por agente por noite apenas para renderizar esse contexto duas vezes.\n\nAs duas listas referenciam as definições originais por ponteiro, e não por cópia, para que não possam divergir. `cognition.dissonance_classifier` continua existindo para a passagem a quente, logo depois da conversa, que precisa poder disparar ruptura no mesmo dia.",
       "type": "object",
-      "required": ["marcantes"],
+      "required": ["classifications", "verdicts"],
       "properties": {
-        "marcantes": {
-          "type": "array",
-          "maxItems": 5,
-          "items": {
-            "type": "object",
-            "required": ["text", "impact"],
-            "properties": {
-              "text": { "type": "string", "description": "Até duas linhas." },
-              "impact": { "type": "integer", "minimum": 1, "maximum": 5 }
-            },
-            "additionalProperties": false
-          }
-        }
+        "classifications": { "$ref": "#/$defs/dissonance_classification_response/properties/classifications" },
+        "verdicts": { "$ref": "#/$defs/sieve_response/properties/verdicts" }
       },
       "additionalProperties": false
     },
@@ -394,8 +383,8 @@
         "verdict": { "type": "string", "enum": ["systemic", "one_off"] },
         "domain": {
           "type": "string",
-          "enum": ["substrate", "body", "social", "cognition", "community"],
-          "description": "Obrigatório quando verdict é systemic."
+          "enum": ["substrate", "body", "social", "cognition", "community", "object"],
+          "description": "Obrigatório quando verdict é systemic. O domínio `object` exige também o `defId` do alvo no corpo da regra. V-041."
         },
         "rule": {
           "type": "object",
@@ -489,12 +478,13 @@
 
     "agent_profile_response": {
       "type": "object",
-      "required": ["name", "age", "appearanceDescription", "personality", "initialRole", "primaryGoalSeed", "secondaryGoalSeed", "skills"],
+      "required": ["name", "age", "appearanceDescription", "personality", "initialRole", "primaryGoalSeed", "secondaryGoalSeed", "skills", "voiceCard"],
       "properties": {
         "name": { "type": "string" },
         "age": { "type": "number" },
         "appearanceDescription": { "type": "string" },
         "personality": { "$ref": "domain.schema.json#/$defs/Personality" },
+        "voiceCard": { "$ref": "domain.schema.json#/$defs/VoiceCard" },
         "skills": { "$ref": "domain.schema.json#/$defs/Skills" },
         "initialRole": { "type": "string" },
         "primaryGoalSeed": { "type": "string" },

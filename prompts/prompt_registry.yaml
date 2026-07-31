@@ -122,15 +122,13 @@ prompts:
 
   # ── MEMORIA ──────────────────────────────────────────────────────────
 
-  memory.marcantes_selection:
-    file: "memory/marcantes_selection.md"
-    tier: compact
-    temperature: 0.2
-    maxTokens: 400
-    schema: marcantes_response
-    status: falta
-    description: "Escolhe 0 a 5 eventos marcantes do dia"
-    variables: [agentName, personality, dayEvents]
+  # memory.marcantes_selection foi APOSENTADO por C-014.
+  # A eleicao de marcantes passou a ser deterministica sobre a nota de
+  # lembrabilidade que o agente ja atribui na propria resposta que decide a
+  # acao (C-053). Pagar um modelo para reler o dia e reordenar informacao que
+  # o agente produziu de graca era o pior negocio do lote noturno — e marcar
+  # no instante e mais correto: o que fica de um dia nao e o que se julga
+  # importante ao fim dele.
 
   memory.daily_summary:
     file: "memory/daily_summary.md"
@@ -170,8 +168,38 @@ prompts:
     schema: dissonance_classification_response
     status: rascunho
     prioridade: P0
-    description: "Classifica impressoes contra opiniões — uma chamada por evento"
+    description: "Passagem a quente: classifica impressoes contra opinioes logo apos a conversa, para que a ruptura possa acontecer no mesmo dia"
     variables: [agentContext, existingOpinions, newImpressions, topicFilter]
+
+  cognition.nightly_appraisal:
+    file: "cognition/nightly_appraisal.md"
+    tier: compact
+    fallbackTier: narrative
+    temperature: 0.3
+    maxTokens: 1200
+    schema: nightly_appraisal_response
+    status: falta
+    prioridade: P0
+    description: "Apreciacao noturna: o Crivo e a passagem noturna do classificador numa chamada so"
+    variables: [agentContext, existingOpinions, newImpressions, heardClaims, factBankSummary, topicFilter]
+    porque: >
+      C-047 e C-025. As duas tarefas leem o mesmo material do dia contra o mesmo
+      contexto pessoal; separa-las pagaria uma chamada por agente por noite so
+      para renderizar esse contexto duas vezes. O recuo esta declarado em C-047:
+      duas tarefas estruturalmente distintas numa resposta e o que modelo pequeno
+      erra primeiro, e se a fusao se mostrar instavel no tier compact, separar
+      custa uma chamada por agente por noite — um numero conhecido.
+
+  cognition.self_understanding:
+    file: "cognition/self_understanding.md"
+    tier: narrative
+    temperature: 0.8
+    maxTokens: 500
+    schema: self_understanding_response
+    status: falta
+    prioridade: P1
+    description: "Como o agente se ve agora, a partir do que viveu desde a ultima vez"
+    variables: [agentContext, personality, recentMemories, previousSelfUnderstanding, period]
 
   cognition.opinion_burst:
     file: "cognition/opinion_burst.md"

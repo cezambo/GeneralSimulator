@@ -168,8 +168,8 @@
             "properties": {
               "kind": {
                 "type": "string",
-                "enum": ["damage", "pain", "nausea", "drowsiness", "unconsciousness", "healing", "disinhibition", "moodShift", "perceptionDistortion", "paranoia", "euphoria"],
-                "description": "Os últimos são cognitivos e entram no contexto enviado ao modelo. R-031."
+                "enum": ["damage", "pain", "nausea", "drowsiness", "unconsciousness", "healing", "disinhibition", "moodShift", "perceptionDistortion", "paranoia", "euphoria", "toxicLoad"],
+                "description": "Os cognitivos entram no contexto enviado ao modelo. `toxicLoad` deposita carga tóxica nas partes expostas em vez de ferir: sem ele uma fonte de radiação só consegue se expressar como dano e dor, e veneno lento não teria como existir sem subsistema próprio. R-031, B-062."
               },
               "severity": { "type": "number", "minimum": 0, "maximum": 100 },
               "delayTicks": { "type": "integer", "minimum": 0 },
@@ -330,7 +330,7 @@
     "ObjectDef": {
       "type": "object",
       "description": "Molde reutilizável de objeto. O que é constante ao tipo vive aqui; o que varia por exemplar vive em WorldObject. W-030.",
-      "required": ["id", "name", "description", "category", "materialId", "size", "affordances"],
+      "required": ["id", "name", "description", "category", "materialId", "size", "affordances", "weight", "volume", "packingEfficiency"],
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
@@ -559,20 +559,20 @@
         "biologicalAge": {
           "type": "number",
           "minimum": 0,
-          "description": "Idade biológica desta parte, em anos, independente da idade do agente. Um fígado pode envelhecer mais rápido que o dono. Quanto maior, mais comprometida a função, com velocidade e forma do comprometimento declaradas por tipo de parte em config/body.json. B-046."
+          "description": "Idade biológica desta parte, em anos, independente da idade do agente. Um fígado pode envelhecer mais rápido que o dono. Quanto maior, mais comprometida a função, com velocidade e forma do comprometimento declaradas por classe de parte em config/body.json. B-058."
         },
         "toxicity": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Carga tóxica acumulada nesta parte. Sobe por taxa própria do tipo de parte e desce pelo trabalho do sistema excretor. Com tudo funcionando fica perto de zero; quando a excreção falha, sobe em toda parte ao mesmo tempo e a falência é sistêmica em vez de local. É a mesma corrida assimétrica da infecção, aplicada ao corpo inteiro. B-047, B-048."
+          "description": "Carga tóxica acumulada nesta parte. Sobe por taxa própria do tipo de parte e desce pelo trabalho do sistema excretor. Com tudo funcionando fica perto de zero; quando a excreção falha, sobe em toda parte ao mesmo tempo e a falência é sistêmica em vez de local. É a mesma corrida assimétrica da infecção, aplicada ao corpo inteiro. B-059, B-060."
         },
         "functioning": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
           "x-derived": true,
-          "description": "DERIVADO. Quanto esta parte ainda entrega do que deveria. Vem da integridade transformada linearmente entre dois pontos declarados por tipo de parte: acima da sensibilidade vale 1, abaixo da resiliência vale 0, e entre as duas interpola. Modulado ainda por idade biológica e toxicidade. Alimenta as capacidades de B-012. B-049."
+          "description": "DERIVADO. Quanto esta parte ainda entrega do que deveria. Vem da integridade transformada linearmente entre dois pontos declarados por tipo de parte: acima da sensibilidade vale 1, abaixo da resiliência vale 0, e entre as duas interpola. Modulado ainda por idade biológica e toxicidade. Alimenta as capacidades de B-012. B-055."
         },
         "coverings": {
           "type": "array",
@@ -744,7 +744,13 @@
         "text": { "type": "string" },
         "simTime": { "type": "number", "description": "Quando o período coberto começou." },
         "isMarcante": { "type": "boolean", "description": "Sobe intacto pelas camadas. C-013." },
-        "tags": { "type": "array", "items": { "type": "string" }, "description": "Ex: gm_denial, action_blocked, trauma." },
+        "memorabilityScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "A nota que o agente deu ao instante quando o viveu, preservada junto da memória que ela elegeu. Sem ela a eleição determinística de C-014 acontece mas não é auditável depois: seria impossível dizer se uma lembrança sobreviveu por ter marcado ou por um limiar mal calibrado naquele dia. C-053, C-052."
+        },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Ex: validator_denial, action_blocked, trauma." },
         "userCreated": { "type": "boolean" },
         "social": { "type": "string", "description": "Só em camadas longas: parágrafos focados em relações." }
       },
@@ -773,6 +779,20 @@
         "simTime": { "type": "number" }
       },
       "additionalProperties": false
+    },
+
+    "VoiceCard": {
+      "type": "array",
+      "description": "Cartela de perguntas variadas com a resposta típica daquele indivíduo, gerada uma vez junto do perfil. Serve de âncora de estilo: um subconjunto entra no contexto dos prompts de fala, e o modelo passa a ter exemplo concreto da voz em vez de apenas adjetivos de personalidade. Custo marginal zero em jogo, porque sai na chamada de perfil que já existe. É o conserto mais barato para deriva de voz, que é o primeiro defeito que aparece em modelo fraco. C-056.",
+      "items": {
+        "type": "object",
+        "required": ["question", "answer"],
+        "properties": {
+          "question": { "type": "string" },
+          "answer": { "type": "string", "description": "Na voz do personagem, dentro do teto de palavras declarado em tuning." }
+        },
+        "additionalProperties": false
+      }
     },
 
     "SelfUnderstanding": {
@@ -885,6 +905,7 @@
           "description": "O que o agente tem por verdade sobre o mundo, incluindo o que ele registrou como mentira ouvida. C-048."
         },
         "selfUnderstanding": { "$ref": "#/$defs/SelfUnderstanding" },
+        "voiceCard": { "$ref": "#/$defs/VoiceCard" },
         "itemBeliefs": {
           "type": "array",
           "items": { "$ref": "#/$defs/ItemBelief" },
@@ -1098,8 +1119,8 @@
         "id": { "type": "string" },
         "domain": {
           "type": "string",
-          "enum": ["substrate", "body", "social", "cognition", "community"],
-          "description": "V-022. Cada domínio tem vocabulário fechado próprio de condição e efeito."
+          "enum": ["substrate", "body", "social", "cognition", "community", "object"],
+          "description": "V-022. Cada domínio tem vocabulário fechado próprio de condição e efeito. O domínio `object` materializa a regra como `ItemRule` no Funcionamento do `ObjectDef` alvo, mas continua registrada aqui: registro único é o que faz o teto de regras vivas de V-027 e o painel de ciclo de vida valerem também para as regras de objeto. V-041, O-021."
         },
         "state": {
           "type": "string",

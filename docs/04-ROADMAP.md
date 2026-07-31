@@ -147,7 +147,7 @@ Aqui entra o motor mental completo.
 
 ## Estado da especificação
 
-Os dez domínios estão escritos: `W` mundo, `R` substrato, `A` agente, `B` corpo, `C` cognição, `S` interação, `G` Validador, `U` interface, `L` camada LLM e `X` transversal. Somados, 343 requisitos com critério de aceite.
+Os onze domínios estão escritos: `W` mundo, `R` substrato, `O` objetos, `A` agente, `B` corpo, `C` cognição, `S` interação, `V` validador, `U` interface, `L` camada LLM e `X` transversal. Somados, 418 requisitos com critério de aceite.
 
 O que falta não é mais especificação, e sim código: nenhum requisito foi implementado. `V0` é o próximo passo real.
 

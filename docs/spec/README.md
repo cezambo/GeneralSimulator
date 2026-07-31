@@ -26,6 +26,9 @@ Quando um bloco de requisitos cresce a ponto de merecer documento próprio, ele 
 |-------|-------------|
 | `W-015` a `W-028` | `R-001` a `R-050` — [SPEC-R-substrato.md](SPEC-R-substrato.md) |
 | `A-012` a `A-019` | `B-001` a `B-063` — [SPEC-B-corpo.md](SPEC-B-corpo.md) |
+| `G-001` a `G-034` | `V-001` a `V-034` — [SPEC-V-validador.md](SPEC-V-validador.md) |
+
+⚑ A faixa `G-` é o único caso de **transposição**, e não de migração: o Game Master virou Validador e os trinta e quatro identificadores foram para `V-` um a um, sem renumerar. Foi assim de propósito, para que a mudança de papel lesse como diff em vez de como documento novo — `G-021` e `V-021` são o mesmo requisito de promoção de regra. Os requisitos `V-035` em diante é que são novos.
 
 ## Formato
 
