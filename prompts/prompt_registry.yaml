@@ -168,7 +168,7 @@ prompts:
     temperature: 0.2
     maxTokens: 600
     schema: dissonance_classification_response
-    status: falta
+    status: rascunho
     prioridade: P0
     description: "Classifica impressoes contra opiniões — uma chamada por evento"
     variables: [agentContext, existingOpinions, newImpressions, topicFilter]
