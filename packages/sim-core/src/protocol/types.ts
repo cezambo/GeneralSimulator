@@ -53,6 +53,7 @@ export interface TileCellSnapshot {
   /** Estados transientes (burning, wet, …) para o cliente pintar. */
   readonly states?: readonly { type: string; intensity: number }[];
   readonly integrity?: number;
+  readonly temperature?: number;
 }
 
 export interface WorldSnapshotPayload {

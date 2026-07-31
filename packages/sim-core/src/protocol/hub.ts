@@ -341,6 +341,44 @@ export class ProtocolHub {
         }
         return;
       }
+      case 'cmd.build.moveObject': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'moveObject só em modo construção');
+        }
+        const ref = objectRefFromPayload(p);
+        const posRaw = p['pos'] as { x?: unknown; y?: unknown } | undefined;
+        const x = Number(posRaw?.x);
+        const y = Number(posRaw?.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          throw new ProtocolError('BAD_PLACE', 'moveObject exige pos {x,y}');
+        }
+        const delta = this.#build.moveObject(ref, { x, y });
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true }, env.reqId);
+        return;
+      }
+      case 'cmd.build.rotate': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'rotate só em modo construção');
+        }
+        const ref = objectRefFromPayload(p);
+        const degrees = Number(p['degrees'] ?? 90);
+        if (!Number.isFinite(degrees)) {
+          throw new ProtocolError('BAD_ROTATE', 'rotate exige degrees numérico');
+        }
+        const deltaMode = p['delta'] !== false;
+        const delta = this.#build.rotateObject(ref, degrees, deltaMode);
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) {
+          this.#sendTo(
+            client,
+            'res.ok',
+            { ok: true, rotation: delta.objectsUpsert?.[0]?.rotation },
+            env.reqId,
+          );
+        }
+        return;
+      }
       case 'cmd.build.undo': {
         if (this.#mode !== 'construction') {
           throw new ProtocolError('WRONG_MODE', 'undo de construção só em modo construção');
@@ -480,6 +518,26 @@ export class ProtocolHub {
     });
     client.send(msg);
   }
+}
+
+function objectRefFromPayload(p: Record<string, unknown>): {
+  objectId?: string;
+  cell?: { x: number; y: number };
+} {
+  const objectId = p['objectId'] !== undefined ? String(p['objectId']) : undefined;
+  const cells = Array.isArray(p['cells']) ? p['cells'] : [];
+  const first = cells[0] as { x?: unknown; y?: unknown } | undefined;
+  const cell =
+    first && Number.isFinite(Number(first.x)) && Number.isFinite(Number(first.y))
+      ? { x: Math.floor(Number(first.x)), y: Math.floor(Number(first.y)) }
+      : undefined;
+  if (!objectId && !cell) {
+    throw new ProtocolError('BAD_TARGET', 'exige objectId ou cells[{x,y}]');
+  }
+  return {
+    ...(objectId ? { objectId } : {}),
+    ...(cell ? { cell } : {}),
+  };
 }
 
 function receives(subs: ReadonlySet<string>, type: string): boolean {

@@ -52,4 +52,21 @@ describe('BuildHistory', () => {
     const { build } = hist();
     expect(() => build.placeObject('cadeira_madeira', { x: 0, y: 0 })).toThrow(ProtocolError);
   });
+
+  it('move e rotaciona móvel com undo', () => {
+    const { build, sim } = hist();
+    const placed = build.placeObject('cadeira_madeira', { x: 5, y: 5 }, 0);
+    const id = placed.objectsUpsert![0]!.id;
+
+    build.moveObject({ objectId: id }, { x: 6, y: 6 });
+    expect(sim.state.objects[id]!.pos).toMatchObject({ x: 6.5, y: 6.5 });
+
+    build.rotateObject({ objectId: id }, 90, true);
+    expect(sim.state.objects[id]!.rotation).toBe(90);
+
+    build.undo();
+    expect(sim.state.objects[id]!.rotation).toBe(0);
+    build.undo();
+    expect(sim.state.objects[id]!.pos).toMatchObject({ x: 5.5, y: 5.5 });
+  });
 });

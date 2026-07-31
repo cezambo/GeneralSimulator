@@ -330,6 +330,7 @@ export async function startLiveServe(opts?: {
         ? { states: o.states.map((s) => ({ type: s.type, intensity: s.intensity })) }
         : { states: [] as { type: string; intensity: number }[] }),
       ...(o?.integrity !== undefined ? { integrity: o.integrity } : {}),
+      ...(o?.temperature !== undefined ? { temperature: o.temperature } : {}),
     };
   }
 

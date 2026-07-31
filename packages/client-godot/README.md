@@ -45,6 +45,8 @@ godot --path packages/client-godot
 | B / N / F / R | Parede pedra (corta fogo) / parede madeira / chão / porta |
 | E ou botão direito | Apagar tile (volta a chão) — não apaga fogo |
 | T | Colocar cadeira |
+| M | Mover móvel (origem → destino) |
+| . | Girar móvel sob o cursor (+90°) |
 | X | Remover móvel na célula |
 | Z / Y | Undo / redo |
 | Arrastar (construção) | Pintar / apagar células |

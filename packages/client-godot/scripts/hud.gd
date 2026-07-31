@@ -9,6 +9,7 @@ signal construction_toggled(on: bool)
 signal build_tool_changed(tool_id: String)
 signal build_undo_requested
 signal build_redo_requested
+signal build_rotate_requested
 signal sandbox_tool_changed(tool_id: String)
 signal save_requested
 signal load_requested
@@ -24,7 +25,7 @@ var _connected: bool = false
 var _last_speed: int = 1
 var _paused: bool = false
 var _construction: bool = false
-## wall | wall_wood | floor | door | erase | furniture | del_object
+## wall | wall_wood | floor | door | erase | furniture | move_furniture | del_object
 var _build_tool: String = "wall"
 var _furniture_def: String = "cadeira_madeira"
 ## "" | wet | extinguish — ferramentas RT fora da construção
@@ -123,7 +124,7 @@ func clear_sandbox_tool() -> void:
 
 func _refresh_help() -> void:
 	if _construction:
-		help_label.text = "C·sair · B parede pedra · N parede madeira · F/R chão/porta · E apagar · T cadeira · X móvel · Z/Y undo/redo"
+		help_label.text = "C·sair · B/N parede · F/R chão/porta · E apagar · T cadeira · M mover · . girar · X remover · Z/Y undo/redo"
 		set_selection(_selection_text)
 	else:
 		help_label.text = "Clique: sel./andar · porta · G água · Q apagar fogo · F6 salvar · F7 carregar · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
@@ -144,6 +145,8 @@ func _tool_label(tool_id: String) -> String:
 			return "apagar tile → chão"
 		"furniture":
 			return "móvel: %s" % _furniture_def
+		"move_furniture":
+			return "mover móvel (clique origem → destino)"
 		"del_object":
 			return "remover móvel"
 		_:
@@ -196,8 +199,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_tool("erase")
 		elif event.is_action_pressed("build_tool_furniture"):
 			_set_tool("furniture")
+		elif event.is_action_pressed("build_tool_move_furniture"):
+			_set_tool("move_furniture")
 		elif event.is_action_pressed("build_tool_del_object"):
 			_set_tool("del_object")
+		elif event.is_action_pressed("build_rotate"):
+			build_rotate_requested.emit()
 		elif event.is_action_pressed("build_undo"):
 			build_undo_requested.emit()
 		elif event.is_action_pressed("build_redo"):

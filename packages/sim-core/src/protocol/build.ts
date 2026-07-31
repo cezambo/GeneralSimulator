@@ -21,7 +21,8 @@ export interface TileCellEdit {
 export type BuildEdit =
   | { kind: 'tiles'; before: TileCellEdit[]; after: TileCellEdit[] }
   | { kind: 'placeObject'; object: WorldObject }
-  | { kind: 'removeObject'; object: WorldObject };
+  | { kind: 'removeObject'; object: WorldObject }
+  | { kind: 'transformObject'; before: WorldObject; after: WorldObject };
 
 const DEFAULT_FLOOR: Pick<TileCellEdit, 'type' | 'materialId'> = {
   type: 'floor',
@@ -133,18 +134,53 @@ export class BuildHistory {
   }
 
   removeObject(opts: { objectId?: string; cell?: { x: number; y: number } }): WorldDeltaPayload {
-    const obj = opts.objectId
-      ? this.#sim.state.objects[opts.objectId]
-      : opts.cell
-        ? findObjectAt(this.#sim, this.#world.mainGridId, opts.cell.x, opts.cell.y)
-        : undefined;
-    if (!obj) {
-      throw new ProtocolError('NOT_FOUND', 'objeto não encontrado');
-    }
+    const obj = this.#resolveObject(opts);
     const copy = cloneObj(obj);
     delete this.#sim.state.objects[obj.id];
     this.#push({ kind: 'removeObject', object: copy });
     return { objectsRemove: [copy.id] };
+  }
+
+  /** Move móvel para outra célula (undo = volta à posição anterior). */
+  moveObject(
+    opts: { objectId?: string; cell?: { x: number; y: number } },
+    to: { x: number; y: number },
+  ): WorldDeltaPayload {
+    const obj = this.#resolveObject(opts);
+    const gridId = this.#world.mainGridId;
+    const gx = Math.floor(to.x);
+    const gy = Math.floor(to.y);
+    if (!this.#world.inBounds(gridId, gx, gy)) {
+      throw new ProtocolError('OUT_OF_BOUNDS', `destino (${gx},${gy}) fora do mapa`);
+    }
+    if (this.#world.blocksMovementAt(gridId, gx, gy)) {
+      throw new ProtocolError('BLOCKED', 'destino bloqueado');
+    }
+    const occupant = findObjectAt(this.#sim, gridId, gx, gy);
+    if (occupant && occupant.id !== obj.id) {
+      throw new ProtocolError('OCCUPIED', 'já há um móvel no destino');
+    }
+    const before = cloneObj(obj);
+    obj.pos = { x: gx + 0.5, y: gy + 0.5 };
+    const after = cloneObj(obj);
+    this.#push({ kind: 'transformObject', before, after });
+    return { objectsUpsert: [objectVisible(after)] };
+  }
+
+  /** Rotaciona móvel (graus absolutos ou delta se `delta` for true). */
+  rotateObject(
+    opts: { objectId?: string; cell?: { x: number; y: number } },
+    degrees: number,
+    delta = false,
+  ): WorldDeltaPayload {
+    const obj = this.#resolveObject(opts);
+    const before = cloneObj(obj);
+    const base = obj.rotation ?? 0;
+    const next = delta ? base + degrees : degrees;
+    obj.rotation = ((next % 360) + 360) % 360;
+    const after = cloneObj(obj);
+    this.#push({ kind: 'transformObject', before, after });
+    return { objectsUpsert: [objectVisible(after)] };
   }
 
   undo(): WorldDeltaPayload {
@@ -189,6 +225,18 @@ export class BuildHistory {
     }
   }
 
+  #resolveObject(opts: { objectId?: string; cell?: { x: number; y: number } }): WorldObject {
+    const obj = opts.objectId
+      ? this.#sim.state.objects[opts.objectId]
+      : opts.cell
+        ? findObjectAt(this.#sim, this.#world.mainGridId, opts.cell.x, opts.cell.y)
+        : undefined;
+    if (!obj) {
+      throw new ProtocolError('NOT_FOUND', 'objeto não encontrado');
+    }
+    return obj;
+  }
+
   #applyForward(entry: BuildEdit): WorldDeltaPayload {
     const gridId = this.#world.mainGridId;
     if (entry.kind === 'tiles') {
@@ -201,17 +249,11 @@ export class BuildHistory {
     }
     if (entry.kind === 'placeObject') {
       this.#sim.state.objects[entry.object.id] = cloneObj(entry.object);
-      const o = entry.object;
-      return {
-        objectsUpsert: [
-          {
-            id: o.id,
-            defId: o.defId,
-            pos: { x: o.pos.x, y: o.pos.y },
-            ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
-          },
-        ],
-      };
+      return { objectsUpsert: [objectVisible(entry.object)] };
+    }
+    if (entry.kind === 'transformObject') {
+      this.#sim.state.objects[entry.after.id] = cloneObj(entry.after);
+      return { objectsUpsert: [objectVisible(entry.after)] };
     }
     delete this.#sim.state.objects[entry.object.id];
     return { objectsRemove: [entry.object.id] };
@@ -231,18 +273,12 @@ export class BuildHistory {
       delete this.#sim.state.objects[entry.object.id];
       return { objectsRemove: [entry.object.id] };
     }
+    if (entry.kind === 'transformObject') {
+      this.#sim.state.objects[entry.before.id] = cloneObj(entry.before);
+      return { objectsUpsert: [objectVisible(entry.before)] };
+    }
     this.#sim.state.objects[entry.object.id] = cloneObj(entry.object);
-    const o = entry.object;
-    return {
-      objectsUpsert: [
-        {
-          id: o.id,
-          defId: o.defId,
-          pos: { x: o.pos.x, y: o.pos.y },
-          ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
-        },
-      ],
-    };
+    return { objectsUpsert: [objectVisible(entry.object)] };
   }
 }
 
@@ -274,4 +310,18 @@ function findObjectAt(
 
 function cloneObj(o: WorldObject): WorldObject {
   return structuredClone(o);
+}
+
+function objectVisible(o: WorldObject): {
+  id: string;
+  defId: string;
+  pos: { x: number; y: number };
+  rotation?: number;
+} {
+  return {
+    id: o.id,
+    defId: o.defId,
+    pos: { x: o.pos.x, y: o.pos.y },
+    ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
+  };
 }

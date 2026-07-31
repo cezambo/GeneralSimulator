@@ -106,6 +106,21 @@ func place_object(def_id: String, x: int, y: int, rotation: float = 0.0) -> void
 	})
 
 
+func move_object_at(from_x: int, from_y: int, to_x: int, to_y: int) -> void:
+	send_command("cmd.build.moveObject", {
+		"cells": [{"x": from_x, "y": from_y}],
+		"pos": {"x": to_x, "y": to_y},
+	})
+
+
+func rotate_object_at(x: int, y: int, degrees: float = 90.0) -> void:
+	send_command("cmd.build.rotate", {
+		"cells": [{"x": x, "y": y}],
+		"degrees": degrees,
+		"delta": true,
+	})
+
+
 func undo_build() -> void:
 	send_command("cmd.build.undo", {})
 

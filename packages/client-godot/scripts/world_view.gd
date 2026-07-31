@@ -10,6 +10,7 @@ var _grid_w: int = 0
 var _grid_h: int = 0
 var _tile_nodes: Dictionary = {} # "x,y" -> Polygon2D
 var _fire_nodes: Dictionary = {} # "x,y" -> Polygon2D (brilho)
+var _smoke_nodes: Dictionary = {} # "x,y" -> Polygon2D (fumaça)
 var _object_nodes: Dictionary = {} # id -> Polygon2D
 var _construction: bool = false
 var _hover_cell: Vector2i = Vector2i(-1, -1)
@@ -21,6 +22,7 @@ func apply_snapshot(payload: Dictionary) -> void:
 	_clear_children(objects_root)
 	_tile_nodes.clear()
 	_fire_nodes.clear()
+	_smoke_nodes.clear()
 	_object_nodes.clear()
 	_tile_data.clear()
 	_grid_w = int(payload.get("width", 0))
@@ -99,6 +101,8 @@ func describe_tile(cell: Vector2i) -> String:
 	var parts: PackedStringArray = ["(%d,%d) %s · %s" % [cell.x, cell.y, tile_type, material_id]]
 	if t.has("integrity"):
 		parts.append("int %d" % int(t.get("integrity", 100)))
+	if t.has("temperature"):
+		parts.append("%.0f°" % float(t.get("temperature", 0.0)))
 	var states: Array = t.get("states", [])
 	var state_bits: PackedStringArray = []
 	for s in states:
@@ -185,7 +189,7 @@ func _upsert_tile(cell: Dictionary) -> void:
 	if wet and not burning:
 		poly.color = poly.color.lerp(Color("3a6ea5"), 0.55)
 	if smoky and not burning:
-		poly.color = poly.color.darkened(0.2)
+		poly.color = poly.color.lerp(Color("6a6a70"), 0.35)
 	if tile_type == "door" and bool(state.get("isOpen", false)) and not burning:
 		poly.color = WorldScale.tile_color("door", false, material_id).lightened(0.2)
 		if wet:
@@ -195,6 +199,8 @@ func _upsert_tile(cell: Dictionary) -> void:
 		poly.color = poly.color.darkened((1.0 - integ) * 0.55)
 
 	_set_fire_glow(key, x, y, burning)
+	var smoke_intensity := _state_intensity(states, "smoky") if smoky and not burning else 0.0
+	_set_smoke_haze(key, x, y, smoke_intensity)
 
 
 func _set_fire_glow(key: String, x: int, y: int, burning: bool) -> void:
@@ -219,12 +225,37 @@ func _set_fire_glow(key: String, x: int, y: int, burning: bool) -> void:
 		(_fire_nodes[key] as Polygon2D).visible = false
 
 
+func _set_smoke_haze(key: String, x: int, y: int, intensity: float) -> void:
+	if intensity > 0.0:
+		var haze: Polygon2D
+		if _smoke_nodes.has(key):
+			haze = _smoke_nodes[key]
+		else:
+			haze = Polygon2D.new()
+			var s := WorldScale.PIXELS_PER_TILE
+			haze.polygon = PackedVector2Array([
+				Vector2(0, 0), Vector2(s, 0), Vector2(s, s), Vector2(0, s)
+			])
+			haze.position = WorldScale.cell_to_px(x, y)
+			haze.z_index = 2
+			tiles_root.add_child(haze)
+			_smoke_nodes[key] = haze
+		var a := clampf(intensity / 100.0, 0.15, 0.55)
+		haze.color = Color(0.55, 0.55, 0.58, a)
+		haze.visible = true
+	elif _smoke_nodes.has(key):
+		(_smoke_nodes[key] as Polygon2D).visible = false
+
+
 func _has_state(states: Array, type_name: String) -> bool:
+	return _state_intensity(states, type_name) > 0.0
+
+
+func _state_intensity(states: Array, type_name: String) -> float:
 	for s in states:
 		if typeof(s) == TYPE_DICTIONARY and String(s.get("type", "")) == type_name:
-			if float(s.get("intensity", 0)) > 0.0:
-				return true
-	return false
+			return float(s.get("intensity", 0))
+	return 0.0
 
 
 func _clear_children(node: Node) -> void:

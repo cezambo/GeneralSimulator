@@ -11,6 +11,7 @@ extends Node
 
 var _paint_dragging: bool = false
 var _last_painted: Vector2i = Vector2i(-999, -999)
+var _move_from: Vector2i = Vector2i(-999, -999)
 
 
 func _ready() -> void:
@@ -27,6 +28,7 @@ func _ready() -> void:
 	hud.construction_toggled.connect(_on_construction)
 	hud.build_undo_requested.connect(_on_undo)
 	hud.build_redo_requested.connect(_on_redo)
+	hud.build_rotate_requested.connect(_on_rotate)
 	hud.save_requested.connect(_on_save)
 	hud.load_requested.connect(_on_load)
 
@@ -92,16 +94,24 @@ func _handle_sandbox_input(event: InputEvent) -> void:
 func _handle_construction_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT:
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			_move_from = Vector2i(-999, -999)
+			_paint_dragging = false
+			_last_painted = Vector2i(-999, -999)
+			_apply_tool_at_mouse(true)
+			return
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if hud.current_build_tool() == "move_furniture":
+				if mb.pressed:
+					_handle_move_furniture_click()
+				return
 			_paint_dragging = mb.pressed
 			if mb.pressed:
 				_last_painted = Vector2i(-999, -999)
-				# Botão direito = apagar, independente da ferramenta.
-				var force_erase := mb.button_index == MOUSE_BUTTON_RIGHT
-				_apply_tool_at_mouse(force_erase)
+				_apply_tool_at_mouse(false)
 		return
 	if event is InputEventMouseMotion:
-		if _paint_dragging:
+		if _paint_dragging and hud.current_build_tool() != "move_furniture":
 			var force_erase := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 			_apply_tool_at_mouse(force_erase)
 
@@ -134,6 +144,8 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 			core.place_object(hud.current_furniture_def(), cell.x, cell.y)
 			# Um clique por móvel — não arrasta pilha.
 			_paint_dragging = false
+		"move_furniture":
+			pass
 		"del_object":
 			core.remove_object_at(cell.x, cell.y)
 		"floor":
@@ -145,6 +157,19 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 		_:
 			# Pedra: corta-fogo. Parede de madeira (inflamável) = tecla N.
 			core.paint_tiles("wall", "pedra", [{"x": cell.x, "y": cell.y}])
+
+
+func _handle_move_furniture_click() -> void:
+	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	if not world_view.in_bounds_cell(cell):
+		return
+	if _move_from.x < 0:
+		_move_from = cell
+		hud.set_selection("Mover: origem (%d,%d) — clique o destino" % [cell.x, cell.y])
+		return
+	core.move_object_at(_move_from.x, _move_from.y, cell.x, cell.y)
+	hud.set_selection("Móvel (%d,%d) → (%d,%d)" % [_move_from.x, _move_from.y, cell.x, cell.y])
+	_move_from = Vector2i(-999, -999)
 
 
 func _update_hover_inspect() -> void:
@@ -234,6 +259,7 @@ func _on_vision(on: bool) -> void:
 
 func _on_construction(on: bool) -> void:
 	_paint_dragging = false
+	_move_from = Vector2i(-999, -999)
 	world_view.set_construction_overlay(on)
 	if on:
 		agents.set_selected("")
@@ -248,6 +274,16 @@ func _on_undo() -> void:
 
 func _on_redo() -> void:
 	core.redo_build()
+
+
+func _on_rotate() -> void:
+	if not hud.is_construction():
+		return
+	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	if not world_view.in_bounds_cell(cell):
+		return
+	core.rotate_object_at(cell.x, cell.y, 90.0)
+	hud.set_selection("Girando móvel em (%d,%d)…" % [cell.x, cell.y])
 
 
 func _on_save() -> void:

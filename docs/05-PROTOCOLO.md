@@ -137,7 +137,8 @@ Arrastar não é o cliente movendo nada. Ele pede; o núcleo valida e responde c
 cmd.build.paintTile   { tileType, materialId, cells: [{x,y}] }
 cmd.build.placeObject { objectDefId, pos, rotation }
 cmd.build.remove      { target: "tile" | "object", cells | objectId }
-cmd.build.rotate      { objectId, degrees }
+cmd.build.moveObject  { objectId | cells, pos: {x,y} }
+cmd.build.rotate      { objectId | cells, degrees, delta?: boolean }  // delta default true
 cmd.build.undo        { }
 cmd.build.redo        { }
 cmd.build.createCustomItem { name, description, category, materialId }

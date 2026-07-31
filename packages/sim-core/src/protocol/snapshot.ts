@@ -74,6 +74,7 @@ export function tileCellSnapshot(
       ? { states: overlay.states.map((s) => ({ type: s.type, intensity: s.intensity })) }
       : { states: [] }),
     ...(overlay?.integrity !== undefined ? { integrity: overlay.integrity } : {}),
+    ...(overlay?.temperature !== undefined ? { temperature: overlay.temperature } : {}),
   };
 }
 
