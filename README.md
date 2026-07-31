@@ -8,7 +8,7 @@ Não é um jogo de sobrevivência com diálogos escritos à mão. É um laborat�
 
 ## Estado atual
 
-**Fase de planejamento.** Ainda não há código. A especificação e a biblioteca de prompts estão em construção.
+**Fase de planejamento — contratos reconciliados (31/07/2026).** Ainda não há código runtime. Especificação, schemas, prompts e configs de exemplo estão alinhados; validador em `scripts/validate-contracts.mjs`.
 
 ---
 
