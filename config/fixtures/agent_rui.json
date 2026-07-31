@@ -1,0 +1,130 @@
+{
+  "id": "ag_rui",
+  "name": "Rui",
+  "appearanceDescription": "Homem de quase quarenta, ombros largos, cheiro de serragem e suor seco.",
+  "pos": { "x": 10.1, "y": 7.8 },
+  "rotation": 270,
+  "biology": {
+    "age": 39,
+    "needs": { "hunger": 50, "thirst": 45, "energy": 60, "hygiene": 55, "social": 40 },
+    "bodyTemperature": 36.8,
+    "parts": [
+      { "partId": "body", "health": 0 },
+      { "partId": "head", "health": 25 },
+      { "partId": "skull", "health": 25 },
+      { "partId": "brain", "health": 12 },
+      { "partId": "eyeL", "health": 8 },
+      { "partId": "eyeR", "health": 8 },
+      { "partId": "earL", "health": 8 },
+      { "partId": "earR", "health": 8 },
+      { "partId": "nose", "health": 8 },
+      { "partId": "jaw", "health": 12 },
+      { "partId": "neck", "health": 20 },
+      { "partId": "torso", "health": 40 },
+      { "partId": "ribcage", "health": 30 },
+      { "partId": "heart", "health": 15 },
+      { "partId": "lungL", "health": 15 },
+      { "partId": "lungR", "health": 15 },
+      { "partId": "stomach", "health": 15 },
+      { "partId": "liver", "health": 20 },
+      { "partId": "kidneyL", "health": 12 },
+      { "partId": "kidneyR", "health": 12 },
+      { "partId": "armL", "health": 30 },
+      { "partId": "handL", "health": 20 },
+      { "partId": "armR", "health": 30 },
+      { "partId": "handR", "health": 20 },
+      { "partId": "legL", "health": 30 },
+      { "partId": "footL", "health": 20 },
+      { "partId": "legR", "health": 30 },
+      { "partId": "footR", "health": 20 }
+    ],
+    "conditions": [],
+    "capacities": {
+      "consciousness": 1,
+      "moving": 1,
+      "manipulation": 1,
+      "sight": 1,
+      "hearing": 1,
+      "talking": 1,
+      "breathing": 1,
+      "bloodPumping": 1,
+      "bloodFiltration": 1,
+      "digestion": 1
+    },
+    "isAlive": true
+  },
+  "personality": {
+    "traitsText": "Fala pouco e ri alto. Gosta de parecer indispensável. Mentir pequeno não o incomoda se evita conversa longa.",
+    "bigFive": {
+      "openness": 55,
+      "conscientiousness": 40,
+      "extraversion": 70,
+      "agreeableness": 48,
+      "neuroticism": 30
+    },
+    "custom": {
+      "intelligence": 52,
+      "attention": 45,
+      "stubbornness": 5,
+      "honesty": 35,
+      "empathy": 40,
+      "curiosity": 60,
+      "laziness": 55,
+      "bravery": 62,
+      "aggression": 40
+    }
+  },
+  "skills": {
+    "construcao": 68,
+    "combate": 35,
+    "social": 58,
+    "cozinha": 20,
+    "artesanato": 50
+  },
+  "selfUnderstanding": {
+    "text": "Sou o tipo que aparece quando tem barulho para fazer. Não me peçam paciência.",
+    "generatedAtSimTime": 0
+  },
+  "voiceCard": [
+    { "question": "Alguém pede ajuda e você está ocupado?", "answer": "Digo que já estou a caminho. Depois vejo." },
+    { "question": "Como conta uma história?", "answer": "Com mais graça do que precisão. Os detalhes certos cansam." }
+  ],
+  "goals": {
+    "primary": {
+      "level": "primary",
+      "text": "Conseguir madeira boa sem pagar o preço cheio",
+      "rationale": "O cobertizo ainda não tem parede de verdade.",
+      "setAtSimTime": 0
+    }
+  },
+  "routine": {
+    "wakeHour": 7,
+    "sleepHour": 23,
+    "workStartHour": 9,
+    "workEndHour": 17,
+    "role": "marceneiro informal"
+  },
+  "relationships": [
+    {
+      "targetId": "ag_lia",
+      "sentiment": 20,
+      "kind": "vizinha",
+      "opinionId": "op_rui_lia"
+    }
+  ],
+  "opinions": [
+    {
+      "id": "op_rui_lia",
+      "kind": "social",
+      "targetId": "ag_lia",
+      "targetLabel": "Lia",
+      "nuanceDescription": "Vizinha que sempre tem o que fazer e acha que todo mundo deveria ter também. Boa de se ter por perto quando a gente precisa de farinha.",
+      "stance": "admire",
+      "dissonanceBuffer": [],
+      "stubbornnessThreshold": 5,
+      "currentThreshold": 5,
+      "lastBurstSimTime": null
+    }
+  ],
+  "flags": []
+}

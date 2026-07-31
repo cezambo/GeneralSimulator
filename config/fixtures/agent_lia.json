@@ -1,0 +1,134 @@
+{
+  "id": "ag_lia",
+  "name": "Lia",
+  "appearanceDescription": "Mulher de trinta e poucos, cabelo preso, mãos marcadas de farinha e verniz.",
+  "pos": { "x": 8.5, "y": 6.2 },
+  "rotation": 90,
+  "biology": {
+    "age": 34,
+    "needs": { "hunger": 35, "thirst": 40, "energy": 70, "hygiene": 75, "social": 55 },
+    "bodyTemperature": 36.6,
+    "parts": [
+      { "partId": "body", "health": 0 },
+      { "partId": "head", "health": 25 },
+      { "partId": "skull", "health": 25 },
+      { "partId": "brain", "health": 12 },
+      { "partId": "eyeL", "health": 8 },
+      { "partId": "eyeR", "health": 8 },
+      { "partId": "earL", "health": 8 },
+      { "partId": "earR", "health": 8 },
+      { "partId": "nose", "health": 8 },
+      { "partId": "jaw", "health": 12 },
+      { "partId": "neck", "health": 20 },
+      { "partId": "torso", "health": 40 },
+      { "partId": "ribcage", "health": 30 },
+      { "partId": "heart", "health": 15 },
+      { "partId": "lungL", "health": 15 },
+      { "partId": "lungR", "health": 15 },
+      { "partId": "stomach", "health": 15 },
+      { "partId": "liver", "health": 20 },
+      { "partId": "kidneyL", "health": 12 },
+      { "partId": "kidneyR", "health": 12 },
+      { "partId": "armL", "health": 30 },
+      { "partId": "handL", "health": 20 },
+      { "partId": "armR", "health": 30 },
+      { "partId": "handR", "health": 20 },
+      { "partId": "legL", "health": 30 },
+      { "partId": "footL", "health": 20 },
+      { "partId": "legR", "health": 30 },
+      { "partId": "footR", "health": 20 }
+    ],
+    "conditions": [],
+    "capacities": {
+      "consciousness": 1,
+      "moving": 1,
+      "manipulation": 1,
+      "sight": 1,
+      "hearing": 1,
+      "talking": 1,
+      "breathing": 1,
+      "bloodPumping": 1,
+      "bloodFiltration": 1,
+      "digestion": 1
+    },
+    "isAlive": true
+  },
+  "personality": {
+    "traitsText": "Prática e atenta ao que falta na casa. Prefere resolver com as mãos a discutir. Desconfia de promessas grandes.",
+    "bigFive": {
+      "openness": 45,
+      "conscientiousness": 78,
+      "extraversion": 42,
+      "agreeableness": 62,
+      "neuroticism": 38
+    },
+    "custom": {
+      "intelligence": 68,
+      "attention": 72,
+      "stubbornness": 6,
+      "honesty": 70,
+      "empathy": 65,
+      "curiosity": 50,
+      "laziness": 25,
+      "bravery": 48
+    }
+  },
+  "skills": {
+    "cozinha": 72,
+    "artesanato": 55,
+    "social": 48,
+    "medicina": 25,
+    "agricultura": 40
+  },
+  "selfUnderstanding": {
+    "text": "Sou quem mantém a casa de pé. Quando algo falta, sou a primeira a notar.",
+    "generatedAtSimTime": 0
+  },
+  "voiceCard": [
+    { "question": "O que você faz quando sobra um pouco de farinha?", "answer": "Faço um pão pequeno. Nunca deixo estragar." },
+    { "question": "Como responde a um favor?", "answer": "Com outro favor, no prazo. Não gosto de dever." }
+  ],
+  "goals": {
+    "primary": {
+      "level": "primary",
+      "text": "Manter a despensa abastecida até o inverno",
+      "rationale": "A casa depende disso e ninguém mais conta.",
+      "setAtSimTime": 0
+    },
+    "secondary": {
+      "level": "secondary",
+      "text": "Consertar a cadeira que range na cozinha",
+      "setAtSimTime": 0
+    }
+  },
+  "routine": {
+    "wakeHour": 6,
+    "sleepHour": 22,
+    "workStartHour": 8,
+    "workEndHour": 18,
+    "role": "cuidadora da casa"
+  },
+  "relationships": [
+    {
+      "targetId": "ag_rui",
+      "sentiment": 35,
+      "kind": "vizinho",
+      "opinionId": "op_lia_rui"
+    }
+  ],
+  "opinions": [
+    {
+      "id": "op_lia_rui",
+      "kind": "social",
+      "targetId": "ag_rui",
+      "targetLabel": "Rui",
+      "nuanceDescription": "Vizinho útil quando quer, mas some quando o trabalho aperta. Não conto com ele para o essencial.",
+      "stance": "indifferent",
+      "dissonanceBuffer": [],
+      "stubbornnessThreshold": 6,
+      "currentThreshold": 6,
+      "lastBurstSimTime": null
+    }
+  ],
+  "flags": []
+}
