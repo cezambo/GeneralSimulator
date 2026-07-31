@@ -176,14 +176,16 @@ Papel declarado — ferreiro, curandeiro, agricultor — que orienta metas e ele
 
 **Aceite:** a função aparece no contexto e influencia a meta terciária definida ao acordar.
 
-### A-029 — Relações numéricas
+### A-029 — Relações numéricas comprimidas
 `P1` · `V6` · PDF 482-483 · dep: A-001
 
-Valor de −100 a +100 por par de agentes, distinto da opinião social textual e vinculado a ela.
+Valor de −100 a +100 por par de agentes, distinto da opinião social textual. No **prompt**, relações entram comprimidas: `stance` canônico (`trust`, `distrust`, `admire`, `pity`, `resent`, `indifferent`, `fear`, `desire`, `neutral`) + número só quando a decisão exige nuance fina.
+
+**Pré-filtro:** `cognition.dissonance_classifier` recebe `topicFilter` e opiniões já filtradas por `stance`/`topic` — não manda todas contra todas quando o tópico é conhecido.
 
 **Grito de combate:** sem prompt LLM dedicado. A engine registra grito como **fato perceptível** (R-037); ouvintes aplicam **viés de relação** conforme sentimento com quem gritou (`obedecer` / `ignorar` / `contrariar` proporcional ao sentiment).
 
-**Aceite:** `sentimentDelta` de conversa altera o número imediatamente; grito ouvido modula disposição tática sem chamada extra.
+**Aceite:** `sentimentDelta` de conversa altera o número imediatamente; contexto de pensamento lista relações como stance, não tabela −100..+100; grito ouvido modula disposição tática sem chamada extra.
 
 ### A-030 — Geração de perfil inicial
 `P1` · `V3` · PDF 3-5 · dep: A-020, A-022 · prompt: `generation.agent_profile`

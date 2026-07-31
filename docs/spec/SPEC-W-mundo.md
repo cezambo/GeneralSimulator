@@ -104,9 +104,11 @@ Exemplo completo em [`config/materials.example.json`](../../config/materials.exa
 
 Dezoito propriedades estáticas: inflamável, sensível à água, condutivo, cortante, tóxico, comestível, potável, frágil, flutuante, isolante, transparente, magnético, orgânico, escorregadio, absorvente, corrosivo, luminoso, à prova de som.
 
-Cada uma é uma **etiqueta** no sentido de R-001, não um campo consultado caso a caso. As regras do substrato referenciam a etiqueta; nenhuma referencia o material.
+Cada uma é uma **etiqueta** no sentido de R-001 (`tags[]` + aliases em `properties` para compatibilidade de dados legados). Regras do substrato referenciam `#inflammable`, `#conductive`, etc. — nunca identificador de material.
 
-**Aceite:** cada propriedade participa de ao menos uma reação em R-018, e nenhuma regra do substrato nomeia um material diretamente.
+⚑ Migração: novos materiais declaram só em `tags[]`; `properties` booleanas permanecem no schema como espelho derivado na carga.
+
+**Aceite:** adicionar `"tags": ["inflammable"]` a um material novo faz ele participar de ignição sem tocar em código; nenhuma regra nomeia material por identificador.
 
 ### W-013 — Propriedades numéricas
 `P1` · `V1` · PDF 115 refinado por decisão · dep: W-011, R-009

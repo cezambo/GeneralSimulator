@@ -235,7 +235,9 @@ Roupa isola; roupa molhada esfria (R-022). Nada disso precisa de regra própria 
 ### B-019 — Necessidades como escalares com limiar
 `P0` · `V5` · PDF 45, 59 refinado por decisão · dep: B-006
 
-Fome, sede, energia, higiene, bexiga, conforto e necessidade social decaem em taxas configuráveis. Cruzar o limiar crítico **gera uma condição** — desnutrição, desidratação, privação de sono — com estágios, dor e offsets como qualquer outra.
+Fome, sede, energia (inclui conforto e fadiga), higiene e necessidade social decaem em taxas configuráveis. **Bexiga** não é escalar separado: pressão alta gera condição `urgência` ou dispara affordance `urinar` — omitida do prompt salvo se crítica (B-030).
+
+Cruzar o limiar crítico **gera uma condição** — desnutrição, desidratação, privação de sono — com estágios, dor e offsets como qualquer outra.
 
 Assim necessidade e saúde deixam de ser dois sistemas. Fome extrema não "drena vitalidade" por regra especial; ela produz desnutrição, que faz o que qualquer condição faz.
 
@@ -373,7 +375,9 @@ Não:
 
 > `braço_esq: 0.0 · manipulação: 0.51 · dor: 0.62 · consciência: 0.78`
 
-Este é o requisito de custo mais importante do documento. A simulação pode ser rica porque o resumo é barato: o corpo custa dezenas de tokens por prompt, não centenas, e o que determina a conta do projeto é token, não CPU.
+Este é o requisito de custo mais importante do documento. A simulação pode ser rica porque o resumo é barato: o corpo custa dezenas de tokens por prompt, não centenas.
+
+**Omitir por padrão:** bexiga/conforto abaixo do limiar, condições estágios baixos, capacidades > 0.9. Incluir só o saliente para a decisão corrente.
 
 **Aceite:** a descrição corporal cabe num orçamento de tokens declarado em `tuning.json`, e condições irrelevantes para a decisão corrente são omitidas.
 
