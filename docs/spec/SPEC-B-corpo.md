@@ -185,6 +185,12 @@ Eficiência da parte é o **funcionamento** de B-055 — um número derivado que
 
 Nada é atribuído diretamente. A especificação anterior já calculava consciência assim; a diferença é que agora **tudo** funciona assim, e a fórmula única de consciência dá lugar a uma composição de partes e condições.
 
+O peso declarado é **importância relativa**, e a soma ponderada é normalizada pelo total dos pesos. É o que faz as duas metades do aceite valerem juntas: a locomoção soma 1,4 de peso declarado neste arquivo de exemplo, e sem normalizar o corpo íntegro teria de ser aparado em 1 — o que faria a perna perdida custar 0,3 em vez de metade. Normalizar também dispensa quem edita o dado de manter a soma em exatamente 1, que é a armadilha da cobertura de B-002; aqui não há distribuição para enviesar, então a exigência não se repete.
+
+Efeito de condição sobre uma parte específica — o `partEfficiency` de B-007 — multiplica a contribuição daquela parte, e não o funcionamento dela. A distinção existe para que o funcionamento continue sendo exatamente o que B-055 define, e para que a via das condições continue sendo uma só.
+
+Capacidade que nenhuma parte serve vale zero, e não 1 por vacuidade: é assim que se descobre que faltou pendurá-la numa parte.
+
 **Aceite:** perder uma perna reduz movimento em aproximadamente metade, e perder as duas zera.
 
 ### B-013 — Consciência como multiplicador global
@@ -213,6 +219,8 @@ Duas coisas de uma vez, e é por isso que este requisito importa mais do que par
 `P0` · `V5` · decisão · dep: B-012
 
 Capacidades são função pura do conjunto de partes vivas e condições ativas. São recalculadas **quando esse conjunto muda**, nunca a cada tick.
+
+A mudança apenas **invalida**; o recálculo acontece na primeira leitura seguinte. Isso tem uma consequência que precisa ficar dita porque ela não é óbvia: morte por capacidade vital zerada (B-004) só pode ser sabida depois do recálculo, e portanto **consultar se um agente está vivo é consultar um derivado** e força o recálculo pendente. A alternativa — responder sem calcular — diria "vivo" sobre alguém cujo último pulmão acabou de sair, e diria isso até alguém consultar uma capacidade por outro motivo. É a pior forma de errar, porque a resposta certa existia e não foi procurada. Num corpo estável nada invalidou e a consulta não recalcula nada.
 
 **Aceite:** um agente estável por mil ticks executa zero recálculos de capacidade.
 
@@ -287,6 +295,8 @@ Os identificadores abaixo são os que estão no arquivo, em inglês, e não uma 
 | `corrosion` | `#living` | `chem_burn` |
 | `*` *(fallback)* | `!#living` | nenhuma condição: perde integridade como objeto (R-027) |
 
+Uma entrada da coluna do meio não é propriedade do material: `#vital` é propriedade da **parte**, e precisa ser, porque fígado e bíceps são o mesmo tecido e a linha que fala em perfuração de órgão tem de distinguir os dois. Ela é resolvida pelo mesmo canal de etiquetas de evento que o substrato já usa para as etiquetas derivadas de R-018, e não por uma segunda forma de casar — quem escreve a regra não deveria precisar saber em qual gaveta cada etiqueta mora.
+
 A coluna do meio é etiqueta e não nome de tecido, e a última linha é a que fecha o desenho. Ossos são frágeis porque o catálogo diz que são — igual a vidro e cerâmica. Nervos conduzem porque são condutivos — igual a cobre. E uma parte cujo material deixou de ser vivo simplesmente para de adoecer e passa a se comportar como matéria, que é exatamente o que se espera depois de uma transmutação (B-039).
 
 Os tipos de dano da primeira coluna vêm do vocabulário fechado de B-052, e são a única coisa aqui que não é ajustável em dado: acrescentar linha à matriz é editar arquivo, acrescentar **tipo** é mudar contrato.
@@ -299,6 +309,8 @@ A dependência de ordem é o custo de "a primeira que casa vence", e é um custo
 `P0` · `V5` · decisão de RimWorld · dep: B-002
 
 A parte atingida é sorteada pela cobertura, com viés quando a ação declara alvo. Partes internas só são atingidas se a camada externa já estiver comprometida ou se o dano for penetrante.
+
+Penetrante são corte, perfuração e elétrico; contusão, queimadura, frio e corrosivo precisam da camada externa cedida. Aberto o caminho, o golpe desce um nível por vez, com chance declarada em `tuning.json`, e entre os filhos internos o sorteio é ponderado pela vida máxima deles — é o que faz o coração ser mais raro que a caixa torácica sem que nenhum dos dois declare cobertura, que eles não podem declarar por não estarem no sorteio de fora. O caminho percorrido acompanha o resultado, para o log causal.
 
 **Aceite:** golpes aleatórios acertam o torso com muito mais frequência que os dedos, na proporção declarada.
 
@@ -412,6 +424,10 @@ A idade biológica é escrita por eventos — intoxicação sustentada, doença,
 
 Cada parte acumula carga tóxica de 0 a 1 a uma taxa própria e constante, declarada pela classe e sobrescrevível pela parte. A carga reduz o funcionamento (B-055) e é **continuamente removida** pelo sistema excretor (B-061), na proporção da filtragem sanguínea que ele ainda entrega.
 
+A remoção é **proporcional ao acúmulo da própria parte**, e não uma taxa absoluta igual para todas: o saldo de cada parte é `taxa × (1 − fator × filtragem)`, com o fator declarado em `tuning.json`. Uma taxa absoluta parecia mais simples e produzia a coisa errada — osso e músculo continuariam limpos enquanto o fígado apodrecia, e a falência seria local justamente onde B-060 diz que é sistêmica. Sendo proporcional, o sinal do saldo é o mesmo em toda parte e vira no mesmo instante; o fígado ainda vai primeiro, porque a taxa dele é maior, mas ninguém fica de fora.
+
+Daí sai o limiar, que é `1 / fator` de filtragem, e é ele que produz a assimetria dos rins sem nenhuma regra escrita sobre rins: com fator 1,5 o limiar fica em dois terços, um rim a menos deixa a filtragem em 0,75 e a remoção ainda vence, e os dois a menos a deixam em 0,5 e a corrida se inverte.
+
 Com tudo funcionando, a remoção supera o acúmulo e a carga fica perto de zero em toda parte. Essa é a propriedade que faz o mecanismo valer a pena: ele é invisível e gratuito na vida de um agente saudável, e só existe quando alguma coisa já deu errado.
 
 Substância tóxica de R-029 entra por aqui, e não por caminho novo: o payload deposita carga na parte que o vetor de R-030 alcançou, e daí em diante é a mesma aritmética. Veneno lento, água contaminada, fumaça respirada por semanas e metal na comida deixam de ser quatro sistemas e passam a ser quatro fontes do mesmo número.
@@ -434,7 +450,9 @@ Reusar a corrida de B-024 em vez de escrever um sistema de intoxicação é a de
 
 A subida chega à percepção e ao prompt como condição de corpo inteiro, do mesmo jeito que a perda de sangue de B-017: o agente sente náusea e fraqueza sem saber a causa, e quem olha vê alguém adoecendo devagar. E a morte tem causa registrada como qualquer outra (B-029) — a cadeia aponta para a parte que parou de filtrar, não para um escalar genérico.
 
-**Aceite:** destruir os dois rins de um agente faz a toxicidade subir simultaneamente em todas as partes e mata em prazo previsível, com a cadeia causal apontando para a perda de filtragem; restaurar a filtragem antes do fim reverte a subida.
+A última frase se cumpre de um jeito melhor do que o previsto, e vale registrar porque é o desenho funcionando sozinho: **não é a intoxicação cheia que mata.** A carga come o funcionamento de toda parte (B-055), e alguma capacidade vital zera antes de o escalar chegar ao fim — quem morre morre de coração parado, com a cadeia inteira no log causal. O escalar de intoxicação é a face perceptível, não o mecanismo letal, o que é exatamente o que se pede de um escalar genérico.
+
+**Aceite:** destruir os dois rins de um agente faz a toxicidade subir simultaneamente em todas as partes e mata em prazo previsível, com a cadeia causal apontando para a perda de filtragem; restaurar a filtragem antes do fim reverte a subida; e a morte é registrada como capacidade vital zerada, indistinguível de qualquer outra.
 
 ### B-061 — Sistemas fisiológicos
 `P1` · `V5` · decisão · dep: B-011, B-055 · dados: `config/body.json`

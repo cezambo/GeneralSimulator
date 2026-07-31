@@ -14,6 +14,7 @@ export * from './llm/index.js';
 export * from './state/index.js';
 export * from './perception/index.js';
 export * from './substrate/index.js';
+export * from './body/index.js';
 export * from './validator/index.js';
 export * from './cognition/context.js';
 export { validateDomain, validateLlmOutput, definitionOf } from './schema/index.js';

@@ -64,9 +64,17 @@
     "limiarInvocacaoBiologicaValidador": 0.05,
     "toxicidade": {
       "$comment": "B-055, B-059, B-060. Mesma corrida assimetrica da infeccao, aplicada ao corpo inteiro.",
-      "remocaoPorDiaComFiltragemPlena": 0.06,
+      "fatorRemocaoComFiltragemPlena": 1.5,
+      "porqueFator": "B-060. Quantas vezes o proprio acumulo de cada parte uma excrecao plena remove, e nao uma taxa absoluta igual para todas. Proporcional porque o saldo de toda parte precisa virar de sinal no MESMO instante: com taxa absoluta, osso e musculo continuariam limpos enquanto o figado apodrecia, e a falencia seria local onde o requisito diz que e sistemica. O valor decide o limiar, que e 1/fator de filtragem: em 1,5 o limiar fica em dois tercos, e daí sai 'perder um rim e sobrevivivel e perder os dois nao e' — 0,75 ainda vence, 0,5 nao — sem nenhuma regra escrita sobre rins.",
       "penalidadeFuncionamentoCargaPlena": 0.60,
       "limiarCargaPerceptivel": 0.20
+    },
+    "lesao": {
+      "$comment": "B-021. Selecao da parte atingida.",
+      "chanceDescerUmNivelParaDentro": 0.35,
+      "viesAlvoDeclarado": 0.70,
+      "fracaoVidaCamadaComprometida": 0.40,
+      "porqueVies": "B-021. Declarar alvo enviesa, e nao decide: em 1,0 mirar a cabeca seria acertar a cabeca sempre, e o sorteio de cobertura deixaria de existir toda vez que alguem mirasse."
     },
     "idadeBiologica": {
       "$comment": "B-058. O teto existe para velhice degradar sem matar sozinha.",
