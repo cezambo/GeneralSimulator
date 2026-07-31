@@ -22,7 +22,7 @@ var _connected: bool = false
 var _last_speed: int = 1
 var _paused: bool = false
 var _construction: bool = false
-## wall | floor | door | erase | furniture | del_object
+## wall | wall_wood | floor | door | erase | furniture | del_object
 var _build_tool: String = "wall"
 var _furniture_def: String = "cadeira_madeira"
 ## "" | wet | extinguish — ferramentas RT fora da construção
@@ -121,7 +121,7 @@ func clear_sandbox_tool() -> void:
 
 func _refresh_help() -> void:
 	if _construction:
-		help_label.text = "C·sair · B/F/R parede/chão/porta · E ou botão direito: apagar tile · T cadeira · X móvel · Z/Y undo/redo"
+		help_label.text = "C·sair · B parede pedra · N parede madeira · F/R chão/porta · E apagar · T cadeira · X móvel · Z/Y undo/redo"
 		set_selection(_selection_text)
 	else:
 		help_label.text = "Clique: sel./andar · porta: clique nela · G água · Q apagar fogo · C construir · Espaço pausa · 1–4 vel · V cone · WASD câmera"
@@ -131,7 +131,9 @@ func _refresh_help() -> void:
 func _tool_label(tool_id: String) -> String:
 	match tool_id:
 		"wall":
-			return "parede (pinho)"
+			return "parede (pedra) — corta fogo"
+		"wall_wood":
+			return "parede (pinho) — queima"
 		"floor":
 			return "chão (pinho)"
 		"door":
@@ -162,14 +164,6 @@ func _set_tool(tool_id: String) -> void:
 	build_tool_changed.emit(_build_tool)
 
 
-func clear_sandbox_tool() -> void:
-	if _sandbox_tool == "":
-		return
-	_sandbox_tool = ""
-	_refresh_help()
-	sandbox_tool_changed.emit(_sandbox_tool)
-
-
 func _set_sandbox_tool(tool_id: String) -> void:
 	if _sandbox_tool == tool_id:
 		_sandbox_tool = ""
@@ -190,6 +184,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _construction:
 		if event.is_action_pressed("build_tool_wall"):
 			_set_tool("wall")
+		elif event.is_action_pressed("build_tool_wall_wood"):
+			_set_tool("wall_wood")
 		elif event.is_action_pressed("build_tool_floor"):
 			_set_tool("floor")
 		elif event.is_action_pressed("build_tool_door"):

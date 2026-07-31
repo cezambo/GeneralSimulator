@@ -111,7 +111,7 @@ func _apply_sandbox_at_mouse() -> void:
 	if cell == _last_painted:
 		return
 	_last_painted = cell
-	var effect := hud.current_sandbox_tool()
+	var effect: String = hud.current_sandbox_tool()
 	if effect == "":
 		return
 	core.apply_tool(effect, [{"x": cell.x, "y": cell.y}])
@@ -124,7 +124,7 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 	if cell == _last_painted:
 		return
 	_last_painted = cell
-	var tool_id := "erase" if force_erase else hud.current_build_tool()
+	var tool_id: String = "erase" if force_erase else hud.current_build_tool()
 	match tool_id:
 		"erase":
 			core.remove_tiles([{"x": cell.x, "y": cell.y}])
@@ -138,9 +138,11 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 			core.paint_tiles("floor", "pinho", [{"x": cell.x, "y": cell.y}])
 		"door":
 			core.paint_tiles("door", "pinho", [{"x": cell.x, "y": cell.y}])
-		_:
-			# Pinho: parede inflamável — o fogo pode consumir e virar escombro.
+		"wall_wood":
 			core.paint_tiles("wall", "pinho", [{"x": cell.x, "y": cell.y}])
+		_:
+			# Pedra: corta-fogo. Parede de madeira (inflamável) = tecla N.
+			core.paint_tiles("wall", "pedra", [{"x": cell.x, "y": cell.y}])
 
 
 func _update_hover_inspect() -> void:

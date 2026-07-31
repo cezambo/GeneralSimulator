@@ -42,7 +42,7 @@ godot --path packages/client-godot
 | Q | Ferramenta RT: apagar fogo (`extinguish`) |
 | Botão direito (com ferramenta RT) | Cancela a ferramenta |
 | C | Entrar/sair do modo construção (pausa) |
-| B / F / R | Parede (pinho) / chão / porta |
+| B / N / F / R | Parede pedra (corta fogo) / parede madeira / chão / porta |
 | E ou botão direito | Apagar tile (volta a chão) — não apaga fogo |
 | T | Colocar cadeira |
 | X | Remover móvel na célula |
