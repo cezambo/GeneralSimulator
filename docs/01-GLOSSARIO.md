@@ -131,8 +131,8 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Comitê** | — | Reunião de especialistas por habilidade. |
 | **Ata** | `MeetingVerdict` | Saída estruturada da reunião. Altera leis e metas comunitárias. |
 | **Lei da comunidade** | `CommunityLaw` | Norma vigente. Entra no contexto do GM e dos agentes. |
-| **Grito semântico** | `Shout` | Fala de combate que propaga significado num raio e enviesa aliados. |
-| **Opção tática** | `TacticalOption` | Alternativa pré-calculada pela engine em conflito. A LLM escolhe entre elas. |
+| **Grito** | `Shout` | Fala de alcance ampliado. A engine o entrega como fato perceptível a cada ouvinte, com viés derivado da relação. ⚑ não há chamada de LLM por ouvinte. S-031, S-032. |
+| **Opção tática** | — | ⚑ **aposentado.** Conflito é escolha de agência decidida no pensamento normal, sem prompt tático nem lista pré-calculada. S-030. |
 
 ## Game Master
 
@@ -144,7 +144,7 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 | **Retorno diegético** | `agentFeedback` | O que o agente percebe. Nunca linguagem de sistema. |
 | **Lei inviolável** | `InviolableLaw` | Regra do cenário que o GM não contorna. |
 | **Instrução do usuário** | `userInstruction` | Orientação com prioridade máxima sobre o GM. |
-| **Memória do GM** | `GMWorldMemory` | Histórico que mantém coerência entre dias. Nunca visível aos agentes. |
+| **Memória do GM** | — | ⚑ **aposentado.** A coerência entre dias vem do estado do mundo, que é autoritativo na engine, e do log causal determinístico (`R-048`) — ambos grátis. Um resumo em prosa seria uma segunda fonte de verdade inflando o prompt mais chamado. |
 
 ## Camada LLM
 
