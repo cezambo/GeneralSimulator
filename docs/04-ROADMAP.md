@@ -142,6 +142,14 @@ Aqui entra o motor mental completo.
 
 ---
 
+## Estado da especificação
+
+Os dez domínios estão escritos: `W` mundo, `R` substrato, `A` agente, `B` corpo, `C` cognição, `S` interação, `G` GM, `U` interface, `L` camada LLM e `X` transversal. Somados, 343 requisitos com critério de aceite.
+
+O que falta não é mais especificação, e sim código: nenhum requisito foi implementado. `V0` é o próximo passo real.
+
+---
+
 ## Nota sobre prompts
 
 A escrita dos ~16 prompts faltantes **não segue esta ordem sequencialmente**. Prompts são conteúdo, não código, e cada um é barato de escrever isolado. A regra prática: escrever o prompt junto com a fatia que o consome, e testá-lo contra o tier mais fraco assim que houver cassete.

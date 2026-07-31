@@ -11,7 +11,7 @@ Os arquivos `*.example.json` são referência comentada e são versionados. Os a
 | `body.example.json` | árvore de partes do corpo | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
 | `conditions.example.json` | condições e matriz de lesão | [SPEC-B](../docs/spec/SPEC-B-corpo.md) |
 | `models.example.json` | provedor e modelo por tier (`compact` / `narrative` / `longform`) | [03-CAMADA-LLM](../docs/03-CAMADA-LLM.md) |
-| `tuning.json` | todos os números ajustáveis | ainda não escrito |
+| `tuning.example.json` | todos os números ajustáveis | [SPEC-X](../docs/spec/SPEC-X-transversal.md) |
 
 Tudo é validado contra [`schemas/domain.schema.json`](../schemas/domain.schema.json) no carregamento. Chaves iniciadas por `_` são comentário e a engine ignora.
 

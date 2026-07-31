@@ -98,25 +98,7 @@
       "propagates": "wholeLiquidBody",
       "porque": "Uma poca energizada eletrifica por inteiro, nao so o ponto de contato."
     },
-  "injuryTriggers": [
     {
-      "id": "shock-on-entry",
-      "when": "entry",
-      "in": ["electrified", "#creature"],
-      "injury": { "damageType": "electric", "severity": 40, "condition": "choque" },
-      "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia. Fora do vocabulario R-015 — e gatilho de matriz de lesao (B-022)."
-    },
-    {
-      "id": "slip-on-entry",
-      "when": "entry",
-      "in": ["#slippery", "#creature"],
-      "injury": { "damageType": "blunt", "severity": 25, "condition": "queda" },
-      "modifiedBy": { "hurry": 0.5, "carryingWeight": 0.2 },
-      "porque": "Superficie escorregadia derruba quem passa. Fora do vocabulario R-015 — e gatilho de matriz de lesao (B-022)."
-    }
-  ],
-
-  "reactions": [
       "id": "impact-shatter",
       "when": "contact",
       "in": ["#impact", "#fragile"],
@@ -158,6 +140,31 @@
       "effect": "stain",
       "chance": 1.0,
       "porque": "Sangue, tinta, fuligem e lama deixam vestigio persistente e visivel. E por este caminho que um fato fisico vira evidencia social."
+    }
+  ],
+
+  "_notaGatilhosDeLesao": [
+    "Bloco separado das reacoes de proposito: 'damage' e 'fall' nao sao efeitos do vocabulario",
+    "fechado de R-015. Eles nao mudam estado de tile — alimentam a matriz de lesao (B-022),",
+    "que traduz tipo de dano mais material atingido em condicao. Misturar os dois no mesmo",
+    "array foi o que quebrou este arquivo antes."
+  ],
+
+  "injuryTriggers": [
+    {
+      "id": "shock-on-entry",
+      "when": "entry",
+      "in": ["electrified", "#creature"],
+      "injury": { "damageType": "electric", "severity": 40, "condition": "choque" },
+      "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia."
+    },
+    {
+      "id": "slip-on-entry",
+      "when": "entry",
+      "in": ["#slippery", "#creature"],
+      "injury": { "damageType": "blunt", "severity": 25, "condition": "queda" },
+      "modifiedBy": { "hurry": 0.5, "carryingWeight": 0.2 },
+      "porque": "Superficie escorregadia derruba quem passa."
     }
   ],
 

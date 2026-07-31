@@ -1,0 +1,144 @@
+{
+  "$comment": "Todos os numeros ajustaveis do simulador, num lugar so. Nenhum destes valores deve aparecer no codigo. Cada bloco cita os requisitos que o consomem. Copie para tuning.json para uso local.",
+  "version": 1,
+
+  "tempo": {
+    "$comment": "W-053. Calendario simulado.",
+    "minutosPorTick": 1,
+    "horasPorDia": 24,
+    "diasPorEstacao": 15,
+    "estacoesPorAno": 4,
+    "safetyOffsetDias": 8,
+    "velocidadesDisponiveis": [0, 1, 2, 5, 20]
+  },
+
+  "percepcao": {
+    "$comment": "A-007, A-009, R-034, R-035. Alcances em tiles.",
+    "coneVisaoGraus": 110,
+    "alcanceVisaoTiles": 12,
+    "raioAudicaoTiles": 8,
+    "raioGritoTiles": 20,
+    "raioSussurroTiles": 2,
+    "alcanceInteracaoTiles": 1.5,
+    "alcanceOdorTiles": 3
+  },
+
+  "movimento": {
+    "$comment": "A-005. Modulado por capacidades derivadas.",
+    "velocidadeBaseTilesPorMinuto": 4.0,
+    "fatorVelocidadeMinimoPorMobilidade": 0.15
+  },
+
+  "substrato": {
+    "$comment": "R-003, R-006, R-009, R-014, R-049.",
+    "maxEntradasPorReacao": 3,
+    "orcamentoTickMs": 4.0,
+    "maxTilesAtivosSimultaneos": 512,
+    "chanceBasePropagacao": 0.35,
+    "decaimentoEstadoTransientePorTick": 0.02,
+    "limiarVolumeLiquidoPerceptivel": 0.05,
+    "ticksParaApodrecimento": 4320
+  },
+
+  "corpo": {
+    "$comment": "B-013, B-014, B-019, B-024, B-030.",
+    "limiarConscienciaInstinto": 0.70,
+    "limiarConscienciaInconsciente": 0.40,
+    "limiarDorPanico": 0.60,
+    "limiarCapacidadeOmitirDoPrompt": 0.90,
+    "orcamentoTokensDescricaoCorporal": 60,
+    "limiarInvocacaoBiologicaGm": 0.05,
+    "necessidades": {
+      "fomeQuedaPorDia": 1.0,
+      "sedeQuedaPorDia": 1.6,
+      "energiaQuedaPorHoraAcordado": 0.055,
+      "higieneQuedaPorDia": 0.4,
+      "socialQuedaPorDia": 0.5,
+      "limiarSaliente": 0.35,
+      "limiarCritico": 0.15
+    },
+    "infeccao": {
+      "$comment": "B-024 a B-026. Corrida assimetrica: janela apertada mas vencivel.",
+      "severidadePorDiaSemTratamento": 0.28,
+      "imunidadePorDiaBase": 0.24,
+      "bonusImunidadeRepousoTotal": 0.10,
+      "reducaoSeveridadePorDiaTratado": 0.18,
+      "penalidadeImunidadePorDesnutricao": 0.08,
+      "severidadeLetal": 1.0
+    }
+  },
+
+  "cognicao": {
+    "$comment": "C-002, C-003, C-007, C-018, C-027, C-030, C-033.",
+    "orcamentoTokensContextoPensamento": 2200,
+    "cadenciaGatilhos": {
+      "agendadoPorDia": 5,
+      "contemplativoAposMinutosOciosos": 90,
+      "espontaneoChancePorHora": 0.12,
+      "reativoCooldownMinutos": 10
+    },
+    "memoria": {
+      "tetoCurtoPrazoItens": 40,
+      "maxMarcantesPorDia": 5,
+      "tetoMemoriasNoContexto": 8,
+      "pesoRecencia": 0.4,
+      "pesoMarcante": 0.4,
+      "pesoTopico": 0.2
+    },
+    "opinioes": {
+      "$comment": "C-030 e C-033. Compressao, nunca apagamento.",
+      "tetoOpinioesNoContexto": 25,
+      "orcamentoTokensBlocoOpinioes": 900,
+      "limiarTeimosiaBasePorPontoDePersonalidade": 3,
+      "acrescimoLimiarPorSinergia": 1,
+      "acrescimoMaximoPorSinergia": 6,
+      "intensidadeMinimaParaBuffer": 1,
+      "diasParaCandidataConsolidacao": 5
+    },
+    "metas": {
+      "maxNiveisCascataPorEvento": 1,
+      "duracaoMaximaCaprichoMinutos": 120,
+      "chanceCaprichoPorTedio": 0.25
+    }
+  },
+
+  "social": {
+    "$comment": "S-006, S-007, S-013, S-015, S-019, S-032.",
+    "turnosBase": 3,
+    "turnosPorPontoHabilidadeSocial": 0.04,
+    "turnosMaximosAbsoluto": 8,
+    "maxParticipantes": 4,
+    "extensoesPermitidasPorConversa": 1,
+    "sentimentDeltaMin": -10,
+    "sentimentDeltaMax": 10,
+    "cooldownHandshakeMinutos": 30,
+    "reservaOrcamentoParaConversa": 6,
+    "viesGritoPorPontoDeSentimento": 0.01
+  },
+
+  "gm": {
+    "$comment": "G-002, G-024, G-027, G-028.",
+    "maxRegrasProvisoriasVivas": 24,
+    "invocacoesParaEntrarNaDivida": 3,
+    "disparosPorDiaParaAlertaAnomalia": 50,
+    "maxTentativasReparo": 2
+  },
+
+  "llm": {
+    "$comment": "L-006, L-016, L-017. Espelha config/models.json quando houver conflito, models.json vence.",
+    "tetoChamadasPorAgentePorDiaSimulado": 20,
+    "tetoGastoDiarioUsd": 5.0,
+    "aoExceder": "degrade",
+    "maxRequisicoesPorMinuto": 30,
+    "recuoInicialMs": 500,
+    "recuoMaximoMs": 30000
+  },
+
+  "mundo": {
+    "$comment": "W-001, W-038.",
+    "larguraPadrao": 96,
+    "alturaPadrao": 96,
+    "tamanhoCelulaIndiceEspacial": 8,
+    "raioFiltroTransporteTiles": 15
+  }
+}
