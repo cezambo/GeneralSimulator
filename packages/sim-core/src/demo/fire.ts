@@ -15,7 +15,7 @@ import { SimClock } from '../world/clock.js';
 export interface FireDemoOptions {
   readonly seed?: string;
   readonly ticks?: number;
-  /** Célula onde a chama começa (interior da sala 5×5). */
+  /** Célula onde a chama começa (interior da sala). */
   readonly ignition?: { x: number; y: number };
   readonly config?: SimConfig;
 }

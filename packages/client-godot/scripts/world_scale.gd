@@ -15,15 +15,24 @@ static func cell_to_px(x: int, y: int) -> Vector2:
 	return Vector2(float(x), float(y)) * PIXELS_PER_TILE
 
 
-static func tile_color(tile_type: String, burning: bool = false) -> Color:
+static func px_to_cell(px: Vector2) -> Vector2i:
+	return Vector2i(int(floor(px.x / PIXELS_PER_TILE)), int(floor(px.y / PIXELS_PER_TILE)))
+
+
+static func tile_color(tile_type: String, burning: bool = false, material_id: String = "") -> Color:
+	if material_id == "cinza":
+		return Color("5a5a5a")
+	if material_id == "carvao" or material_id == "lascas":
+		return Color("2b2118")
+
 	var c: Color
 	match tile_type:
 		"wall":
-			c = Color("2c333a")
+			c = Color("3d4650")
 		"floor":
-			c = Color("8b7355")
+			c = Color("c4a574")
 		"door":
-			c = Color("5c4033")
+			c = Color("8a5a3a")
 		"water":
 			c = Color("3a6ea5")
 		"road":
@@ -33,5 +42,6 @@ static func tile_color(tile_type: String, burning: bool = false) -> Color:
 		_:
 			c = Color("4a5560")
 	if burning:
-		c = c.lerp(Color("e85d04"), 0.55)
+		# Chama bem óbvia — não um tint suave.
+		return Color("ff5a00")
 	return c

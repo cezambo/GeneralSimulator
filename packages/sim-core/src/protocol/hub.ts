@@ -6,10 +6,17 @@
  */
 
 import type { Simulation } from '../state/index.js';
+import type { ObjectDef } from '../types/domain.js';
 import type { World } from '../world/grid.js';
 import type { SimClock } from '../world/clock.js';
+import { BuildHistory } from './build.js';
 import { makeEnvelope, makeError, parseEnvelope, ProtocolError } from './envelope.js';
-import { agentsUpdatePayload, buildWorldSnapshot, clockPayload } from './snapshot.js';
+import {
+  agentsUpdatePayload,
+  buildWorldSnapshot,
+  clockPayload,
+  type AgentMotionLookup,
+} from './snapshot.js';
 import type {
   ClientRole,
   Envelope,
@@ -25,11 +32,34 @@ export interface ProtocolSink {
   readonly subscriptions?: ReadonlySet<string>;
 }
 
+export type AgentMoveHandler = (
+  agentId: string,
+  goal: { x: number; y: number },
+) => { ok: true } | { ok: false; code: string; message: string };
+
+/** Ferramentas GM em tempo real (água / apagar fogo). */
+export type ToolEffectId = 'wet' | 'extinguish';
+
+export type ToolApplyHandler = (
+  effect: ToolEffectId,
+  cells: readonly { x: number; y: number }[],
+) => WorldDeltaPayload;
+
 export interface ProtocolHubOptions {
   readonly sim: Simulation;
   readonly world: World;
   readonly clock: SimClock;
   readonly mode?: SimMode;
+  /** Trajetórias para `agents.update` / snapshot (§4.2). */
+  readonly motionOf?: AgentMotionLookup;
+  /** Clique-para-andar no cliente fino. */
+  readonly onAgentMove?: AgentMoveHandler;
+  /** Catálogo ObjectDef — necessário para placeObject. */
+  readonly objects?: ReadonlyMap<string, ObjectDef>;
+  /** Geometria mudou (parede/porta/móvel) — revalidar caminhos. */
+  readonly onGeometryChanged?: () => void;
+  /** Ferramentas de substrato fora do modo construção. */
+  readonly onToolApply?: ToolApplyHandler;
 }
 
 export class ProtocolHub {
@@ -37,6 +67,11 @@ export class ProtocolHub {
   readonly #world: World;
   readonly #clock: SimClock;
   #mode: SimMode;
+  readonly #motionOf: AgentMotionLookup | undefined;
+  readonly #onAgentMove: AgentMoveHandler | undefined;
+  readonly #onGeometryChanged: (() => void) | undefined;
+  readonly #onToolApply: ToolApplyHandler | undefined;
+  readonly #build: BuildHistory;
   readonly #clients = new Map<string, ProtocolSink>();
   #seq = 0;
   /** Seq por cliente (mensagens inbound). */
@@ -47,6 +82,11 @@ export class ProtocolHub {
     this.#world = opts.world;
     this.#clock = opts.clock;
     this.#mode = opts.mode ?? 'normal';
+    this.#motionOf = opts.motionOf;
+    this.#onAgentMove = opts.onAgentMove;
+    this.#onGeometryChanged = opts.onGeometryChanged;
+    this.#onToolApply = opts.onToolApply;
+    this.#build = new BuildHistory(opts.sim, opts.world, opts.objects);
   }
 
   get clientCount(): number {
@@ -57,6 +97,14 @@ export class ProtocolHub {
     return this.#mode;
   }
 
+  /** Snapshot fresco para todos (ex.: depois de acender o fogo). */
+  broadcastSnapshot(): void {
+    this.broadcast(
+      'world.snapshot',
+      buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode, this.#motionOf),
+    );
+  }
+
   /**
    * Conecta e manda `world.snapshot` completo.
    * Reconexão = nova conexão: o cliente nunca precisa de delta acumulado. X-007.
@@ -64,7 +112,11 @@ export class ProtocolHub {
   connect(client: ProtocolSink): void {
     this.#clients.set(client.id, client);
     this.#inboundSeq.set(client.id, 0);
-    this.#sendTo(client, 'world.snapshot', buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode));
+    this.#sendTo(
+      client,
+      'world.snapshot',
+      buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode, this.#motionOf),
+    );
   }
 
   disconnect(clientId: string): void {
@@ -111,11 +163,16 @@ export class ProtocolHub {
   /** Empurra relógio + agentes para todos (cadência do laço do núcleo). */
   pushFrame(): void {
     this.broadcast('clock.update', clockPayload(this.#clock));
-    this.broadcast('agents.update', agentsUpdatePayload(this.#sim));
+    this.broadcast('agents.update', agentsUpdatePayload(this.#sim, this.#motionOf));
   }
 
   broadcastDelta(delta: WorldDeltaPayload): void {
     this.broadcast('world.delta', delta);
+  }
+
+  #afterGeometryEdit(delta: WorldDeltaPayload): void {
+    this.broadcastDelta(delta);
+    this.#onGeometryChanged?.();
   }
 
   broadcast(type: string, payload: unknown): void {
@@ -150,14 +207,170 @@ export class ProtocolHub {
           throw new ProtocolError('BAD_MODE', `modo inválido: ${String(mode)}`);
         }
         this.#mode = mode;
-        // Construção pausa automaticamente (PDF / protocolo §5.1).
+        // Construção pausa; sair retoma (PDF / protocolo §5.1).
         if (mode === 'construction') this.#clock.pause();
-        this.broadcast('world.snapshot', buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode));
+        else this.#clock.resume();
+        this.broadcast(
+          'world.snapshot',
+          buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode, this.#motionOf),
+        );
+        this.broadcast('clock.update', clockPayload(this.#clock));
         if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, mode }, env.reqId);
         return;
       }
+      case 'cmd.build.paintTile': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'paint só em modo construção');
+        }
+        const delta = this.#build.paintTiles(
+          String(p['tileType'] ?? ''),
+          String(p['materialId'] ?? ''),
+          p['cells'],
+        );
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) {
+          this.#sendTo(client, 'res.ok', { ok: true, painted: delta.tiles?.length ?? 0 }, env.reqId);
+        }
+        return;
+      }
+      case 'cmd.build.remove': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'remove só em modo construção');
+        }
+        const target = String(p['target'] ?? 'tile');
+        if (target === 'tile') {
+          const delta = this.#build.removeTiles(p['cells']);
+          this.#afterGeometryEdit(delta);
+          if (env.reqId) {
+            this.#sendTo(client, 'res.ok', { ok: true, removed: delta.tiles?.length ?? 0 }, env.reqId);
+          }
+          return;
+        }
+        if (target === 'object') {
+          const objectId = p['objectId'] !== undefined ? String(p['objectId']) : undefined;
+          const cells = Array.isArray(p['cells']) ? p['cells'] : [];
+          const first = cells[0] as { x?: unknown; y?: unknown } | undefined;
+          const cell =
+            first && Number.isFinite(Number(first.x)) && Number.isFinite(Number(first.y))
+              ? { x: Math.floor(Number(first.x)), y: Math.floor(Number(first.y)) }
+              : undefined;
+          const delta = this.#build.removeObject({
+            ...(objectId ? { objectId } : {}),
+            ...(cell ? { cell } : {}),
+          });
+          this.#afterGeometryEdit(delta);
+          if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true }, env.reqId);
+          return;
+        }
+        throw new ProtocolError('BAD_TARGET', `target inválido: ${target}`);
+      }
+      case 'cmd.build.placeObject': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'placeObject só em modo construção');
+        }
+        const objectDefId = String(p['objectDefId'] ?? '');
+        const posRaw = p['pos'] as { x?: unknown; y?: unknown } | undefined;
+        const x = Number(posRaw?.x);
+        const y = Number(posRaw?.y);
+        if (!objectDefId || !Number.isFinite(x) || !Number.isFinite(y)) {
+          throw new ProtocolError('BAD_PLACE', 'placeObject exige objectDefId e pos');
+        }
+        const rotation = Number(p['rotation'] ?? 0);
+        const delta = this.#build.placeObject(
+          objectDefId,
+          { x, y },
+          Number.isFinite(rotation) ? rotation : 0,
+        );
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) {
+          this.#sendTo(
+            client,
+            'res.ok',
+            { ok: true, objectId: delta.objectsUpsert?.[0]?.id },
+            env.reqId,
+          );
+        }
+        return;
+      }
+      case 'cmd.build.undo': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'undo de construção só em modo construção');
+        }
+        const delta = this.#build.undo();
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true }, env.reqId);
+        return;
+      }
+      case 'cmd.build.redo': {
+        if (this.#mode !== 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'redo de construção só em modo construção');
+        }
+        const delta = this.#build.redo();
+        this.#afterGeometryEdit(delta);
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true }, env.reqId);
+        return;
+      }
+      case 'cmd.tool.apply': {
+        if (!this.#onToolApply) {
+          throw new ProtocolError('UNSUPPORTED', 'cmd.tool.apply não está ativo nesta sessão');
+        }
+        if (this.#mode === 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'ferramentas de substrato só em modo normal');
+        }
+        const effect = String(p['effect'] ?? '');
+        if (effect !== 'wet' && effect !== 'extinguish') {
+          throw new ProtocolError('BAD_EFFECT', `efeito de ferramenta inválido: ${effect}`);
+        }
+        const cellsRaw = Array.isArray(p['cells']) ? p['cells'] : [];
+        const cells: { x: number; y: number }[] = [];
+        for (const raw of cellsRaw) {
+          const c = raw as { x?: unknown; y?: unknown };
+          const x = Number(c?.x);
+          const y = Number(c?.y);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            throw new ProtocolError('BAD_CELLS', 'cells exige {x,y} numéricos');
+          }
+          cells.push({ x: Math.floor(x), y: Math.floor(y) });
+        }
+        if (cells.length === 0) {
+          throw new ProtocolError('BAD_CELLS', 'cmd.tool.apply exige cells');
+        }
+        const delta = this.#onToolApply(effect, cells);
+        this.broadcastDelta(delta);
+        if (env.reqId) {
+          this.#sendTo(client, 'res.ok', { ok: true, effect, cells: cells.length }, env.reqId);
+        }
+        return;
+      }
+      case 'cmd.agent.move': {
+        if (!this.#onAgentMove) {
+          throw new ProtocolError('UNSUPPORTED', 'cmd.agent.move não está ativo nesta sessão');
+        }
+        if (this.#mode === 'construction') {
+          throw new ProtocolError('WRONG_MODE', 'movimento bloqueado em modo construção');
+        }
+        const agentId = String(p['agentId'] ?? '');
+        const x = Number(p['x']);
+        const y = Number(p['y']);
+        if (!agentId || !Number.isFinite(x) || !Number.isFinite(y)) {
+          throw new ProtocolError('BAD_MOVE', 'cmd.agent.move exige agentId, x, y');
+        }
+        const result = this.#onAgentMove(agentId, { x: Math.floor(x), y: Math.floor(y) });
+        if (!result.ok) {
+          throw new ProtocolError(result.code, result.message);
+        }
+        this.pushFrame();
+        if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, agentId }, env.reqId);
+        return;
+      }
       case 'req.world.region': {
-        const snap = buildWorldSnapshot(this.#sim, this.#world, this.#clock, this.#mode);
+        const snap = buildWorldSnapshot(
+          this.#sim,
+          this.#world,
+          this.#clock,
+          this.#mode,
+          this.#motionOf,
+        );
         this.#sendTo(client, 'res.world.region', snap, env.reqId);
         return;
       }

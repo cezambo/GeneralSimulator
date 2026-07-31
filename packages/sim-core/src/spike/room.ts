@@ -1,5 +1,5 @@
 /**
- * Sala fake 5×5 do spike V0. Descartável — não é worldgen.
+ * Sala fake do spike / demo visual. Descartável — não é worldgen.
  */
 
 import { readFileSync } from 'node:fs';
@@ -13,17 +13,25 @@ import { World } from '../world/grid.js';
 export const SPIKE_GRID = 'sala';
 export const CHAIR_ID = 'obj_cadeira_1';
 
-/** Interior transitável: (1..3)×(1..3). Borda é parede; (2,0) é porta. */
+/** Tamanho da sala de teste (borda = parede). Interior transitável: 12×10. */
+export const SPIKE_WIDTH = 14;
+export const SPIKE_HEIGHT = 12;
+
+/** Interior transitável: (1..W-2)×(1..H-2). Porta no meio da parede norte. */
 export function buildSpikeRoom(cfg: SimConfig, seed: string): { sim: Simulation; world: World } {
+  const w = SPIKE_WIDTH;
+  const h = SPIKE_HEIGHT;
+  const doorX = Math.floor(w / 2);
+
   const sim = Simulation.create({
     seed,
     preset: cfg.models.activePreset,
     configFingerprint: cfg.fingerprint,
-    scenarioName: 'spike-v0-sala-5x5',
+    scenarioName: `spike-sala-${w}x${h}`,
     mainGrid: {
       id: SPIKE_GRID,
-      width: 5,
-      height: 5,
+      width: w,
+      height: h,
       defaultType: 'floor',
       defaultMaterialId: 'pinho',
     },
@@ -34,10 +42,10 @@ export function buildSpikeRoom(cfg: SimConfig, seed: string): { sim: Simulation;
     scale: { metersPerTile: cfg.tuning.metersPerTile },
   });
 
-  for (let y = 0; y < 5; y += 1) {
-    for (let x = 0; x < 5; x += 1) {
-      const borda = x === 0 || y === 0 || x === 4 || y === 4;
-      if (x === 2 && y === 0) {
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const borda = x === 0 || y === 0 || x === w - 1 || y === h - 1;
+      if (x === doorX && y === 0) {
         world.setType(SPIKE_GRID, x, y, 'door');
         world.setMaterial(SPIKE_GRID, x, y, 'pinho');
         world.openDoor(SPIKE_GRID, x, y);
@@ -54,7 +62,7 @@ export function buildSpikeRoom(cfg: SimConfig, seed: string): { sim: Simulation;
   const cadeira: WorldObject = {
     id: CHAIR_ID,
     defId: 'cadeira_madeira',
-    pos: { x: 2.5, y: 2.5 },
+    pos: { x: w / 2, y: h / 2 },
     gridId: SPIKE_GRID,
     integrity: 1,
   };
@@ -66,10 +74,10 @@ export function buildSpikeRoom(cfg: SimConfig, seed: string): { sim: Simulation;
 export function loadSpikeAgents(): { lia: Agent; rui: Agent } {
   const lia = JSON.parse(readFileSync(join(CONFIG_DIR, 'fixtures', 'agent_lia.json'), 'utf8')) as Agent;
   const rui = JSON.parse(readFileSync(join(CONFIG_DIR, 'fixtures', 'agent_rui.json'), 'utf8')) as Agent;
-  // Fixtures nascem num mapa maior; a sala 5×5 exige reposicionar.
-  lia.pos = { x: 1.5, y: 1.5 };
+  // Canto SW / canto SE do interior.
+  lia.pos = { x: 2.5, y: 2.5 };
   lia.rotation = 90;
-  rui.pos = { x: 3.5, y: 3.5 };
+  rui.pos = { x: SPIKE_WIDTH - 2.5, y: SPIKE_HEIGHT - 2.5 };
   rui.rotation = 270;
   lia.memories ??= [];
   rui.memories ??= [];

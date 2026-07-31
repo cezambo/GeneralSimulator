@@ -34,13 +34,26 @@ godot --path packages/client-godot
 | Roda do mouse | Zoom |
 | Espaço | Pausa / retoma |
 | 1 / 2 / 3 / 4 | Velocidade 1, 2, 5, 20 |
+| Clique no agente | Selecionar |
+| Clique no chão (com seleção) | Pedir caminho (`cmd.agent.move`) |
+| Hover | Info do tile (e do pawn selecionado) no HUD |
+| G | Ferramenta RT: água (`wet`) — molha; apaga fogo se houver |
+| Q | Ferramenta RT: apagar fogo (`extinguish`) |
+| Botão direito (com ferramenta RT) | Cancela a ferramenta |
+| C | Entrar/sair do modo construção (pausa) |
+| B / F / R | Parede / chão / porta |
+| E ou botão direito | Apagar tile (volta a chão) — não apaga fogo |
+| T | Colocar cadeira |
+| X | Remover móvel na célula |
+| Z / Y | Undo / redo |
+| Arrastar (construção) | Pintar / apagar células |
 | V | Liga/desliga cone de visão |
 
-Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; resíduo (cinza/carvão) escurece. `SIM_FIRE=0` desliga o seed.
+Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; molhados azuis; integridade baixa escurece. `SIM_FIRE=0` desliga o seed. Caminhos são recalculados se uma parede cortar a rota.
 
 ## O que o cliente faz / não faz
 
-Faz: desenhar snapshot, interpolar visualmente posição recebida, enviar `cmd.sim.setSpeed`.
+Faz: desenhar snapshot, suavizar posição, desenhar trajetória do selecionado, enviar `cmd.sim.setSpeed` / `cmd.agent.move`.
 
 Não faz: pathfinding, validação de construção, movimento autoritativo, LLM.
 

@@ -10,6 +10,7 @@ extends Camera2D
 
 var _dragging: bool = false
 var _drag_last: Vector2 = Vector2.ZERO
+var _bounds: Rect2 = Rect2()
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _process(delta: float) -> void:
 		dir.x += 1.0
 	if dir != Vector2.ZERO:
 		position += dir.normalized() * pan_speed * delta / zoom.x
+		_clamp_to_bounds()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -46,10 +48,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		var delta_px := mm.position - _drag_last
 		_drag_last = mm.position
 		position -= delta_px / zoom.x
+		_clamp_to_bounds()
 
 
 func focus_world_center(size_px: Vector2) -> void:
 	position = size_px * 0.5
+	_clamp_to_bounds()
+
+
+func set_bounds(size_px: Vector2) -> void:
+	_bounds = Rect2(Vector2.ZERO, size_px)
+	_clamp_to_bounds()
+
+
+func _clamp_to_bounds() -> void:
+	if _bounds.size == Vector2.ZERO:
+		return
+	position.x = clampf(position.x, _bounds.position.x, _bounds.end.x)
+	position.y = clampf(position.y, _bounds.position.y, _bounds.end.y)
 
 
 func _set_zoom(value: float) -> void:

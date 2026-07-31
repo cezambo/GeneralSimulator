@@ -110,6 +110,15 @@ const REGRA_AGUA_APAGA: ReactionRule = {
   porque: 'Água apaga fogo.',
 };
 
+const REGRA_AGUA_APAGA_SOAK: ReactionRule = {
+  id: 'water-douses-fire-soak',
+  when: 'continuous',
+  in: ['burning', 'wet'],
+  effect: 'extinguish',
+  chance: 1,
+  porque: 'Tile encharcado em chamas apaga no mesmo lugar.',
+};
+
 describe('vocabulário fechado de efeitos (R-015)', () => {
   it('o catálogo real cobre o vocabulário inteiro', () => {
     expect(() => new EffectCatalog(reactionsFile.effects as never)).not.toThrow();
@@ -626,6 +635,21 @@ describe('estados e decaimento (R-004)', () => {
     const molhado = alvo('p', 'agua', { states: [{ type: 'wet', intensity: 90 }] });
     s.contact(tocha, molhado, { simTime: 0, world: w });
     expect(molhado.states.some((x) => x.type === 'smoky')).toBe(true);
+  });
+
+  it('água no mesmo tile apaga fogo por contínua (soak)', () => {
+    const s = makeSubstrate([REGRA_AGUA_APAGA_SOAK]);
+    const w = new FakeWorld();
+    const t = alvo('t', 'madeira', {
+      states: [
+        { type: 'burning', intensity: 90 },
+        { type: 'wet', intensity: 90 },
+      ],
+    });
+    s.activate(t);
+    s.tick({ simTime: 0, world: w });
+    expect(t.states.some((x) => x.type === 'burning')).toBe(false);
+    expect(t.states.some((x) => x.type === 'smoky')).toBe(true);
   });
 });
 
