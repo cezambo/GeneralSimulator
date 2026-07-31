@@ -116,7 +116,7 @@ prompts:
     temperature: 0.6
     maxTokens: 1000
     schema: personality_drift_response
-    status: falta
+    status: rascunho
     description: "Ajusta tracos apos experiencias significativas"
     variables: [agentContext, personality, significantEvents, period]
 
@@ -196,7 +196,7 @@ prompts:
     temperature: 0.8
     maxTokens: 500
     schema: self_understanding_response
-    status: falta
+    status: rascunho
     prioridade: P1
     description: "Como o agente se ve agora, a partir do que viveu desde a ultima vez"
     variables: [agentContext, personality, recentMemories, previousSelfUnderstanding, period]
@@ -216,7 +216,7 @@ prompts:
     temperature: 0.85
     maxTokens: 800
     schema: nightly_reflection_response
-    status: falta
+    status: rascunho
     description: "Lote noturno de opiniões gerais"
     variables: [agentContext, daySummary, generalOpinions, communityEvents]
 
@@ -238,7 +238,7 @@ prompts:
     temperature: 0.7
     maxTokens: 300
     schema: whim_response
-    status: falta
+    status: rascunho
     description: "Capricho: impulso de minutos"
     variables: [agentContext, personality, boredomLevel, nearbyAffordances]
 
@@ -250,7 +250,7 @@ prompts:
     temperature: 0.2
     maxTokens: 300
     schema: handshake_response
-    status: falta
+    status: rascunho
     description: "Checa disponibilidade para conversa"
     variables: [initiatorContext, targetContext, spatialContext]
 
@@ -269,7 +269,7 @@ prompts:
     temperature: 0.3
     maxTokens: 300
     schema: relocation_vote_response
-    status: falta
+    status: rascunho
     variables: [agentContext, proposal, currentLocation, targetLocation]
 
   social.post_conversation:
