@@ -115,22 +115,11 @@ Isso entra na primeira fatia vertical, não no polimento.
 
 ## 6. Decisão estrutural nº 5 — fatias verticais, não fases horizontais
 
-O plano anterior era horizontal: mundo inteiro → geração inteira → GM inteiro → cognição inteira. Cognição só apareceria no mês 4 ou 5. Isso significa descobrir se a premissa central funciona tarde demais para corrigir barato.
+O plano anterior era horizontal: mundo inteiro → geração inteira → mediação inteira → cognição inteira. Cognição só apareceria no mês 4 ou 5. Isso significa descobrir se a premissa central funciona tarde demais para corrigir barato.
 
-Invertendo:
+A inversão é organizar a construção em fatias verticais: cada uma atravessa todas as camadas e é jogável e observável de ponta a ponta, em vez de completar uma camada por vez. Cada fatia existe para responder a uma pergunta de risco, e a ordem das fatias é a ordem decrescente de risco.
 
-| Fatia | Entrega | Pergunta que responde |
-|-------|---------|----------------------|
-| **V1 — Fio de vida** | 2 agentes, 1 cômodo, loop de pensamento, GM mediando, log factual. Headless + render feio. | O loop agente→GM→mundo→memória fecha e produz algo coerente? |
-| **V2 — Memória e opinião** | Waterfall diária, classificador de dissonância, ruptura, metas reativas. Ainda 2–3 agentes. | Agentes mudam de ideia de forma plausível ao longo de dias? |
-| **V3 — Social** | Conversas multi-agente, impressões, relato vs. log factual (mentira). | Emerge drama social sem script? |
-| **V4 — Mundo** | Geração procedural, materiais, construção, itens. | O mundo suporta a cognição que já funciona? |
-| **V5 — UI completa** | Inspetor de 10 abas, modo construção, seletor de modelos, timeline. | Dá pra operar e ajustar confortavelmente? |
-| **V6 — Escala e extremos** | N agentes, combate, reuniões, estados mentais extremos, budget. | Aguenta 10 agentes por 30 dias? |
-
-V1 deve estar rodando em semanas, não meses. Cada fatia é jogável/observável de ponta a ponta.
-
-Consequência que vale aceitar: o mundo bonito vem tarde (V4). Em compensação, o risco real do projeto é atacado primeiro.
+⚑ **A tabela de fatias vive em [`04-ROADMAP.md`](04-ROADMAP.md), e só lá.** Este documento registra *por que* o projeto é fatiado verticalmente; o roadmap registra *quais* são as fatias e o que cada uma entrega. Houve uma segunda tabela aqui, com ordem diferente da do roadmap, e como todo requisito das specs carrega etiqueta de fatia, ter duas ordens tornava cada uma dessas etiquetas ambígua. Num projeto conduzido em boa parte por agentes de IA, um roadmap contraditório custa mais caro que um contrato faltando: o agente lê o documento errado e constrói a coisa certa na ordem errada.
 
 ---
 

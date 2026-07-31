@@ -316,8 +316,15 @@ Estimativa conservadora (10 agentes, preset gratuito):
 |------------|---------------------|------------------------|
 | Pensamentos (8/dia, 70% affordance → sem GM) | 8 thought + 2.4 GM ≈ **10.4** | 104 |
 | Social (1 conversa, 3 turnos × 2 agentes) | +6 turn + 2 pós + 2 dissonância ≈ **10** | 100 |
-| Noturno (marcantes + diária + dissonância lote) | +3 compact/longform | 30 |
+| Noturno (reflexão + apreciação + diária, mais auto-entendimento amortizado) | +3,1 compact/longform | 31 |
 | **Total** | **~23** | **~234 chamadas/dia simulado** |
+
+A linha noturna mudou de composição sem mudar de tamanho, e vale registrar como:
+
+- **Seleção de marcantes saiu** (−1 por agente por noite). A nota de lembrabilidade vem na mesma resposta que já decide a ação, e a eleição virou determinística sobre ela (`C-014`, `C-052`, `C-053`).
+- **O Crivo entrou de graça** (+0). Ele roda na mesma chamada da passagem noturna do classificador de dissonância, porque as duas leem o mesmo material contra o mesmo contexto (`C-047`).
+- **A reflexão noturna passou a aparecer na conta** (+1 de contabilidade, não de gasto). Ela sempre existiu (`C-031`) e faltava nesta tabela.
+- **Auto-entendimento amortizado** (+0,1). Uma chamada por período de vários dias simulados (`C-050`).
 
 Antes do colapso (~35 prompts, router + intent + gm_low): ~35–40 chamadas/agente/dia → **~350–400** total. Redução ~35–40%.
 

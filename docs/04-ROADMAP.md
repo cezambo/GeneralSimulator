@@ -107,6 +107,7 @@ Aqui entra o motor mental completo.
 - Profundidade determinística: consciência (B-014) + `requestedDeepThinking` — sem `thought_router`
 - Pensamento nos três níveis, com gatilhos reativo, contemplativo, espontâneo e agendado
 - Substrato biológico comprimido: catálogo único, capacidades derivadas, odor/descritores
+- Órgãos como partes com mais campos: funcionamento derivado por sensibilidade e resiliência, vascularização governando sangramento, e as capacidades agrupadas em sistemas nomeados
 - Exposição do corpo ao GM com `transmute_part` atrás do registro de plausibilidade
 - `cognition.goal_revise` parametrizado (substitui metas separadas por período)
 - Classificador de dissonância, ruptura com `stance`, reavaliação de metas
@@ -125,6 +126,7 @@ Aqui entra o motor mental completo.
 - Relato coberto por `conversation_turn` + ActivityLog — sem prompt `report_vs_log`
 - Grito de combate: fato perceptível + viés A-029, sem LLM extra
 - Coberturas e sinais corporais como evidência
+- Toxicidade por parte e falência excretora sistêmica, pela mesma corrida assimétrica da infecção
 
 **Pronto quando:** dois agentes conversam, um mente sobre o que fez no dia, e um terceiro que estava no mesmo setor confronta a versão depois — ou nota o sangue que o primeiro não lavou.
 
@@ -136,6 +138,7 @@ Aqui entra o motor mental completo.
 - Reuniões comunitárias e leis
 - Camadas longas via `memory.longterm_summary` parametrizado
 - Deriva de personalidade
+- Idade biológica por parte, independente da idade do agente
 - Timeline, minimap, exportação de log narrativo
 
 **Pronto quando:** 10 agentes rodam 30 dias simulados sem crash, dentro do budget, com narrativa legível na exportação.

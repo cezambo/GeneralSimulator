@@ -8,6 +8,7 @@ Requisitos atômicos, identificados e verificáveis. Cada um é uma unidade fech
 |---------|---------|--------|
 | `W-` | [SPEC-W-mundo.md](SPEC-W-mundo.md) | Grid, tiles, materiais, objetos, geração, tempo, espaço |
 | `R-` | [SPEC-R-substrato.md](SPEC-R-substrato.md) | Reações, temperatura, líquidos, gases, coberturas, substâncias, campos perceptuais |
+| `O-` | [SPEC-O-objetos.md](SPEC-O-objetos.md) | Peso, volume, empacotamento, composição, trânsito, carga, descrição, crença, funcionamento |
 | `A-` | [SPEC-A-agente.md](SPEC-A-agente.md) | Entidade, percepção, movimento, inventário, habilidades, rotina |
 | `B-` | [SPEC-B-corpo.md](SPEC-B-corpo.md) | Anatomia, condições, capacidades, lesão, doença, cuidado |
 | `C-` | [SPEC-C-cognicao.md](SPEC-C-cognicao.md) | Pensamento, memória, opiniões, objetivos |
@@ -24,7 +25,7 @@ Quando um bloco de requisitos cresce a ponto de merecer documento próprio, ele 
 | Faixa | Migrou para |
 |-------|-------------|
 | `W-015` a `W-028` | `R-001` a `R-050` — [SPEC-R-substrato.md](SPEC-R-substrato.md) |
-| `A-012` a `A-019` | `B-001` a `B-051` — [SPEC-B-corpo.md](SPEC-B-corpo.md) |
+| `A-012` a `A-019` | `B-001` a `B-063` — [SPEC-B-corpo.md](SPEC-B-corpo.md) |
 
 ## Formato
 

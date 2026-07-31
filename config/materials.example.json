@@ -30,7 +30,7 @@
       "properties": { "inflammable": true, "organic": true, "insulating": true },
       "numeric": { "hardness": 5, "density": 0.75, "specificHeat": 420, "decayRate": 0.02, "flammabilitySpeed": 0.6 },
       "thermal": { "ignitePoint": 300, "heatDamagePoint": 200 },
-      "damageResistance": { "impact": 0.4, "cut": 0.3, "fire": 0.1, "corrosion": 0.3, "electric": 0.9 },
+      "damageResistance": { "blunt": 0.4, "cut": 0.3, "burn": 0.1, "corrosion": 0.3, "electric": 0.9 },
       "burnsTo": "carvao", "rubbleMaterialId": "lascas"
     },
 
@@ -41,7 +41,7 @@
       "properties": { "inflammable": true, "organic": true, "insulating": true },
       "numeric": { "hardness": 3, "density": 0.5, "specificHeat": 380, "decayRate": 0.04, "flammabilitySpeed": 1.1 },
       "thermal": { "ignitePoint": 240, "heatDamagePoint": 160 },
-      "damageResistance": { "impact": 0.25, "cut": 0.15, "fire": 0.0, "corrosion": 0.2, "electric": 0.9 },
+      "damageResistance": { "blunt": 0.25, "cut": 0.15, "burn": 0.0, "corrosion": 0.2, "electric": 0.9 },
       "burnsTo": "carvao", "rubbleMaterialId": "lascas"
     },
 
@@ -52,7 +52,7 @@
       "properties": { "inflammable": true, "organic": true, "absorbent": true, "insulating": true },
       "numeric": { "hardness": 0.5, "density": 0.08, "specificHeat": 200, "decayRate": 0.15, "flammabilitySpeed": 3.5 },
       "thermal": { "ignitePoint": 150 },
-      "damageResistance": { "impact": 0.0, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.5 },
+      "damageResistance": { "blunt": 0.0, "cut": 0.0, "burn": 0.0, "corrosion": 0.0, "electric": 0.5 },
       "burnsTo": "cinza"
     },
 
@@ -63,7 +63,7 @@
       "properties": {},
       "numeric": { "hardness": 8, "density": 2.6, "specificHeat": 840 },
       "thermal": { "meltPoint": 1200 },
-      "damageResistance": { "impact": 0.7, "cut": 0.9, "fire": 1.0, "corrosion": 0.6, "electric": 0.8 },
+      "damageResistance": { "blunt": 0.7, "cut": 0.9, "burn": 1.0, "corrosion": 0.6, "electric": 0.8 },
       "rubbleMaterialId": "entulho"
     },
 
@@ -74,7 +74,7 @@
       "properties": { "conductive": true, "magnetic": true },
       "numeric": { "hardness": 9, "density": 7.8, "specificHeat": 450 },
       "thermal": { "meltPoint": 1538 },
-      "damageResistance": { "impact": 0.8, "cut": 0.85, "fire": 0.9, "corrosion": 0.2, "electric": 0.0 },
+      "damageResistance": { "blunt": 0.8, "cut": 0.85, "burn": 0.9, "corrosion": 0.2, "electric": 0.0 },
       "rubbleMaterialId": "sucata"
     },
 
@@ -85,7 +85,7 @@
       "properties": { "conductive": true },
       "numeric": { "hardness": 5, "density": 8.9, "specificHeat": 385 },
       "thermal": { "meltPoint": 1085 },
-      "damageResistance": { "impact": 0.6, "cut": 0.6, "fire": 0.9, "corrosion": 0.4, "electric": 0.0 },
+      "damageResistance": { "blunt": 0.6, "cut": 0.6, "burn": 0.9, "corrosion": 0.4, "electric": 0.0 },
       "rubbleMaterialId": "sucata"
     },
 
@@ -96,7 +96,7 @@
       "properties": { "fragile": true, "transparent": true, "sharp": true },
       "numeric": { "hardness": 6, "density": 2.5, "specificHeat": 840 },
       "thermal": { "meltPoint": 1400, "brittlePoint": -40 },
-      "damageResistance": { "impact": 0.0, "cut": 0.8, "fire": 0.8, "corrosion": 0.7, "electric": 0.95 },
+      "damageResistance": { "blunt": 0.0, "cut": 0.8, "burn": 0.8, "corrosion": 0.7, "electric": 0.95 },
       "rubbleMaterialId": "cacos"
     },
 
@@ -106,7 +106,7 @@
       "tags": ["buildable"],
       "properties": { "fragile": true, "insulating": true },
       "numeric": { "hardness": 6, "density": 2.3, "specificHeat": 850 },
-      "damageResistance": { "impact": 0.1, "cut": 0.7, "fire": 0.9, "corrosion": 0.5, "electric": 0.9 },
+      "damageResistance": { "blunt": 0.1, "cut": 0.7, "burn": 0.9, "corrosion": 0.5, "electric": 0.9 },
       "rubbleMaterialId": "cacos"
     },
 
@@ -117,7 +117,7 @@
       "properties": { "inflammable": true, "organic": true, "absorbent": true, "insulating": true },
       "numeric": { "hardness": 1, "density": 0.3, "specificHeat": 1300, "decayRate": 0.05, "flammabilitySpeed": 1.4 },
       "thermal": { "ignitePoint": 210 },
-      "damageResistance": { "impact": 0.1, "cut": 0.0, "fire": 0.0, "corrosion": 0.1, "electric": 0.7 },
+      "damageResistance": { "blunt": 0.1, "cut": 0.0, "burn": 0.0, "corrosion": 0.1, "electric": 0.7 },
       "burnsTo": "cinza"
     },
 
@@ -128,31 +128,31 @@
       "properties": { "inflammable": true, "organic": true, "insulating": true },
       "numeric": { "hardness": 2, "density": 0.9, "specificHeat": 1500, "decayRate": 0.03, "flammabilitySpeed": 0.5 },
       "thermal": { "ignitePoint": 280 },
-      "damageResistance": { "impact": 0.3, "cut": 0.3, "fire": 0.2, "corrosion": 0.2, "electric": 0.6 }
+      "damageResistance": { "blunt": 0.3, "cut": 0.3, "burn": 0.2, "corrosion": 0.2, "electric": 0.6 }
     },
 
     "terra":    { "name": "terra",    "category": "material", "description": "Chao comum.", "tags": ["ground", "fertile"],
                   "properties": { "organic": true, "absorbent": true },
                   "numeric": { "hardness": 1, "density": 1.5, "specificHeat": 800 },
-                  "damageResistance": { "impact": 0.6, "cut": 0.8, "fire": 1.0, "corrosion": 0.8, "electric": 0.4 } },
+                  "damageResistance": { "blunt": 0.6, "cut": 0.8, "burn": 1.0, "corrosion": 0.8, "electric": 0.4 } },
 
     "grama":    { "name": "grama",    "category": "material", "description": "Cresce sozinha onde ha umidade e luz.", "tags": ["ground", "fibrous", "growable"],
                   "properties": { "inflammable": true, "organic": true },
                   "numeric": { "hardness": 0.2, "density": 0.2, "specificHeat": 900, "decayRate": 0.1, "flammabilitySpeed": 2.0, "nutritionValue": 1 },
                   "thermal": { "ignitePoint": 180 },
-                  "damageResistance": { "impact": 0.5, "cut": 0.0, "fire": 0.0, "corrosion": 0.3, "electric": 0.5 },
+                  "damageResistance": { "blunt": 0.5, "cut": 0.0, "burn": 0.0, "corrosion": 0.3, "electric": 0.5 },
                   "burnsTo": "cinza" },
 
     "concreto": { "name": "concreto", "category": "material", "description": "Pedra fabricada.", "tags": ["stone", "buildable"],
                   "properties": {},
                   "numeric": { "hardness": 8, "density": 2.4, "specificHeat": 880 },
-                  "damageResistance": { "impact": 0.75, "cut": 0.9, "fire": 0.95, "corrosion": 0.4, "electric": 0.8 },
+                  "damageResistance": { "blunt": 0.75, "cut": 0.9, "burn": 0.95, "corrosion": 0.4, "electric": 0.8 },
                   "rubbleMaterialId": "entulho" },
 
     "cinza":    { "name": "cinza",    "category": "material", "description": "O que sobra.", "tags": ["powder", "staining"],
                   "properties": { "organic": true },
                   "numeric": { "hardness": 0.1, "density": 0.4, "specificHeat": 800 },
-                  "damageResistance": { "impact": 1.0, "cut": 1.0, "fire": 1.0, "corrosion": 1.0, "electric": 0.5 } },
+                  "damageResistance": { "blunt": 1.0, "cut": 1.0, "burn": 1.0, "corrosion": 1.0, "electric": 0.5 } },
 
     "_nota_residuos": "Alvos de 'rubbleMaterialId' e 'burnsTo'. Toda referencia precisa existir no catalogo.",
 
@@ -160,35 +160,35 @@
                   "properties": { "inflammable": true, "organic": true },
                   "numeric": { "hardness": 1, "density": 0.5, "specificHeat": 700, "flammabilitySpeed": 0.3 },
                   "thermal": { "ignitePoint": 400 },
-                  "damageResistance": { "impact": 0.2, "cut": 0.2, "fire": 0.3, "corrosion": 0.5, "electric": 0.4 },
+                  "damageResistance": { "blunt": 0.2, "cut": 0.2, "burn": 0.3, "corrosion": 0.5, "electric": 0.4 },
                   "burnsTo": "cinza" },
 
     "lascas":   { "name": "lascas",   "category": "material", "description": "Restos de madeira partida. Pegam fogo com facilidade e cortam o pe descalco.", "tags": ["debris", "wood"],
                   "properties": { "inflammable": true, "organic": true, "sharp": true },
                   "numeric": { "hardness": 2, "density": 0.4, "specificHeat": 400, "decayRate": 0.06, "flammabilitySpeed": 2.2 },
                   "thermal": { "ignitePoint": 220 },
-                  "damageResistance": { "impact": 0.9, "cut": 0.5, "fire": 0.0, "corrosion": 0.2, "electric": 0.9 },
+                  "damageResistance": { "blunt": 0.9, "cut": 0.5, "burn": 0.0, "corrosion": 0.2, "electric": 0.9 },
                   "burnsTo": "cinza" },
 
     "entulho":  { "name": "entulho",  "category": "material", "description": "Pedra quebrada. Atrapalha a passagem e nao serve para mais nada.", "tags": ["debris", "stone"],
                   "properties": {},
                   "numeric": { "hardness": 6, "density": 2.2, "specificHeat": 840 },
-                  "damageResistance": { "impact": 0.9, "cut": 0.9, "fire": 1.0, "corrosion": 0.6, "electric": 0.8 } },
+                  "damageResistance": { "blunt": 0.9, "cut": 0.9, "burn": 1.0, "corrosion": 0.6, "electric": 0.8 } },
 
     "sucata":   { "name": "sucata",   "category": "material", "description": "Metal retorcido. Ainda conduz, ainda pesa, ja nao serve.", "tags": ["debris", "metal"],
                   "properties": { "conductive": true, "sharp": true },
                   "numeric": { "hardness": 7, "density": 7.0, "specificHeat": 450 },
-                  "damageResistance": { "impact": 0.9, "cut": 0.8, "fire": 0.9, "corrosion": 0.2, "electric": 0.0 } },
+                  "damageResistance": { "blunt": 0.9, "cut": 0.8, "burn": 0.9, "corrosion": 0.2, "electric": 0.0 } },
 
     "cacos":    { "name": "cacos",    "category": "material", "description": "Estilhacos. Cortam quem pisa e denunciam pelo barulho.", "tags": ["debris", "sharp"],
                   "properties": { "sharp": true, "transparent": true, "fragile": true },
                   "numeric": { "hardness": 6, "density": 2.4, "specificHeat": 840 },
-                  "damageResistance": { "impact": 0.9, "cut": 0.8, "fire": 0.8, "corrosion": 0.7, "electric": 0.95 } },
+                  "damageResistance": { "blunt": 0.9, "cut": 0.8, "burn": 0.8, "corrosion": 0.7, "electric": 0.95 } },
 
     "fragmentos_osso": { "name": "fragmentos de osso", "category": "material", "description": "O que sobra de um osso que cedeu.", "tags": ["debris", "sharp", "organic"],
                   "properties": { "organic": true, "sharp": true, "fragile": true },
                   "numeric": { "hardness": 5, "density": 1.8, "specificHeat": 1300, "decayRate": 0.02 },
-                  "damageResistance": { "impact": 0.9, "cut": 0.6, "fire": 0.5, "corrosion": 0.4, "electric": 0.6 } },
+                  "damageResistance": { "blunt": 0.9, "cut": 0.6, "burn": 0.5, "corrosion": 0.4, "electric": 0.6 } },
 
     "_nota_biologia": "Daqui para baixo, tecidos. Mesmo formato, mesmo catalogo, mesmas regras.",
 
@@ -199,7 +199,7 @@
       "properties": { "inflammable": true, "organic": true, "absorbent": true },
       "numeric": { "hardness": 1, "density": 1.1, "specificHeat": 3500, "decayRate": 0.3, "flammabilitySpeed": 0.4, "bleedFactor": 0.6 },
       "thermal": { "ignitePoint": 250, "heatDamagePoint": 45, "coldDamagePoint": 0 },
-      "damageResistance": { "impact": 0.2, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.3 }
+      "damageResistance": { "blunt": 0.2, "cut": 0.0, "burn": 0.0, "corrosion": 0.0, "electric": 0.3 }
     },
 
     "musculo": {
@@ -209,7 +209,7 @@
       "properties": { "inflammable": true, "organic": true, "edible": true },
       "numeric": { "hardness": 1.5, "density": 1.06, "specificHeat": 3600, "decayRate": 0.4, "flammabilitySpeed": 0.3, "nutritionValue": 40, "bleedFactor": 1.0 },
       "thermal": { "heatDamagePoint": 45, "coldDamagePoint": -2 },
-      "damageResistance": { "impact": 0.4, "cut": 0.1, "fire": 0.1, "corrosion": 0.1, "electric": 0.2 }
+      "damageResistance": { "blunt": 0.4, "cut": 0.1, "burn": 0.1, "corrosion": 0.1, "electric": 0.2 }
     },
 
     "osso": {
@@ -220,7 +220,7 @@
       "properties": { "organic": true, "fragile": true },
       "numeric": { "hardness": 7, "density": 1.9, "specificHeat": 1300, "decayRate": 0.02, "bleedFactor": 0.3 },
       "thermal": { "ignitePoint": 500, "heatDamagePoint": 60 },
-      "damageResistance": { "impact": 0.1, "cut": 0.6, "fire": 0.5, "corrosion": 0.4, "electric": 0.6 },
+      "damageResistance": { "blunt": 0.1, "cut": 0.6, "burn": 0.5, "corrosion": 0.4, "electric": 0.6 },
       "rubbleMaterialId": "fragmentos_osso"
     },
 
@@ -231,7 +231,7 @@
       "properties": { "organic": true, "edible": true },
       "numeric": { "hardness": 0.5, "density": 1.05, "specificHeat": 3700, "decayRate": 0.6, "nutritionValue": 60, "bleedFactor": 2.0 },
       "thermal": { "heatDamagePoint": 43, "coldDamagePoint": 0 },
-      "damageResistance": { "impact": 0.1, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.1 }
+      "damageResistance": { "blunt": 0.1, "cut": 0.0, "burn": 0.0, "corrosion": 0.0, "electric": 0.1 }
     },
 
     "nervo": {
@@ -241,7 +241,7 @@
       "properties": { "organic": true, "conductive": true },
       "numeric": { "hardness": 0.3, "density": 1.04, "specificHeat": 3600, "decayRate": 0.5, "bleedFactor": 0.1 },
       "thermal": { "heatDamagePoint": 42 },
-      "damageResistance": { "impact": 0.3, "cut": 0.0, "fire": 0.0, "corrosion": 0.0, "electric": 0.0 }
+      "damageResistance": { "blunt": 0.3, "cut": 0.0, "burn": 0.0, "corrosion": 0.0, "electric": 0.0 }
     },
 
     "gordura": {
@@ -251,7 +251,7 @@
       "properties": { "inflammable": true, "organic": true, "edible": true, "insulating": true },
       "numeric": { "hardness": 0.3, "density": 0.9, "specificHeat": 2300, "decayRate": 0.35, "flammabilitySpeed": 1.6, "nutritionValue": 90, "bleedFactor": 0.4 },
       "thermal": { "ignitePoint": 190, "meltPoint": 40, "heatDamagePoint": 45 },
-      "damageResistance": { "impact": 0.5, "cut": 0.1, "fire": 0.0, "corrosion": 0.1, "electric": 0.4 }
+      "damageResistance": { "blunt": 0.5, "cut": 0.1, "burn": 0.0, "corrosion": 0.1, "electric": 0.4 }
     }
   },
 

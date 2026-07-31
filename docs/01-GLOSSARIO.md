@@ -150,7 +150,7 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 
 | Termo | Código | Significado |
 |-------|--------|-------------|
-| **Tier** | `Tier` | Nível de pensamento com binding próprio de modelo: `utility`, `instinct`, `standard`, `deep`, `archivist`, `gm_fast`, `gm_deep`, `builder`. ⚑ substitui os `ROLE_*` do documento, que misturavam papel e modelo. |
+| **Tier** | `Tier` | Faixa de capacidade com binding próprio de modelo. São três: `compact`, `narrative` e `longform`. ⚑ substitui os `ROLE_*` do documento original, que misturavam papel e modelo, e substitui também a lista anterior de oito tiers, que confundia faixa de capacidade com finalidade de prompt — quem declara a finalidade é o prompt, e o tier só diz de quanta capacidade ele precisa. |
 | **Binding** | `ModelBinding` | Amarração tier → provedor, modelo e parâmetros. Configuração, não código. |
 | **Preset** | `Preset` | Conjunto nomeado de bindings. Alterna a simulação inteira de uma vez. |
 | **Capacidade** | `Capability` | Requisito que o modelo precisa atender: saída estruturada, reasoning, tools, contexto mínimo. |
@@ -163,10 +163,10 @@ A engine física, química e fisiológica que roda sozinha, sem LLM. Detalhe em 
 
 | Documento original | Agora | Motivo |
 |--------------------|-------|--------|
-| `ROLE_BASE_LOW` | tier `instinct` | papel e modelo eram a mesma coisa; agora são separados |
-| `ROLE_BASE_HIGH` | tier `standard` | idem |
-| `ROLE_REASONING` | tier `deep` | idem |
-| `ROLE_SUMMARIZER` | tier `archivist` | idem |
+| `ROLE_BASE_LOW` | prompt `agent.thought.base_low`, tier `compact` | papel e modelo eram a mesma coisa; agora o prompt diz o papel e o tier diz a capacidade |
+| `ROLE_BASE_HIGH` | prompt `agent.thought.base_high`, tier `narrative` | idem |
+| `ROLE_REASONING` | prompt `agent.thought.reasoning`, tier `longform` | idem |
+| `ROLE_SUMMARIZER` | prompts de memória, tier `compact` ou `narrative` conforme a camada | idem |
 | "Pessoa" | Agente / pessoa | código em inglês, UI em português |
 | "vida (0-100)" | árvore de partes + capacidades | uma barra só não diz *o quê* quebrou, e é justamente isso que gera história |
 | "Saúde.Consciência" | `consciousness` derivada | era tratada como entrada; é saída |

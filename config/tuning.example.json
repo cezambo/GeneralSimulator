@@ -13,28 +13,33 @@
   },
 
   "percepcao": {
-    "$comment": "A-007, A-009, R-034, R-035. Alcances em tiles.",
+    "$comment": "A-007, A-009, R-034, R-035, W-057. Alcances em METROS, nao em tiles. A engine divide por mundo.metrosPorTile.",
+    "porqueMetros": "Estes valores estavam em tiles e ficaram todos errados quando W-057 declarou que o tile mede 0,5 m: cada um tinha sido calibrado contra uma intuicao diferente de tamanho de celula, e nenhuma delas era 0,5 m. Em metros o numero e conferivel contra o mundo real por quem le, e mudar a escala do tile deixa de invalidar a calibracao inteira.",
     "coneVisaoGraus": 110,
-    "alcanceVisaoTiles": 12,
-    "raioAudicaoTiles": 8,
-    "raioGritoTiles": 20,
-    "raioSussurroTiles": 2,
-    "alcanceInteracaoTiles": 1.5,
-    "alcanceOdorTiles": 3
+    "alcanceVisaoMetros": 30,
+    "raioAudicaoMetros": 20,
+    "raioGritoMetros": 100,
+    "raioSussurroMetros": 2,
+    "alcanceInteracaoMetros": 1.5,
+    "alcanceOdorMetros": 6
   },
 
   "movimento": {
-    "$comment": "A-005. Modulado por capacidades derivadas.",
-    "velocidadeBaseTilesPorMinuto": 4.0,
+    "$comment": "A-005, W-057. Modulado por capacidades derivadas.",
+    "velocidadeBaseMetrosPorSegundo": 1.4,
+    "porque": "1,4 m/s e o passo humano tranquilo. O valor anterior, 4 tiles por minuto, dava 3,3 cm/s a 0,5 m por tile — cerca de quarenta vezes mais devagar que caminhar. O erro passou despercebido enquanto a escala do tile nao estava declarada em lugar nenhum.",
     "fatorVelocidadeMinimoPorMobilidade": 0.15
   },
 
   "substrato": {
-    "$comment": "R-003, R-006, R-009, R-014, R-049.",
+    "$comment": "R-003, R-006, R-009, R-014, R-049, R-051 a R-053.",
     "maxEntradasPorReacao": 3,
     "orcamentoTickMs": 4.0,
     "maxTilesAtivosSimultaneos": 512,
     "chanceBasePropagacao": 0.35,
+    "atenuacaoSomPorPisoAtravessado": 0.5,
+    "densidadeGasAmbiente": 1.0,
+    "porqueDensidadeAmbiente": "R-052. Referencia contra a qual um gas sobe ou assenta. Gas mais denso que isto desce pela coluna; menos denso sobe e atravessa abertura para o grid de cima.",
     "decaimentoEstadoTransientePorTick": 0.02,
     "limiarVolumeLiquidoPerceptivel": 0.05,
     "ticksParaApodrecimento": 4320
@@ -135,10 +140,24 @@
   },
 
   "mundo": {
-    "$comment": "W-001, W-038.",
-    "larguraPadrao": 96,
-    "alturaPadrao": 96,
-    "tamanhoCelulaIndiceEspacial": 8,
-    "raioFiltroTransporteTiles": 15
+    "$comment": "W-001, W-038, W-057 a W-068. Dimensoes de grid em tiles; distancias fisicas em metros.",
+    "metrosPorTile": 0.5,
+    "larguraPadrao": 192,
+    "alturaPadrao": 192,
+    "larguraMaxima": 512,
+    "alturaMaxima": 512,
+    "porqueTeto": "A 0,5 m por tile, o teto anterior de 128 dava um mundo de 64 m — menor que um quarteirao. 512 da 256 m de lado. O custo e memoria, nao CPU: o substrato so avalia tile ativo, entao o grid maior nao acrescenta trabalho por tick, e por isso estado, cobertura e liquido precisam de armazenamento esparso.",
+    "tamanhoCelulaIndiceEspacial": 16,
+    "raioFiltroTransporteMetros": 30,
+    "alturaEntreGridsMetros": 2.5,
+    "fracaoOcupacaoQueBloqueia": 0.85,
+    "penalidadeMovimentoPorOcupacaoCompartilhada": 0.5,
+    "volumeEfetivoMaximoPorCelula": 0.5,
+    "quedaMetrosSemDano": 1.0,
+    "severidadeQuedaPorMetro": 0.15,
+    "pressaoFaixaNormalMin": 0.7,
+    "pressaoFaixaNormalMax": 1.3,
+    "degradacaoRespiracaoPorAtmosferaForaDaFaixa": 0.8,
+    "porquePressao": "W-068. Faixa morta larga de proposito: dentro dela a pressao nao faz nada, e e essa inercia que mantem o campo barato onde ele nao importa — que e quase todo o mapa."
   }
 }

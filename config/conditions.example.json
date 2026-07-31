@@ -7,7 +7,12 @@
     "'cadence' e obrigatorio (B-010): static nunca e avaliada, slow roda uma vez por hora simulada,",
     "fast roda a cada tick. Num mundo em regime a esmagadora maioria e static, e custa zero.",
     "'stages' ativam por severidade minima e trazem seus proprios modificadores (B-008).",
-    "Offsets de capacidade sao aditivos; 'max' impoe teto."
+    "Offsets de capacidade sao aditivos; 'max' impoe teto.",
+    "",
+    "Identificador de condicao e SEMPRE em ingles, como no resto dos contratos de dado. O portugues vive",
+    "no campo 'nome', que e o unico lugar onde ele deve aparecer. Toda condicao que a matriz de lesao ou",
+    "um gatilho de reactions.json produz precisa estar declarada aqui, e o validador cobra as duas pontas:",
+    "foi por identificador em portugues de um lado e em ingles do outro que este arquivo divergiu antes."
   ],
 
   "conditions": {
@@ -49,6 +54,105 @@
         { "minSeverity": 0.0, "nome": "primeiro grau", "pain": 0.10 },
         { "minSeverity": 0.4, "nome": "segundo grau",  "pain": 0.30 },
         { "minSeverity": 0.75, "nome": "terceiro grau","pain": 0.20, "nota": "menos dor: o nervo morreu", "partEfficiency": 0.2 }
+      ]
+    },
+
+    "bruise": {
+      "nome": "hematoma",
+      "cadence": "slow",
+      "progressPerDay": -0.25,
+      "visible": true,
+      "_nota": "Contusao em tecido mole. Nao sangra para fora, e por isso nao declara taxa de sangramento: a linha da matriz que a produz traz 'bleed': 'none'.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "roxo",     "pain": 0.03 },
+        { "minSeverity": 0.45, "nome": "extenso",  "pain": 0.10, "partEfficiency": 0.85 },
+        { "minSeverity": 0.75, "nome": "profundo", "pain": 0.20, "partEfficiency": 0.60 }
+      ]
+    },
+
+    "puncture": {
+      "nome": "perfuracao",
+      "cadence": "fast",
+      "progressPerDay": -0.20,
+      "bleedRateBySeverity": 1.1,
+      "infectable": true,
+      "infectionChanceMultiplier": 2.0,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.5, "ifSeverityAbove": 0.4 },
+      "_nota": "A taxa e a mais alta do arquivo porque a matriz a produz em parte vital, e o sangramento final ainda e multiplicado pela vascularizacao da parte (B-056). Furar figado e furar cerebro deixam de dar no mesmo.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "rasa",         "pain": 0.10 },
+        { "minSeverity": 0.40, "nome": "profunda",     "pain": 0.25, "partEfficiency": 0.50 },
+        { "minSeverity": 0.75, "nome": "transfixante", "pain": 0.35, "partEfficiency": 0.15, "lifeThreatening": true }
+      ]
+    },
+
+    "frostbite": {
+      "nome": "ulceracao por congelamento",
+      "cadence": "slow",
+      "progressPerDay": -0.10,
+      "infectable": true,
+      "visible": true,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.6, "ifSeverityAbove": 0.35 },
+      "_nota": "Regride devagar e mal: e a condicao que faz uma noite ao relento custar um dedo do pe pelo resto da vida. O ultimo estagio doi menos porque o nervo morreu, igual ao terceiro grau da queimadura.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "pele branca", "pain": 0.05 },
+        { "minSeverity": 0.40, "nome": "bolhas",      "pain": 0.18, "partEfficiency": 0.60 },
+        { "minSeverity": 0.80, "nome": "necrose",     "pain": 0.08, "nota": "menos dor: o nervo morreu", "partEfficiency": 0.05 }
+      ]
+    },
+
+    "shock": {
+      "nome": "choque eletrico",
+      "cadence": "fast",
+      "progressPerDay": -4.0,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.2, "ifSeverityAbove": 0.7 },
+      "_nota": "Passa em minutos, e e no minuto que ela dura que o agente cai no chao. A matriz a produz em material condutivo, o que inclui nervo e inclui um femur que o GM tenha transmutado para ferro (B-039).",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "formigamento", "pain": 0.05 },
+        { "minSeverity": 0.35, "nome": "espasmo",      "pain": 0.18, "capacityOffsets": { "manipulation": -0.30, "moving": -0.20 } },
+        { "minSeverity": 0.70, "nome": "desmaio",      "pain": 0.10, "capacityMax": { "consciousness": 0.05 } }
+      ]
+    },
+
+    "chem_burn": {
+      "nome": "queimadura quimica",
+      "cadence": "fast",
+      "progressPerDay": -0.20,
+      "bleedRateBySeverity": 0.3,
+      "infectable": true,
+      "infectionChanceMultiplier": 2.0,
+      "leavesOnHeal": { "condition": "scar", "chance": 0.7 },
+      "_nota": "Cadencia rapida porque continua queimando enquanto o corrosivo estiver na parte: quem para a progressao e lavar a cobertura (R-026), nao tratar a ferida. E o unico ferimento do arquivo cuja cura comeca fora do corpo.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "irritacao", "pain": 0.10 },
+        { "minSeverity": 0.40, "nome": "ulcera",    "pain": 0.28, "partEfficiency": 0.60 },
+        { "minSeverity": 0.75, "nome": "profunda",  "pain": 0.20, "nota": "menos dor: o nervo morreu", "partEfficiency": 0.30 }
+      ]
+    },
+
+    "fall": {
+      "nome": "queda",
+      "wholeBody": true,
+      "cadence": "fast",
+      "progressPerDay": -8.0,
+      "_nota": "Estar no chao, e nao o ferimento da queda. O ferimento vem da matriz de lesao pelo dano de contusao que o gatilho declara (B-022); esta condicao e o que o tipo de dano sozinho nao expressa. Passa em segundos simulados, e nesses segundos alguem pode chegar antes.",
+      "stages": [
+        { "minSeverity": 0.0,  "nome": "desequilibrado", "capacityOffsets": { "moving": -0.25, "manipulation": -0.10 } },
+        { "minSeverity": 0.40, "nome": "no chao",        "capacityOffsets": { "moving": -0.60, "manipulation": -0.30 } }
+      ]
+    },
+
+    "toxicosis": {
+      "nome": "intoxicacao",
+      "wholeBody": true,
+      "cadence": "slow",
+      "drivenBy": "meanPartToxicity",
+      "lethalAt": 1.0,
+      "_nota": "A face perceptivel da carga toxica das partes (B-059). Enquanto a excrecao anula o acumulo, a severidade fica perto de zero e a condicao nao existe. Quando a filtragem cai, sobe em todas as partes ao mesmo tempo e a falencia e sistemica, nao local (B-060) — o agente sente nausea e fraqueza sem saber a causa, e quem olha ve alguem adoecendo devagar.",
+      "stages": [
+        { "minSeverity": 0.20, "nome": "nausea",     "pain": 0.05, "capacityOffsets": { "consciousness": -0.05 } },
+        { "minSeverity": 0.45, "nome": "fraqueza",   "pain": 0.12, "capacityOffsets": { "consciousness": -0.15, "moving": -0.20, "manipulation": -0.15 } },
+        { "minSeverity": 0.75, "nome": "prostracao", "pain": 0.20, "capacityOffsets": { "consciousness": -0.35, "moving": -0.45 }, "lifeThreatening": true }
       ]
     },
 

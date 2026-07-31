@@ -2,7 +2,7 @@
 
 Entidade, percepção, movimento, personalidade, habilidades, inventário e rotina.
 
-O corpo está em [SPEC-B](SPEC-B-corpo.md). A mente está em [SPEC-C](SPEC-C-cognicao.md).
+O corpo está em [SPEC-B](SPEC-B-corpo.md). A mente está em [SPEC-C](SPEC-C-cognicao.md). O que ele carrega está em [SPEC-O](SPEC-O-objetos.md).
 
 ---
 
@@ -95,7 +95,7 @@ Consultas de proximidade e percepção resolvidas por particionamento espacial, 
 
 Migrado para [SPEC-B-corpo.md](SPEC-B-corpo.md).
 
-O que era `A-012` a `A-019` virou um substrato biológico completo — árvore de partes, condições unificadas, capacidades derivadas, lesão, infecção, cuidado e fronteira com o GM — e ganhou documento próprio. Os requisitos correspondentes agora são `B-001` a `B-051`.
+O que era `A-012` a `A-019` virou um substrato biológico completo — árvore de partes, condições unificadas, capacidades derivadas, lesão, infecção, cuidado e fronteira com o GM — e ganhou documento próprio. Os requisitos correspondentes agora são `B-001` a `B-063`.
 
 A faixa `A-012` a `A-019` fica **aposentada** e não deve ser reutilizada.
 
@@ -137,26 +137,38 @@ Uso repetido de uma habilidade a aumenta lentamente.
 
 ## Inventário e posses
 
-### A-024 — Inventário por slots
-`P0` · `V4` · PDF 64 · dep: W-030
+A física das coisas — peso, volume, empacotamento, composição, pilha — está em [SPEC-O](SPEC-O-objetos.md). Aqui fica só o que é do portador.
 
-Duas mãos, vestimenta e mochila com capacidade limitada.
+### A-024 — Inventário volumétrico
+`P0` · `V4` · PDF 64 refinado por decisão · dep: W-030, O-001, O-003
 
-**Aceite:** pegar um item com as duas mãos ocupadas exige guardar ou largar antes.
+Mãos e vestimenta continuam existindo como **posições** de porte, conforme `InventorySlot`, porque equipar precisa de um lugar e porque o que está na mão é visível para quem olha. Mas o que cada posição aceita é decidido por peso e volume, nunca por contagem: uma mão leva o que cabe numa mão — duas maçãs e uma faca, sim; uma bigorna, não — e o que se guarda é limitado pela soma dos volumes efetivos (O-002, O-003).
+
+A troca não é de precisão, é de gênero de decisão. Slot faz o agente perguntar se há vaga; volume faz ele perguntar o que vale a pena levar, e essa segunda pergunta é a que produz cena.
+
+⚑ O critério de aceite anterior — "pegar um item com as duas mãos ocupadas exige guardar ou largar antes" — fica **aposentado** junto com o modelo de slots. Mão ocupada não é mão cheia.
+
+**Aceite:** três objetos pequenos cabem numa mão só; guardar um objeto cujo volume efetivo excede o volume livre é recusado com retorno diegético e passa a caber depois que outro é retirado; nenhum limite de contagem aparece em nenhum caminho do inventário.
 
 ### A-025 — Equipar
-`P1` · `V4` · derivado · dep: A-024
+`P1` · `V4` · derivado · dep: A-024, O-013
 
-Itens equipáveis ocupam slot e alteram affordances e aparência percebida.
+Itens equipáveis ocupam uma posição de porte e alteram affordances e aparência percebida.
 
-**Aceite:** empunhar um martelo torna `reparar` disponível e é visível para quem observa.
+O que está na mão ou vestido **não** está guardado: o multiplicador de empacotamento não se aplica, e o peso inteiro conta na carga de O-013. Equipar não muda a massa que a pessoa leva, muda onde ela está — e é por isso que passar o martelo da mochila para a mão libera volume sem aliviar nada.
+
+**Aceite:** empunhar um martelo torna `reparar` disponível e é visível para quem observa; mover o mesmo martelo da mochila para a mão não altera a carga somada e altera o volume livre da mochila.
 
 ### A-026 — Transferência de posse
-`P1` · `V4` · derivado de PDF 65-66 · dep: A-024, G-005
+`P1` · `V4` · derivado de PDF 65-66 · dep: A-024, V-005, O-014
 
-Dar, receber, largar e pegar, todos mediados pelo GM e refletidos como mutação de inventário.
+Dar, receber, largar e pegar, refletidos como mutação de inventário conforme `WorldMutation`.
 
-**Aceite:** um item dado sai do inventário de um e entra no do outro numa única mutação consistente.
+A transferência valida o lado que recebe **antes** de aplicar: o que não cabe no volume livre, ou o que estouraria a capacidade de carga (O-014), é recusado com retorno diegético. A recusa é uma cena, não um erro — alguém estende uma coisa e o outro não tem como levar.
+
+Um composto viaja inteiro, com o grafo (O-004). Uma pilha pode ser dividida, e a divisão produz exemplar novo com o multiplicador de solto (O-007). Largar devolve o objeto ao mundo físico, guardar o retira dele (O-009).
+
+**Aceite:** um item dado sai de um inventário e entra no outro numa única mutação consistente; dar uma coisa que não cabe é recusado antes de qualquer mutação; dar vinte de uma pilha de sessenta divide o registro sem criar nem destruir exemplares.
 
 ---
 

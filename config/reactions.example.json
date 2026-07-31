@@ -147,7 +147,18 @@
     "Bloco separado das reacoes de proposito: 'damage' e 'fall' nao sao efeitos do vocabulario",
     "fechado de R-015. Eles nao mudam estado de tile — alimentam a matriz de lesao (B-022),",
     "que traduz tipo de dano mais material atingido em condicao. Misturar os dois no mesmo",
-    "array foi o que quebrou este arquivo antes."
+    "array foi o que quebrou este arquivo antes.",
+    "",
+    "'damageType' e 'severity' entram na matriz de lesao e produzem o ferimento local. 'condition'",
+    "nomeia a condicao que o gatilho resolve, aplicada UMA vez junto do ferimento e nunca por cima",
+    "dele (B-043): para 'shock-on-entry' e a mesma que a matriz derivaria de dano eletrico em material",
+    "condutivo, declarada aqui para que o validador possa conferir as duas pontas; para 'slip-on-entry'",
+    "e 'fall', estar no chao, que e o que o tipo de dano sozinho nao expressa.",
+    "",
+    "Identificadores em ingles, como no resto dos contratos: 'shock' e 'fall', nao 'choque' e 'queda'.",
+    "O nome em portugues vive no campo 'nome' da condicao, em conditions.json. Este arquivo referenciava",
+    "as duas em portugues enquanto a matriz de lesao as produzia em ingles, e o resultado foi um gatilho",
+    "que disparava para uma condicao que nao existia."
   ],
 
   "injuryTriggers": [
@@ -155,16 +166,16 @@
       "id": "shock-on-entry",
       "when": "entry",
       "in": ["electrified", "#creature"],
-      "injury": { "damageType": "electric", "severity": 40, "condition": "choque" },
+      "injury": { "damageType": "electric", "severity": 40, "condition": "shock" },
       "porque": "Pisar em superficie eletrificada causa choque e pode derrubar a consciencia."
     },
     {
       "id": "slip-on-entry",
       "when": "entry",
       "in": ["#slippery", "#creature"],
-      "injury": { "damageType": "blunt", "severity": 25, "condition": "queda" },
+      "injury": { "damageType": "blunt", "severity": 25, "condition": "fall" },
       "modifiedBy": { "hurry": 0.5, "carryingWeight": 0.2 },
-      "porque": "Superficie escorregadia derruba quem passa."
+      "porque": "Superficie escorregadia derruba quem passa, e o ferimento vem do impacto no chao."
     }
   ],
 

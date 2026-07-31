@@ -37,32 +37,41 @@ Outras consequências práticas de reaproveitar o motor: as mesmas ferramentas d
 ### B-001 — Árvore de partes
 `P0` · `V5` · decisão de RimWorld · dep: — · dados: `config/body.json`
 
-O corpo é uma árvore de partes, cada uma com pai e filhos. Cerca de vinte e cinco nós, não mais:
+O corpo é uma árvore de partes, cada uma com pai e filhos. Vinte e oito nós, e o teto é essa ordem de grandeza:
 
 ```
 corpo
-├─ cabeça — crânio — cérebro · olhos · orelhas · nariz · mandíbula
+├─ cabeça — crânio — cérebro
+│         └─ olhos · orelhas · nariz · mandíbula
 ├─ pescoço
 ├─ torso — caixa torácica — coração · pulmões
 │         └─ estômago · fígado · rins
-├─ braços — mãos — dedos
+├─ braços — mãos
 └─ pernas — pés
 ```
 
-Vinte e cinco nós é escolha deliberada. Dwarf Fortress modela camadas de tecido por parte e paga caro por isso; o retorno narrativo do detalhe extra é próximo de zero.
+Duas leituras do diagrama precisam ficar explícitas, porque o dado depende delas e uma ambiguidade aqui produz comportamento errado sem produzir erro de validação.
+
+**Do crânio pende só o cérebro.** Olho, orelha, nariz e mandíbula pendem da cabeça. Não é detalhe de desenho: parte interna só é atingida com a camada externa comprometida ou com dano penetrante (B-021), e pôr o olho atrás do crânio o tornaria inatingível por um golpe comum — que é o oposto do que a cobertura declarada para ele diz.
+
+**Não existem dedos.** A manipulação já é servida pela mão, e perder um dedo não muda o que o agente consegue fazer, o que ele sente a respeito, nem o que os outros pensam dele — os três critérios de admissão deste documento. Dez nós a mais custariam um terço da árvore para não produzir fato nenhum.
+
+O teto é escolha deliberada, e é o mesmo argumento uma escala acima: Dwarf Fortress modela camadas de tecido por parte e paga caro por isso, e o retorno narrativo do detalhe extra é próximo de zero.
 
 Exemplo completo em [`config/body.example.json`](../../config/body.example.json).
 
-**Aceite:** a árvore é carregada de dado, e trocar o arquivo por um corpo diferente não exige código.
+**Aceite:** a árvore é carregada de dado, trocar o arquivo por um corpo diferente não exige código, e o diagrama acima e o arquivo de exemplo declaram exatamente o mesmo conjunto de nós.
 
 ### B-002 — Propriedades da parte
 `P0` · `V5` · decisão de RimWorld · dep: B-001
 
-Cada parte declara: vida máxima, **cobertura** (probabilidade relativa de ser atingida), profundidade (externa ou interna), se é **vital**, seu **material inicial**, e quais capacidades ela serve e com que peso.
+Cada parte declara: vida máxima, **cobertura** (probabilidade relativa de ser atingida), profundidade (externa ou interna), se é **vital**, seu **material inicial**, quais capacidades ela serve e com que peso, e sua **classe de parte**, que resolve as constantes fisiológicas (B-054). Órgãos declaram um punhado de campos além destes, enumerados em B-053.
 
 Material inicial, não material fixo: o material corrente vive no estado do agente e pode divergir depois de uma transmutação (B-038).
 
-**Aceite:** a soma das coberturas das partes externas é 1, e a distribuição de acertos ao longo de mil golpes aleatórios converge para ela.
+A soma das coberturas é 1 **exatamente**, e não aproximadamente. A seleção da parte atingida sorteia sobre ela (B-021), e um total diferente de 1 enviesa a distribuição inteira sem produzir sintoma nenhum — o defeito mais barato de introduzir e mais caro de encontrar deste documento.
+
+**Aceite:** a soma das coberturas das partes externas é 1 dentro da tolerância que o validador declara, e a distribuição de acertos ao longo de mil golpes aleatórios converge para ela.
 
 ### B-003 — Tecidos são o mesmo catálogo de materiais
 `P0` · `V5` · decisão · dep: B-002, R-001, W-011
@@ -159,16 +168,20 @@ A maioria esmagadora das condições de um mundo em regime é estática. Elas ex
 ### B-011 — O conjunto de capacidades
 `P0` · `V5` · decisão de RimWorld · dep: B-002
 
-Consciência, visão, audição, movimento, manipulação, fala, respiração, bombeamento sanguíneo, filtragem sanguínea, digestão, metabolismo.
+Consciência, visão, audição, olfato, movimento, manipulação, fala, mastigação, respiração, bombeamento sanguíneo, filtragem sanguínea, digestão, metabolismo.
 
 Vitais, cuja perda total mata: consciência, respiração, bombeamento, filtragem, digestão.
 
-**Aceite:** cada capacidade é inspecionável no painel com seu valor corrente e a lista do que a está reduzindo.
+As treze são agrupadas em seis sistemas nomeados por B-061, que não as substitui: o agrupamento é camada de leitura, e existe para que "o sistema excretor está falhando" seja uma frase dizível.
+
+**Aceite:** cada capacidade é inspecionável no painel com seu valor corrente, a lista do que a está reduzindo e o sistema a que pertence.
 
 ### B-012 — Cálculo da capacidade
 `P0` · `V5` · decisão de RimWorld · dep: B-011
 
 Uma capacidade é a soma ponderada da eficiência das partes que a servem, mais os offsets das condições ativas, limitada pelos tetos que alguma condição imponha.
+
+Eficiência da parte é o **funcionamento** de B-055 — um número derivado que já traz dentro de si o dano, a idade biológica e a toxicidade daquela parte. É porta única de propósito: toda fisiologia nova entra na capacidade por ali, e nenhuma capacidade precisa saber que veneno ou idade existem.
 
 Nada é atribuído diretamente. A especificação anterior já calculava consciência assim; a diferença é que agora **tudo** funciona assim, e a fórmula única de consciência dá lugar a uma composição de partes e condições.
 
@@ -219,6 +232,8 @@ O piso existe para que arranhões não deixem ninguém tonto.
 
 Condições declaram taxa de sangramento. A soma alimenta uma condição de corpo inteiro, *perda de sangue*, que sobe enquanto houver sangramento e desce quando parar. Cheia, mata. No caminho, derruba consciência por estágios.
 
+A taxa de cada condição é o fator de sangramento do material da parte ferida multiplicado pela **vascularização** dela (B-056). O material dá a base — carne sangra, osso quase não — e a vascularização dá a diferença entre dois órgãos do mesmo tecido, que é o que o catálogo, por desenho, não pode saber.
+
 E — o detalhe que liga o corpo ao mundo — **quem sangra deixa cobertura de sangue nos tiles por onde passa** (R-025). O rastro é perceptível, persiste, e acusa.
 
 **Aceite:** um agente ferido atravessando um cômodo deixa vestígio que outro agente encontra depois e consegue seguir.
@@ -267,7 +282,9 @@ Tipo de dano cruzado com **propriedade do material** produz condição. Mesma fo
 
 A coluna do meio é etiqueta e não nome de tecido, e a última linha é a que fecha o desenho. Ossos são frágeis porque o catálogo diz que são — igual a vidro e cerâmica. Nervos conduzem porque são condutivos — igual a cobre. E uma parte cujo material deixou de ser vivo simplesmente para de adoecer e passa a se comportar como matéria, que é exatamente o que se espera depois de uma transmutação (B-039).
 
-**Aceite:** cada linha tem teste; adicionar um tipo de dano novo é editar dado; e nenhuma linha nomeia um material por identificador.
+Os tipos de dano da primeira coluna vêm do vocabulário fechado de B-052, e são a única coisa aqui que não é ajustável em dado: acrescentar linha à matriz é editar arquivo, acrescentar **tipo** é mudar contrato.
+
+**Aceite:** cada linha tem teste; acrescentar uma linha à matriz é editar dado; nenhuma linha nomeia um material por identificador; e todo tipo de dano de B-052 tem ao menos uma linha.
 
 ### B-021 — Seleção da parte atingida
 `P0` · `V5` · decisão de RimWorld · dep: B-002
@@ -285,6 +302,170 @@ Não há caminho separado para "dano ambiental". É o mesmo.
 
 **Aceite:** atravessar um tile em chamas produz queimadura na perna, não um decremento genérico de vitalidade.
 
+### B-052 — Vocabulário fechado de tipos de dano
+`P0` · `V5` · decisão · dep: B-020, R-027
+
+Sete tipos, e só sete: contusão, corte, perfuração, queimadura, frio, elétrico e corrosivo. Uma lista só serve à resistência por tipo de dano de cada material, à matriz de lesão e à resolução mecânica de uma agressão — não existe tabela de armas em paralelo, e uma arma é um objeto que entrega um destes sete.
+
+Este é o único pedaço da lesão que **não** é dado ajustável: a lista é fechada no schema de domínio, porque material e matriz consultam a mesma enumeração e a única forma de garantir que não divirjam é não haver duas cópias. Acrescentar um tipo de dano é mudança de contrato, e obriga a matriz a ganhar linha no mesmo passo.
+
+Daí saem duas invariantes que o validador cobra:
+
+- toda chave de resistência por dano declarada num material é um dos sete;
+- todo um dos sete tem ao menos uma linha na matriz de lesão. Um tipo de dano sem linha é uma agressão que não resolve em nada — o pior desfecho possível, porque não falha, apenas não acontece.
+
+O curinga `*` da regra de fallback de B-020 não é um tipo de dano e não entra na lista.
+
+**Aceite:** o validador recusa material cuja resistência cite dano fora da lista, e recusa matriz de lesão que deixe qualquer um dos sete sem nenhuma linha.
+
+---
+
+## Órgãos, tempo biológico e sistemas
+
+Até aqui uma parte era um saco de vida com uma cobertura e uma lista de capacidades servidas. Isso basta para um braço, e não basta para um fígado: dois órgãos do mesmo tecido sangram diferente, envelhecem em ritmos diferentes, acumulam veneno em quantidades diferentes e param de funcionar em pontos diferentes. Nada disso cabia no material, porque o catálogo não sabe de qual órgão se trata, e é justamente por não saber que ele serve ao mundo inteiro (B-003).
+
+Esta seção acrescenta o que faltava sem acrescentar sistema: **órgão é a mesma parte com mais campos**, e todos os campos novos desaguam num número derivado só — o funcionamento da parte (B-055) — que entra nas capacidades pela porta que já existia (B-012). Nenhuma capacidade ganhou regra, nenhum laço novo foi criado, e o agente saudável continua custando zero (B-063).
+
+O que se compra com isso é possibilidade narrativa: alguém que bebe há vinte anos tem fígado de cinquenta aos trinta; quem perde os dois rins não morre do rim, morre de intoxicação lenta e sistêmica com todo mundo assistindo; um veneno bem escolhido mata devagar sem nunca produzir um ferimento.
+
+Os identificadores começam em `B-052` porque `B-046` a `B-051` já estavam em uso pela seção de custo, e identificador não se recicla — a ordem do documento é temática, não numérica.
+
+### B-053 — Órgão é parte, com mais campos
+`P0` · `V5` · decisão · dep: B-002, B-003 · dados: `config/body.json`
+
+Órgão não é uma espécie nova de nó. É uma parte que declara, além de tudo que B-002 exige, quatro coisas: a **classe de parte** que resolve suas constantes fisiológicas (B-054), sua **vascularização** (B-056), sua **taxa própria de acúmulo tóxico** (B-059) e sua **idade biológica** (B-058), esta última no estado do agente e não na definição, porque muda ao longo da vida.
+
+Não ser tipo novo é a decisão, e é a mesma de B-006: um segundo tipo obrigaria um segundo laço de atualização, uma segunda tela, um segundo caminho de serialização e uma segunda chance de os dois divergirem. Uma parte que não declara nenhum campo de órgão continua se comportando exatamente como antes desta seção, com os padrões da sua classe.
+
+O material continua vindo do catálogo único, e a transmutação continua valendo (B-038): o que a parte declara sobre si é ortogonal ao que o material declara sobre a matéria.
+
+**Aceite:** declarar um órgão novo é uma entrada em `config/body.json` e nenhuma linha de código; uma parte sem campo de órgão nenhum produz comportamento observável idêntico ao anterior a esta seção.
+
+### B-054 — Constantes por classe de parte
+`P0` · `V5` · decisão · dep: B-053 · dados: `config/body.json`
+
+Cada parte declara sua **classe** — `flesh`, `bone`, `organ`, `sense` — e a classe resolve seis constantes: taxa base de regeneração, teto de regeneração, taxa de acúmulo tóxico, resistência à radiação, sensibilidade e resiliência. Qualquer parte pode sobrescrever qualquer uma delas, e o exemplo canônico é o fígado, que acumula mais que o resto da sua classe porque é por ele que a carga passa.
+
+Classe não é material, e a diferença importa: **classe sobrevive à transmutação, material não.** Um fêmur virado ferro continua sendo `bone` como classe, e o que muda é que perdeu a etiqueta `living` e portanto parou de regenerar, pela regra de fallback de B-020 e sem cláusula nova. Se as constantes morassem no material, a transmutação apagaria a identidade da parte junto com a matéria, e um osso de ferro passaria a envelhecer como ferro envelhece — o que não quer dizer nada.
+
+Quatro classes, e não vinte e cinco entradas de parte: o retorno de calibrar rim e fígado separadamente é menor que o custo de manter vinte e cinco linhas coerentes, e onde o retorno existe a sobrescrita cobre.
+
+**Aceite:** as seis constantes são lidas de dado; trocar a classe declarada de uma parte muda sua regeneração, seu acúmulo tóxico e seu funcionamento sem tocar em código; e uma sobrescrita na parte vence a constante da classe.
+
+### B-055 — Funcionamento da parte
+`P0` · `V5` · decisão · dep: B-012, B-054
+
+Quanto uma parte ainda entrega é um número derivado de 0 a 1, e é o único caminho pelo qual a fisiologia desta seção chega às capacidades. Ele vem da fração de vida da parte transformada entre dois limiares declarados pela classe: acima da **sensibilidade** vale 1, abaixo da **resiliência** vale 0, e entre as duas interpola linearmente. Depois disso é modulado pela idade biológica (B-058) e pela toxicidade (B-059).
+
+**Um par de constantes, e não dois.** Limite mínimo e máximo de funcionamento descrevem exatamente a mesma curva que sensibilidade e resiliência descrevem, e manter os dois pares significaria dois lugares para ajustar a mesma coisa, com a garantia prática de que um deles ficaria errado e ninguém notaria. Sensibilidade e resiliência são os nomes que ficam.
+
+O sentido dos números precisa ficar dito porque um deles é contraintuitivo. Sensibilidade **alta** é parte que perde função ao primeiro dano — o olho, o cérebro. Resiliência **baixa** é parte que continua entregando com quase nada de vida — o músculo, que trabalha machucado. A exigência é que sensibilidade seja maior ou igual à resiliência; invertidas, a interpolação produziria funcionamento crescente com o dano.
+
+Onde B-012 diz "eficiência da parte", leia este número. É a porta única, e é ela que faz veneno, idade e ferimento chegarem à firmeza da mão sem nenhuma regra ligando os dois.
+
+**Aceite:** uma parte com vida acima da sensibilidade da sua classe entrega funcionamento 1; abaixo da resiliência, 0; entre as duas, a interpolação linear exata — e não existe segundo par de constantes descrevendo a mesma curva em lugar nenhum do dado.
+
+### B-056 — Vascularização
+`P0` · `V5` · decisão · dep: B-017, B-053
+
+O quanto uma parte sangra ao ser avariada é o fator de sangramento do **material** multiplicado pela **vascularização da parte**. O material segue sendo a base — é ele que sabe que carne sangra, osso quase não e nervo praticamente nada — e a vascularização é a precisão que faltava, porque fígado e cérebro são ambos `orgao` e a diferença entre furar um e furar o outro não pode sair de um catálogo que não sabe qual dos dois está na frente.
+
+A mesma vascularização governa oxigenação e recepção de nutrientes, e isso tem dois efeitos que não precisam de regra própria: parte pouco vascularizada regenera mais devagar (B-057), e parte muito vascularizada é a primeira a apagar quando o bombeamento cai. Um número, três consequências, nenhuma delas escrita duas vezes.
+
+A regra de R-001 continua intacta: nenhuma linha da matriz de lesão nomeia órgão nem material. Vascularização é número na parte, e a matriz continua consultando etiqueta.
+
+**Aceite:** dois órgãos do mesmo material com vascularizações diferentes produzem taxas de sangramento diferentes para a mesma lesão, sem que a matriz de lesão tenha ganhado nenhuma linha.
+
+### B-057 — Regeneração com teto
+`P1` · `V5` · derivado · dep: B-023, B-054
+
+Parte viva recupera vida a uma taxa base da sua classe, modulada por descanso, nutrição e vascularização, até um **teto de regeneração** que também é da classe. O teto é a razão de o requisito existir: carne volta ao máximo, osso volta quase todo, órgão não volta ao que era. É o que faz uma perfuração de pulmão ser um evento que fica, em vez de um susto que passa.
+
+Isto não substitui B-023, que continua tratando o ferimento como condição que regride e pode deixar cicatriz. Aqui a recuperação é da **parte**, e o teto é o que dá ao corpo memória fisiológica — dano acumulado ao longo de uma vida vira perda irreversível sem que exista sistema de envelhecimento à parte, porque o mesmo número já resolve.
+
+Parte cujo material perdeu a etiqueta `living` não regenera nada, pela regra de fallback de B-020.
+
+**Aceite:** um órgão ferido e curado estabiliza abaixo da vida máxima, exatamente no teto declarado para a sua classe; um músculo nas mesmas condições volta ao máximo.
+
+### B-058 — Idade biológica por parte
+`P2` · `V7` · derivado · dep: B-055, B-028 · dados: `config/body.json`
+
+Cada parte carrega idade biológica própria, em anos, independente da idade do agente. Quanto mais velha, menos funcionamento entrega — e **a velocidade e a forma do comprometimento são da classe**, declaradas em dado com idade de início, perda por ano e forma da curva. Rim e cérebro não decaem no mesmo ritmo nem no mesmo desenho, e é só por isso que a forma é configurável em vez de fixa: com uma curva só, todo órgão envelheceria igual e a idade biológica não diria nada que a idade do agente já não dissesse.
+
+Idade biológica não é a idade cronológica de B-028, e as duas coexistem sem se sobrepor. B-028 continua sorteando condições crônicas por faixa de idade; aqui a perda é contínua, silenciosa e local, e chega ao agente pelo funcionamento. Um bebedor de trinta anos com fígado de cinquenta é a frase que este requisito existe para tornar verdadeira.
+
+A idade biológica é escrita por eventos — intoxicação sustentada, doença, esforço prolongado — e avaliada por cadência lenta (B-063). Ela nunca é escrita pelo GM diretamente, pela mesma razão de B-036: é causa de um derivado, e o caminho legítimo é a condição ou a substância que a move.
+
+**Aceite:** dois agentes de mesma idade cronológica, um deles com idade biológica de fígado elevada, apresentam filtragem sanguínea mensuravelmente diferente, sem que exista sistema de envelhecimento dedicado.
+
+### B-059 — Toxicidade como carga por parte
+`P1` · `V6` · decisão · dep: B-055, B-054
+
+Cada parte acumula carga tóxica de 0 a 1 a uma taxa própria e constante, declarada pela classe e sobrescrevível pela parte. A carga reduz o funcionamento (B-055) e é **continuamente removida** pelo sistema excretor (B-061), na proporção da filtragem sanguínea que ele ainda entrega.
+
+Com tudo funcionando, a remoção supera o acúmulo e a carga fica perto de zero em toda parte. Essa é a propriedade que faz o mecanismo valer a pena: ele é invisível e gratuito na vida de um agente saudável, e só existe quando alguma coisa já deu errado.
+
+Substância tóxica de R-029 entra por aqui, e não por caminho novo: o payload deposita carga na parte que o vetor de R-030 alcançou, e daí em diante é a mesma aritmética. Veneno lento, água contaminada, fumaça respirada por semanas e metal na comida deixam de ser quatro sistemas e passam a ser quatro fontes do mesmo número.
+
+**Aceite:** um agente com excreção íntegra mantém toxicidade próxima de zero em todas as partes por tempo indefinido, e o laço de saúde não o visita por causa disso.
+
+### B-060 — Falência excretora é sistêmica
+`P1` · `V6` · decisão · dep: B-059, B-024, B-061
+
+Quando a remoção cai abaixo do acúmulo, a toxicidade sobe **em toda parte ao mesmo tempo**, e o que era local passa a ser sistêmico: não morre o rim, morre o agente. É a mesma corrida assimétrica de B-024, com os mesmos papéis e a mesma assimetria:
+
+| | Efeito |
+|---|---|
+| excreção íntegra | a remoção supera o acúmulo — a carga cai a quase zero e fica lá |
+| excreção comprometida | o acúmulo vence em todas as partes de uma vez, e o funcionamento cai junto em todas |
+| tratamento e repouso | reduzem o acúmulo; **não** aumentam a remoção |
+| recuperar a filtragem | é a única coisa que reverte a corrida |
+
+Reusar a corrida de B-024 em vez de escrever um sistema de intoxicação é a decisão inteira deste requisito. O mecanismo existe, está calibrado, tem teste, e produz o mesmo tipo de drama que a infecção produz — alguém precisa cuidar, e o doente precisa aceitar parar. Um segundo mecanismo com a mesma forma seria trabalho novo para chegar ao mesmo lugar.
+
+A subida chega à percepção e ao prompt como condição de corpo inteiro, do mesmo jeito que a perda de sangue de B-017: o agente sente náusea e fraqueza sem saber a causa, e quem olha vê alguém adoecendo devagar. E a morte tem causa registrada como qualquer outra (B-029) — a cadeia aponta para a parte que parou de filtrar, não para um escalar genérico.
+
+**Aceite:** destruir os dois rins de um agente faz a toxicidade subir simultaneamente em todas as partes e mata em prazo previsível, com a cadeia causal apontando para a perda de filtragem; restaurar a filtragem antes do fim reverte a subida.
+
+### B-061 — Sistemas fisiológicos
+`P1` · `V5` · decisão · dep: B-011, B-055 · dados: `config/body.json`
+
+As capacidades de B-011 já são sistemas na prática. Este requisito torna o agrupamento explícito: seis sistemas nomeados — circulatório, respiratório, excretor, digestivo, nervoso e locomotor — cada um declarando **quais capacidades o compõem**. A integridade do sistema é derivada dali: vem do funcionamento das partes que servem aquelas capacidades, e não de uma segunda lista de órgãos que alguém teria de manter em sincronia com a primeira.
+
+Não substitui as capacidades e não muda nenhum número de B-012. É camada de leitura, e serve a três coisas:
+
+**Legibilidade.** "O sistema excretor está falhando" é uma frase que a UI, o log causal e o prompt do GM podem dizer. "Filtragem sanguínea em 0,3" não é, e é a mesma informação.
+
+**Prosa barata.** O resumo corporal de B-030 pode nomear o sistema em vez de enumerar capacidade por capacidade — menos token e mais informação por token, que é o orçamento que de fato escasseia neste projeto.
+
+**Um lugar onde pendurar mecanismo.** A remoção de toxicidade de B-059 é do sistema excretor, não de um rim específico. É por isso que perder um rim é sobrevivível e perder os dois não é, sem que exista nenhuma regra escrita sobre rins.
+
+A dor fica deliberadamente fora do agrupamento. Ela mora junto das capacidades por conveniência de representação, mas não é servida por órgão nenhum: é a soma das condições ativas de B-016, e pendurá-la num sistema seria inventar uma fisiologia que não existe.
+
+**Aceite:** a integridade de cada sistema é derivada do funcionamento das partes que servem suas capacidades; nenhum órgão é declarado duas vezes em dado; e existe uma frase de estado por sistema disponível para a UI e para o prompt.
+
+### B-062 — Radiação é substância
+`P2` · `V6` · derivado · dep: R-029, R-030, B-059
+
+Radiação não ganha subsistema. É uma substância como as outras, com os vetores de R-030 — contato para exposição externa, inalação e ingestão para material contaminado — e seu payload deposita carga tóxica (B-059) e dano nas partes alcançadas, reduzido pela **resistência à radiação** da classe da parte (B-054).
+
+Escrever isto explicitamente serve para fechar uma porta. No instante em que existir "dose acumulada", alguém vai querer meia-vida, blindagem por espessura de material e contagem de partículas, e nenhuma dessas coisas produz fato sobre o qual um agente possa pensar. O que produz fato é ficar doente sem entender por quê, num lugar que parecia seguro, e depois descobrir de onde vinha.
+
+⚑ O vocabulário fechado de efeitos de substância de R-029 ainda não tem entrada para depositar carga tóxica; sem ela, uma fonte de radiação só consegue expressar dano e dor. É a única peça de contrato que falta para este requisito ser implementável.
+
+**Aceite:** definir uma fonte de radiação é uma entrada de substância em dado; a exposição produz toxicidade e condições pelos mesmos caminhos de qualquer outra substância; e não existe campo, laço ou arquivo exclusivo de radiação.
+
+### B-063 — Cadência lenta do tempo biológico
+`P0` · `V5` · decisão · dep: B-010, B-046, B-047
+
+Toxicidade e idade biológica são avaliadas por **cadência lenta**, nunca por tick, e só em agente cuja corrida de toxicidade esteja fora de equilíbrio. Com a excreção íntegra o acúmulo é anulado pela remoção, o estado não muda, e a parte não entra em laço nenhum — o mesmo argumento de B-046, com o mesmo desfecho.
+
+O funcionamento da parte (B-055) é derivado, e portanto recomputado por invalidação como qualquer capacidade (B-015): muda quando muda a vida, a idade biológica ou a toxicidade daquela parte, e essas três só mudam por evento ou por cadência lenta. Nenhuma delas muda por tick.
+
+O princípio que fecha a seção, e que é o critério de admissão dela: **ampliar a possibilidade narrativa não pode custar CPU no caso comum.** Órgãos, envelhecimento e intoxicação só aparecem no perfil de performance quando alguém está de fato adoecendo — e nesse momento existem vinte agentes saudáveis pagando zero pelo privilégio de assistir.
+
+**Aceite:** com vinte agentes saudáveis e envelhecendo, o laço de saúde executa zero iterações por tick, e o custo de toxicidade e idade biológica só aparece no perfil quando a excreção de algum deles está comprometida.
+
 ---
 
 ## Doença, cura e cuidado
@@ -293,6 +474,8 @@ Não há caminho separado para "dano ambiental". É o mesmo.
 `P1` · `V5` · derivado de RimWorld · dep: B-009
 
 Ferimentos regridem sozinhos ao longo de dias, mais rápido com descanso e nutrição. Ao terminar, alguns deixam **cicatriz** — condição permanente, estática, com dor residual e possível perda de eficiência.
+
+A condição regride, mas a parte não necessariamente volta ao que era: a recuperação da vida da parte tem taxa e **teto** por classe (B-057), e é por isso que um pulmão perfurado e curado continua um pulmão pior. Cicatriz é a marca visível; o teto é a perda que ninguém vê.
 
 O corpo acumula história. Uma cicatriz é uma memória que outros conseguem ver.
 
@@ -346,6 +529,8 @@ Doenças contagiosas usam o mecanismo de R-032. Nada específico aqui.
 `P2` · `V7` · derivado de RimWorld · dep: B-006
 
 Com o tempo, agentes desenvolvem condições crônicas — dores nas costas, catarata, fragilidade, perda de audição — com probabilidade crescente por idade. Todas estáticas, todas condições comuns.
+
+Isto é a idade **cronológica** do agente, e é discreta: sorteia condições em faixas de idade. Ela convive com a idade **biológica** de cada parte (B-058), que é contínua, local e chega ao agente pelo funcionamento em vez de pela condição. As duas não se sobrepõem — uma produz a catarata, a outra produz o fígado gasto — e nenhuma delas é um sistema de envelhecimento.
 
 **Aceite:** um agente idoso acumula condições crônicas ao longo de anos simulados, sem nenhum sistema de envelhecimento dedicado.
 
@@ -576,6 +761,8 @@ Só entram no laço de saúde os agentes com ao menos uma condição de cadênci
 
 Exatamente a mesma disciplina de R-014, onde só tiles com estado ativo são avaliados.
 
+Órgãos, envelhecimento e toxicidade não abrem exceção aqui, e B-063 explica por quê: enquanto a excreção anula o acúmulo, nada muda de valor, e o que não muda de valor não é visitado. O corpo mais detalhado não custou um tick a mais no caso comum.
+
 **Aceite:** com vinte agentes saudáveis, o laço de saúde executa zero iterações por tick.
 
 ### B-047 — Cadência escalonada
@@ -620,5 +807,7 @@ Toda aleatoriedade — parte atingida, chance de infecção, variação de imuni
 ## Não-objetivos
 
 Fora de escopo por decisão: camadas de tecido por parte, cirurgia com procedimentos individuais, farmacocinética, sistema imunológico com tipos de patógeno, genética, e ciclo reprodutivo detalhado.
+
+Órgãos **entraram** em escopo (B-053), na forma reduzida desta especificação: campos a mais numa parte que já existia, desaguando num funcionamento derivado. O que continua fora é o resto do que costuma vir com eles — dose de radiação com meia-vida e blindagem, metabolismo nutricional por substância, e qualquer curva fisiológica que não termine em capacidade que alguém perceba.
 
 O corpo aqui existe para produzir três coisas: **limitação** que muda o que o agente consegue fazer, **sofrimento** que muda como ele pensa, e **sinal visível** que muda o que os outros pensam dele. O que não serve a uma dessas três não entra.

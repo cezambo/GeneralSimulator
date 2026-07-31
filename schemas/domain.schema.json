@@ -102,15 +102,9 @@
         },
         "damageResistance": {
           "type": "object",
-          "description": "Resistência por tipo de dano, 0 a 1. R-027.",
-          "properties": {
-            "impact": { "type": "number", "minimum": 0, "maximum": 1 },
-            "cut": { "type": "number", "minimum": 0, "maximum": 1 },
-            "fire": { "type": "number", "minimum": 0, "maximum": 1 },
-            "corrosion": { "type": "number", "minimum": 0, "maximum": 1 },
-            "electric": { "type": "number", "minimum": 0, "maximum": 1 }
-          },
-          "additionalProperties": false
+          "description": "Resistência por tipo de dano, 0 a 1. As chaves são o vocabulário fechado de DamageType — amarrado por referência, e não repetido, para que material e matriz de lesão não possam divergir. R-027, B-020.",
+          "propertyNames": { "$ref": "#/$defs/DamageType" },
+          "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
         },
         "rubbleMaterialId": {
           "type": "string",
@@ -193,6 +187,37 @@
       "enum": ["floor", "wall", "door", "window", "roof", "water", "road"]
     },
 
+    "Grid": {
+      "type": "object",
+      "description": "Uma malha de tiles. O mundo é 2.5D: o plano continua bidimensional, e a terceira dimensão vem de grids empilhados mais a altura contínua dentro de cada célula. Andar superior, porão e caverna são grids; sótão dentro de uma caixa mágica também, com regra de alinhamento diferente. W-059.",
+      "required": ["id", "width", "height", "alignment"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "Rótulo legível: 'segundo andar', 'adega'." },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "alignment": {
+          "type": "string",
+          "enum": ["aligned", "detached"],
+          "description": "Alinhado partilha o sistema de coordenadas do grid principal, então uma célula daqui corresponde a uma célula de lá e cair por um buraco leva ao lugar certo embaixo. Destacado é espaço extraespacial: não corresponde a lugar nenhum e só é alcançável pela entrada declarada. W-060, W-061."
+        },
+        "zLevel": {
+          "type": "integer",
+          "description": "Ordem de empilhamento entre grids alinhados. Só tem significado quando alignment é aligned. Maior está por cima."
+        },
+        "originOffset": {
+          "$ref": "#/$defs/GridPos",
+          "description": "Deslocamento da origem deste grid em relação ao principal. Permite um andar menor que a planta baixa. Só se aplica a grid alinhado."
+        },
+        "entranceTilePos": {
+          "$ref": "#/$defs/GridPos",
+          "description": "Única entrada de um grid destacado, expressa como célula do grid que a contém. Obrigatório quando alignment é detached: espaço sem entrada é inalcançável e não deveria existir. W-061."
+        },
+        "entranceFromGridId": { "type": "string", "description": "Grid onde a entrada de um destacado se abre." }
+      },
+      "additionalProperties": false
+    },
+
     "Tile": {
       "type": "object",
       "required": ["type", "materialId", "pos"],
@@ -200,6 +225,39 @@
         "type": { "$ref": "#/$defs/TileType" },
         "materialId": { "type": "string" },
         "pos": { "$ref": "#/$defs/GridPos" },
+        "gridId": {
+          "type": "string",
+          "description": "Grid a que esta célula pertence. Ausente significa o grid principal. W-059."
+        },
+        "baseHeight": {
+          "type": "number",
+          "description": "Altura do solo desta célula, em metros, relativa ao plano do grid. Contínua e interpolada: uma entidade que ocupa mais de uma célula recebe a média ponderada pela fração ocupada, e não o valor de uma célula só. Governa escoamento de líquido, assentamento de gás pesado e queda. W-063, W-064, R-016, R-022."
+        },
+        "tileHeight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Altura do material do tile sobre o solo, em metros. Separado de baseHeight porque uma mureta sobre terreno plano e um degrau de rocha são coisas diferentes: a primeira pode ser derrubada sem alterar o solo. W-063."
+        },
+        "pressure": { "type": "number", "description": "Pressão ambiente, em atmosferas. Valor contínuo interpolado. Descritor ambiental, não fluidodinâmica: governa respiração e conforto nos extremos, e nada mais. W-068." },
+        "gravityMultiplier": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Multiplicador de gravidade local; 1 é o padrão. Valor contínuo interpolado. Ausente equivale a 1. W-065."
+        },
+        "occupancy": {
+          "type": "object",
+          "description": "Quanto do volume da célula está tomado e por quem. Governa passagem, cobertura e aperto. Objeto grande e imóvel, indivíduo e objeto físico entram todos aqui; o que está guardado não entra. W-066.",
+          "properties": {
+            "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+            "occupantIds": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "storedObjectIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Objetos guardados na célula, cuja soma de volumes efetivos cabe no teto declarado em tuning. O que guardar significa está em O-009; o que este campo acrescenta é que guardado não entra em occupancy — a diferença entre uma despensa arrumada e um cômodo entulhado. W-067, O-009."
+        },
         "rotation": { "type": "integer", "enum": [0, 90, 180, 270] },
         "integrity": { "type": "number", "minimum": 0, "maximum": 100 },
         "temperature": { "type": "number", "description": "R-007." },
@@ -271,11 +329,20 @@
 
     "ObjectDef": {
       "type": "object",
+      "description": "Molde reutilizável de objeto. O que é constante ao tipo vive aqui; o que varia por exemplar vive em WorldObject. W-030.",
       "required": ["id", "name", "description", "category", "materialId", "size", "affordances"],
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "description": { "type": "string" },
+        "description": { "type": "string", "description": "Glosa de uma linha, para listas e UI. Não é nenhuma das duas descrições de O-020." },
+        "sensoryDescription": {
+          "type": "string",
+          "description": "Tudo que pode ser percebido do objeto por qualquer sentido: forma, estética, cheiro, som, textura. Pública — vai para quem quer que perceba o objeto. Nunca contém como a coisa funciona. O-020."
+        },
+        "functionalDescription": {
+          "type": "string",
+          "description": "Como o objeto realmente funciona. Oculta dos agentes e é a fonte que o VALIDADOR consulta. A separação é o que permite um agente usar algo errado de forma plausível: ele decide pela descrição sensorial e pela própria crença, nunca por esta. O-020, V-043."
+        },
         "category": { "type": "string", "enum": ["tool", "furniture", "decoration", "consumable", "container", "clothing", "weapon"] },
         "materialId": { "type": "string" },
         "size": {
@@ -284,34 +351,147 @@
           "properties": { "w": { "type": "integer" }, "h": { "type": "integer" } },
           "additionalProperties": false
         },
+        "weight": { "type": "number", "minimum": 0, "description": "Quilogramas. Soma para a carga do portador e para a penalidade de movimento. O-001." },
+        "volume": { "type": "number", "minimum": 0, "description": "Metros cúbicos de matéria efetiva, sem contar o desperdício de forma. O-001." },
+        "packingEfficiency": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "PEM: quão trambolhudo é o objeto. Multiplica o volume para dar o volume realmente ocupado quando guardado. Um cubo perfeito vale 1; um par de galhadas vale muito mais. Um local de armazenamento feito sob medida para o objeto reduz o multiplicador. O-002."
+        },
+        "stackLimit": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64,
+          "description": "Quantos exemplares formam uma pilha, quando o tipo empilha. Ausente significa que o objeto não empilha. O-007."
+        },
         "grabbable": { "type": "boolean" },
         "equippable": { "type": "boolean" },
         "slot": { "type": "string", "enum": ["hand", "worn", "none"] },
         "isContainer": { "type": "boolean" },
-        "containerCapacity": { "type": "integer" },
+        "containerVolume": { "type": "number", "minimum": 0, "description": "Volume interno em metros cúbicos. Substitui a contagem de itens: o que limita é o volume efetivo somado, não a quantidade. O-003." },
+        "fittedFor": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identificadores de ObjectDef para os quais este container foi feito. O PEM desses objetos cai ao valor declarado em tuning quando guardados aqui — é o que faz uma aljava valer mais que um saco para flechas. O-002."
+        },
         "affordances": { "type": "array", "items": { "$ref": "#/$defs/Affordance" } },
+        "functionRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRule" },
+          "description": "O Funcionamento: regras determinísticas que resolvem o uso do objeto sem chamar o VALIDADOR. Cresce ao longo da partida por promoção. O-021."
+        },
         "customProperties": { "type": "object", "additionalProperties": true },
         "userCreated": { "type": "boolean", "description": "Criado pelo usuário no modo construção. W-034." }
       },
       "additionalProperties": false
     },
 
+    "ItemRule": {
+      "type": "object",
+      "description": "Uma regra do Funcionamento de um objeto. Nasce de um julgamento do VALIDADOR que generalizou: em vez de rechamar o modelo toda vez que alguém tentar a mesma coisa com o mesmo tipo de objeto, a resposta passa a ser determinística. Mesmo ciclo de vida de ProvisionalRule. O-021, V-041.",
+      "required": ["id", "trigger", "outcome"],
+      "properties": {
+        "id": { "type": "string" },
+        "trigger": {
+          "type": "object",
+          "description": "Que tentativa de uso esta regra intercepta, no vocabulário fechado do domínio.",
+          "additionalProperties": true
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["afford", "refuse", "effect"],
+          "description": "afford habilita a ação; refuse a impede com retorno diegético; effect a executa invocando um efeito da engine."
+        },
+        "effectId": { "type": "string", "description": "Obrigatório quando outcome é effect." },
+        "diegeticText": { "type": "string", "description": "O que o agente sente ou percebe. Nunca linguagem de sistema. V-006." },
+        "state": { "type": "string", "enum": ["provisional", "permanent", "rejected"] },
+        "sourceJudgmentId": { "type": "string" },
+        "fireCount": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "ItemBelief": {
+      "type": "object",
+      "description": "O que um indivíduo acha que um tipo de objeto faz. Guardado somente quando diverge da descrição funcional verdadeira: sem divergência o agente herda o entendimento correto, e o registro existir já significa que ele entende errado. É o que produz uso supersticioso, erro plausível e a correção que vem de ver a coisa falhar. O-022.",
+      "required": ["defId", "believedFunction"],
+      "properties": {
+        "defId": { "type": "string" },
+        "believedFunction": { "type": "string", "description": "1 a 3 frases, do ponto de vista do agente." },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "divergedAtSimTime": { "type": "number" },
+        "lastRevisedAtSimTime": { "type": ["number", "null"], "description": "Revisada quando o agente percebe algo que contradiz a crença. O-023." }
+      },
+      "additionalProperties": false
+    },
+
     "WorldObject": {
       "type": "object",
+      "description": "Exemplar de um ObjectDef no mundo. O-001.",
       "required": ["id", "defId", "pos"],
       "properties": {
         "id": { "type": "string" },
         "defId": { "type": "string" },
         "pos": { "$ref": "#/$defs/Vec2" },
+        "gridId": { "type": "string", "description": "Ausente significa o grid principal. W-059." },
+        "z": { "type": "number", "description": "Altura em metros acima do solo da célula, para o objeto que repousa sobre outra coisa em vez de sobre o chão. Não guarda objeto em voo: arremesso e queda resolvem dentro do mesmo tick e assentam antes de o tick fechar, conforme O-011. W-062, W-063." },
         "rotation": { "type": "number" },
+        "velocity": {
+          "$ref": "#/$defs/Vec2",
+          "description": "Metros por segundo simulado. Ausente ou zero significa parado, que é o caso da esmagadora maioria dos objetos e custa nada. Presente significa que o objeto está em trânsito balístico. Projétil é apenas um objeto com velocidade. O-010."
+        },
         "integrity": { "type": "number", "minimum": 0, "maximum": 100, "description": "Integridade unificada: dano estrutural + desgaste. R-027, R-028." },
-        "containedBy": { "type": ["string", "null"], "description": "id de container ou de agente que carrega." },
+        "containedBy": { "type": ["string", "null"], "description": "id de container, de agente que carrega, ou de célula que guarda." },
         "contents": { "type": "array", "items": { "type": "string" } },
+        "stackCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantos exemplares idênticos este registro representa. Um só registro para uma pilha é o que permite sessenta e quatro flechas não custarem sessenta e quatro objetos. Limitado pelo stackLimit do molde. O-007."
+        },
+        "composite": {
+          "$ref": "#/$defs/CompositeStructure",
+          "description": "Presente quando o objeto é montado de outros. O-004."
+        },
         "temperature": { "type": "number", "description": "R-007." },
         "states": { "type": "array", "items": { "$ref": "#/$defs/TransientState" }, "description": "R-004." },
         "coverings": { "type": "array", "items": { "$ref": "#/$defs/Covering" }, "description": "R-025." },
         "odorDescriptor": { "type": "string", "maxLength": 40, "description": "R-036." },
         "state": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "CompositeStructure": {
+      "type": "object",
+      "description": "Objeto montado de outros objetos. A física do jogo renderiza e move um só corpo; a composição existe para que o calor caminhe pelas peças, para que quebrar uma peça desmonte o resto, e para que o peso venha de baixo em vez de ser inventado. O-004, O-005.",
+      "required": ["componentIds", "connections"],
+      "properties": {
+        "componentIds": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+        "connections": {
+          "type": "array",
+          "description": "Grafo de conexão. Uma peça que quebra se desconecta, e o que dependia dela através dela também se solta. O-004.",
+          "items": {
+            "type": "object",
+            "required": ["a", "b", "thermalEfficiency"],
+            "properties": {
+              "a": { "type": "string" },
+              "b": { "type": "string" },
+              "thermalEfficiency": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255,
+                "description": "Quão bem o calor atravessa esta junta. Oito bits porque é a resolução que o fenômeno pede: o cabo de madeira de uma panela de ferro é o mesmo mecanismo que uma alça isolante. R-008, O-006."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "weight": {
+          "type": "number",
+          "x-derived": true,
+          "description": "DERIVADO da soma dos pesos dos componentes. Nunca atribuído."
+        }
       },
       "additionalProperties": false
     },
@@ -375,7 +555,35 @@
         },
         "destroyed": { "type": "boolean" },
         "missing": { "type": "boolean", "description": "Destruída e removida, distinto de apenas ferida." },
-        "prostheticId": { "type": "string", "description": "Substituição artificial, com eficiência própria. B-005." }
+        "prostheticId": { "type": "string", "description": "Substituição artificial, com eficiência própria. B-005." },
+        "biologicalAge": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Idade biológica desta parte, em anos, independente da idade do agente. Um fígado pode envelhecer mais rápido que o dono. Quanto maior, mais comprometida a função, com velocidade e forma do comprometimento declaradas por tipo de parte em config/body.json. B-046."
+        },
+        "toxicity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Carga tóxica acumulada nesta parte. Sobe por taxa própria do tipo de parte e desce pelo trabalho do sistema excretor. Com tudo funcionando fica perto de zero; quando a excreção falha, sobe em toda parte ao mesmo tempo e a falência é sistêmica em vez de local. É a mesma corrida assimétrica da infecção, aplicada ao corpo inteiro. B-047, B-048."
+        },
+        "functioning": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "x-derived": true,
+          "description": "DERIVADO. Quanto esta parte ainda entrega do que deveria. Vem da integridade transformada linearmente entre dois pontos declarados por tipo de parte: acima da sensibilidade vale 1, abaixo da resiliência vale 0, e entre as duas interpola. Modulado ainda por idade biológica e toxicidade. Alimenta as capacidades de B-012. B-049."
+        },
+        "coverings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Covering" },
+          "description": "Coberturas localizadas nesta parte. Distinto de Biology.coverings, que descreve o corpo inteiro. É o que separa 'sangue na mão' de 'coberto de sangue' — a primeira é a evidência que incrimina, a segunda é o estado que assusta. Quando a parte é decepada, suas coberturas acompanham o membro. R-025, B-032."
+        },
+        "exposedSkin": {
+          "type": "boolean",
+          "x-derived": true,
+          "description": "DERIVADO das peças de vestuário que cobrem esta parte. Falso significa que há tecido entre a parte e o mundo, e as reações de contato do substrato incidem sobre a roupa antes da carne. É o que faz vestir um casaco importar sem simular camadas de tecido. R-025, B-021."
+        }
       },
       "additionalProperties": false
     },
@@ -445,6 +653,18 @@
         "custom": {
           "type": "object",
           "properties": {
+            "intelligence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Governa o tamanho do orçamento de pensamento profundo. Abaixo do limiar declarado em tuning o orçamento é zero e a opção de deliberar nem é oferecida ao agente — o que produz um indivíduo que age por impulso por incapacidade, e não por estar mal escrito. C-051."
+            },
+            "attention": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Modula o limiar de lembrabilidade: quem presta mais atenção retém fatos que passariam batido pelos outros. Junto com a consciência corrente, converte a nota de 0 a 10 da decisão em 'isto virou memória' ou 'isto não deixou marca'. C-052."
+            },
             "stubbornness": { "type": "number", "minimum": 1, "maximum": 10, "description": "Base do limiar de teimosia. C-027." },
             "honesty": { "type": "number", "minimum": 0, "maximum": 100, "description": "Modula relato verbal. C-019." },
             "aggression": { "type": "number", "minimum": 0, "maximum": 100 },
@@ -497,7 +717,20 @@
         },
         "stubbornnessThreshold": { "type": "integer", "description": "Valor base, derivado da personalidade." },
         "currentThreshold": { "type": "integer", "description": "Base mais acréscimos por sinergia. C-028." },
-        "lastBurstSimTime": { "type": ["number", "null"] }
+        "lastBurstSimTime": { "type": ["number", "null"] },
+        "absorbedIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identificadores das opiniões que esta consolidou. Só presente na sobrevivente de uma consolidação. C-032."
+        },
+        "supersededById": {
+          "type": ["string", "null"],
+          "description": "Presente na opinião absorvida, apontando para a consolidada. Consultar o identificador de uma absorvida resolve para a sobrevivente por este campo — nada é apagado, e por isso uma memória antiga que cite a opinião antiga continua resolvendo. C-032."
+        },
+        "archived": {
+          "type": "boolean",
+          "description": "Verdadeiro em opinião absorvida. Arquivada não entra em contexto de pensamento nem recebe dissonância, mas permanece no estado e continua resolvível. C-032."
+        }
       },
       "additionalProperties": false
     },
@@ -514,6 +747,43 @@
         "tags": { "type": "array", "items": { "type": "string" }, "description": "Ex: gm_denial, action_blocked, trauma." },
         "userCreated": { "type": "boolean" },
         "social": { "type": "string", "description": "Só em camadas longas: parágrafos focados em relações." }
+      },
+      "additionalProperties": false
+    },
+
+    "SieveVerdict": {
+      "type": "string",
+      "enum": ["true", "possible", "uninteresting", "ignored", "false"],
+      "description": "Saída do Crivo: o que o indivíduo faz com cada tema que ouviu. 'true' entra no banco de fatos; 'possible' fica em suspenso e volta a ser avaliado se corroborado; 'uninteresting' é descartado por desinteresse; 'ignored' é descartado de propósito, o que é caracterização e não filtro; 'false' vai para a memória de mentiras. C-047."
+    },
+
+    "FactBankEntry": {
+      "type": "object",
+      "description": "O que o indivíduo tem por fato do mundo. Distinto de memória, que é o que ele viveu, e de opinião, que é o que ele acha. Um fato aqui pode ser falso: o que importa é que ele acredita. Alimentado pelo Crivo. C-048.",
+      "required": ["id", "text", "verdict", "simTime"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string", "description": "Uma frase, afirmativa." },
+        "topic": { "type": "string", "description": "Tópico canônico, para recuperação e pré-filtro." },
+        "verdict": { "$ref": "#/$defs/SieveVerdict" },
+        "sourceAgentId": { "type": ["string", "null"], "description": "De quem ouviu. Nulo quando veio de percepção direta." },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "corroborationCount": { "type": "integer", "minimum": 0, "description": "Quantas fontes independentes disseram o mesmo. É o que promove um 'possible' a 'true' sem nova chamada. C-049." },
+        "contradictedByFactId": { "type": ["string", "null"], "description": "Fato que colide com este. Colisão alimenta dissonância pelo caminho normal de C-025." },
+        "simTime": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+
+    "SelfUnderstanding": {
+      "type": "object",
+      "description": "Como o indivíduo se vê e como acha que deve responder a cada tipo de situação. Gerado esporadicamente a partir das memórias recentes, da personalidade e dos auto-entendimentos anteriores — e por isso deriva junto com o personagem em vez de ser fixo. É a única peça do desenho que dá ao agente uma teoria sobre si mesmo. C-050.",
+      "required": ["text", "generatedAtSimTime"],
+      "properties": {
+        "text": { "type": "string", "description": "Prosa curta em primeira pessoa. Teto de palavras em tuning." },
+        "generatedAtSimTime": { "type": "number" },
+        "supersedesText": { "type": "string", "description": "O auto-entendimento anterior, preservado por uma geração. Comparar os dois é o que torna a deriva de caráter legível na UI e no export narrativo." },
+        "basedOnMemoryIds": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
     },
@@ -609,6 +879,27 @@
         "relationships": { "type": "array", "items": { "$ref": "#/$defs/Relationship" } },
         "opinions": { "type": "array", "items": { "$ref": "#/$defs/Opinion" } },
         "memories": { "type": "array", "items": { "$ref": "#/$defs/MemoryEntry" } },
+        "factBank": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FactBankEntry" },
+          "description": "O que o agente tem por verdade sobre o mundo, incluindo o que ele registrou como mentira ouvida. C-048."
+        },
+        "selfUnderstanding": { "$ref": "#/$defs/SelfUnderstanding" },
+        "itemBeliefs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemBelief" },
+          "description": "Somente as divergências: um item ausente daqui é um item que o agente entende corretamente. O-022."
+        },
+        "deepThinkingBudget": {
+          "type": "object",
+          "description": "Deliberação profunda é escolha do agente, limitada por período de vários dias e dimensionada pela inteligência. Distinto do teto de chamadas, que limita volume: este limita acesso ao modelo forte. C-051.",
+          "properties": {
+            "total": { "type": "integer", "minimum": 0, "description": "Zero significa que a opção não é oferecida." },
+            "used": { "type": "integer", "minimum": 0 },
+            "windowStartSimTime": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
         "activityLog": { "type": "array", "items": { "$ref": "#/$defs/ActivityLogEntry" } },
         "goals": {
           "type": "object",
@@ -617,17 +908,39 @@
             "secondary": { "$ref": "#/$defs/Goal" },
             "tertiary": { "$ref": "#/$defs/Goal" },
             "whim": { "type": ["object", "null"], "$ref": "#/$defs/Goal" },
-            "deprecated": { "type": ["object", "null"], "$ref": "#/$defs/Goal" }
+            "deprecated": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/Goal" },
+              "description": "Metas abandonadas, da mais recente para a mais antiga, truncadas pelo teto declarado em tuning. Lista e não slot único porque C-038 promete que a ambição frustrada continua disponível como frustração: com um slot, o ferreiro que perde a mão e depois perde o filho esquece a mão. C-038."
+            }
           },
           "additionalProperties": false
         },
         "routine": { "$ref": "#/$defs/Routine" },
         "currentThought": { "type": ["string", "null"] },
+        "states": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TransientState" },
+          "description": "Estados transitórios sobre o próprio agente — em chamas, molhado, eletrificado. Mesma estrutura de tile e objeto, e é o que permite ao substrato reativo tratar uma criatura como qualquer outra entidade ocupando uma célula. R-004, R-034."
+        },
+        "odorDescriptor": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "1–5 palavras derivadas de coberturas, condições e higiene. Perceptível por quem tem olfato. R-036."
+        },
         "flags": {
           "type": "array",
-          "items": { "type": "string", "enum": ["sleeping", "thinking", "in_conversation", "combat", "unconscious", "dead", "paused"] }
+          "items": { "type": "string", "enum": ["sleeping", "resting", "thinking", "in_conversation", "combat", "unconscious", "dead", "paused"] }
         },
-        "llmBudgetUsedToday": { "type": "integer" }
+        "llmBudgetUsedToday": { "type": "integer" },
+        "llmBatchBudgetUsedToday": {
+          "type": "integer",
+          "description": "Consumo do orçamento de lote, contabilizado à parte do teto de pensamento e conversa. Separado porque o lote noturno é o que preserva o estado que faz o agente existir amanhã: se disputasse o mesmo teto, o agente que passou o dia conversando perderia a memória do dia. C-007, L-006."
+        },
+        "degradedSinceSimTime": {
+          "type": ["number", "null"],
+          "description": "Hora simulada em que o agente entrou em degradação por esgotamento de orçamento; nulo quando opera normalmente. Zerado na virada do dia simulado. É o que a UI lê para marcar o agente. C-007, L-006, U-020."
+        }
       },
       "additionalProperties": false
     },
@@ -646,7 +959,7 @@
 
     "WorldMutation": {
       "type": "object",
-      "description": "G-005. Alteração concreta emitida pelo GM.",
+      "description": "V-005. Alteração concreta emitida pelo GM.",
       "required": ["type", "target", "changes"],
       "properties": {
         "type": {
@@ -667,7 +980,7 @@
           "type": "string",
           "description": "Parte do corpo alvo, quando o efeito incide sobre um agente. Ausente significa corpo inteiro. B-037."
         },
-        "rationale": { "type": "string", "description": "Justificativa auditável. G-020. Em engine_effect, deve explicar por que nenhuma regra da matriz de reação ou de lesão já cobria o caso. R-044, B-043." }
+        "rationale": { "type": "string", "description": "Justificativa auditável. V-020. Em engine_effect, deve explicar por que nenhuma regra da matriz de reação ou de lesão já cobria o caso. R-044, B-043." }
       },
       "additionalProperties": false
     },
@@ -677,11 +990,243 @@
       "required": ["simTime", "speed", "paused"],
       "properties": {
         "simTime": { "type": "number", "description": "Minutos simulados desde o início." },
-        "speed": { "type": "integer", "enum": [0, 1, 2, 4, 8] },
+        "speed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Multiplicador de velocidade. O conjunto de valores oferecidos é declarado em config/tuning.json sob tempo.velocidadesDisponiveis, e não enumerado aqui: fixar a lista no schema criaria uma terceira fonte de verdade sobre um número ajustável. Zero é pausa. W-041, U-003, X-008."
+        },
         "paused": { "type": "boolean" },
         "day": { "type": "integer" },
         "season": { "type": "integer" },
         "year": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+
+    "DamageType": {
+      "type": "string",
+      "enum": ["blunt", "cut", "pierce", "burn", "cold", "electric", "corrosion"],
+      "description": "Vocabulário fechado de dano. Uma só lista serve à resistência de material, à matriz de lesão e à resolução mecânica de agressão — não há tabela de armas separada. Os nomes vêm da matriz de lesão, que é o consumidor mais expressivo: 'blunt' absorve o antigo 'impact' da resistência de material e 'burn' absorve o antigo 'fire', que colidia com o estado transitório 'burning'. R-027, B-020, B-052.",
+      "$comment": "A matriz de lesão admite ainda o curinga '*' numa regra de fallback; o curinga não é um tipo de dano e não aparece aqui."
+    },
+
+    "ThoughtTrigger": {
+      "type": "string",
+      "enum": ["reactive", "scheduled", "contemplative", "spontaneous", "postInteraction", "postDenial", "wakeUp", "meeting"],
+      "description": "Vocabulário canônico do que provoca um pensamento. Enumerado aqui, e não em prosa, porque quatro documentos haviam divergido silenciosamente sobre esta lista. Prompt, spec e engine usam estes nomes. C-003.",
+      "$comment": "reactive: fato perceptível saliente. scheduled: cadência da rotina. contemplative: ócio com necessidades atendidas. spontaneous: sorteio de fundo. postInteraction: fim de conversa. postDenial: tentativa frustrada, ver C-046. wakeUp: despertar. meeting: turno de assembleia."
+    },
+
+    "ConversationInstance": {
+      "type": "object",
+      "description": "Uma conversa em curso ou encerrada. Estado compartilhado entre os participantes, e não cópia por agente, porque orçamento de turno e proposta de realocação precisam de um só lugar de verdade. S-001.",
+      "required": ["id", "participants", "state", "startedAtSimTime"],
+      "properties": {
+        "id": { "type": "string" },
+        "initiatorId": { "type": "string", "description": "Quem propôs o handshake. S-002." },
+        "participants": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "description": "Ids de agente, na ordem de entrada. Cresce e encolhe durante a conversa. S-015."
+        },
+        "state": {
+          "type": "string",
+          "enum": ["pending", "active", "relocating", "ended"],
+          "description": "pending é handshake proposto e não respondido."
+        },
+        "locationLabel": { "type": "string", "description": "Onde a conversa acontece. Muda em realocação aceita. S-010." },
+        "maxTurns": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Teto de turnos, derivado na abertura da habilidade social dos participantes e do assunto. S-006."
+        },
+        "turnCount": { "type": "integer", "minimum": 0 },
+        "extensionsUsed": { "type": "integer", "minimum": 0, "description": "S-007." },
+        "pendingRelocation": {
+          "type": ["object", "null"],
+          "description": "Proposta de mudança de lugar aguardando voto. S-010.",
+          "properties": {
+            "proposerId": { "type": "string" },
+            "targetLabel": { "type": "string" },
+            "votes": {
+              "type": "object",
+              "additionalProperties": { "type": "boolean" },
+              "description": "Id de agente para aceite."
+            }
+          },
+          "additionalProperties": false
+        },
+        "unresolvedTopic": { "type": ["string", "null"], "description": "Assunto que ficou em aberto e eleva a propensão de reabrir. S-011." },
+        "startedAtSimTime": { "type": "number" },
+        "endedAtSimTime": { "type": ["number", "null"] },
+        "endReason": {
+          "type": "string",
+          "enum": ["turnBudget", "mutualClose", "departure", "hardBlocker", "budgetExhausted"],
+          "description": "S-008. budgetExhausted cobre o caso em que a reserva de orçamento de conversa acaba antes do teto de turnos."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "RawImpression": {
+      "type": "object",
+      "description": "Fato interpretado que o agente carrega antes de virar — ou não — dissonância. Produzido por pós-conversa, por reflexão noturna e por percepção saliente. Tem identificador próprio porque C-029 promete que é auditável qual impressão rompeu qual opinião, e o buffer precisa poder apontar de volta. C-011, C-025.",
+      "required": ["id", "text", "simTime"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string", "description": "Uma frase, do ponto de vista do agente." },
+        "aboutAgentId": { "type": ["string", "null"], "description": "Alvo, quando a impressão é sobre alguém. S-013." },
+        "topic": { "type": ["string", "null"], "description": "Tópico canônico, para o pré-filtro de dissonância. C-030." },
+        "intensity": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "simTime": { "type": "number" },
+        "sourceType": {
+          "type": "string",
+          "enum": ["conversation", "perception", "reflection", "denial"],
+          "description": "De onde veio. denial é tentativa frustrada pelo GM. C-046."
+        },
+        "classified": { "type": "boolean", "description": "Já passou pelo classificador em lote. C-025." }
+      },
+      "additionalProperties": false
+    },
+
+    "ProvisionalRule": {
+      "type": "object",
+      "description": "Causação nova que o GM julgou generalizável, promovida a regra determinística. Entra viva — o ciclo de vida existe para revisão humana, não para autorização prévia, porque a economia inteira do mecanismo vem de a próxima ocorrência não custar chamada. V-024, V-027.",
+      "required": ["id", "domain", "state", "rule", "proposedAtSimTime"],
+      "properties": {
+        "id": { "type": "string" },
+        "domain": {
+          "type": "string",
+          "enum": ["substrate", "body", "social", "cognition", "community"],
+          "description": "V-022. Cada domínio tem vocabulário fechado próprio de condição e efeito."
+        },
+        "state": {
+          "type": "string",
+          "enum": ["provisional", "permanent", "rejected"],
+          "description": "Provisória vale desde já. Permanente sempre vence provisória em colisão. Rejeitada permanece registrada para não ser reproposta. V-025, V-027."
+        },
+        "rule": {
+          "type": "object",
+          "description": "Corpo da regra, no vocabulário fechado do domínio. Validado contra o catálogo do domínio: uma regra fora do vocabulário é rejeitada na entrada e o julgamento vira caso único. V-021, V-022.",
+          "required": ["condition"],
+          "properties": {
+            "condition": { "type": "object", "additionalProperties": true },
+            "effect": { "type": "object", "additionalProperties": true },
+            "formula": {
+              "$ref": "#/$defs/FormulaBinding",
+              "description": "Alternativa a effect, para causação que é essencialmente numérica. Problema numérico não cabe em condição-para-efeito discreto, e é justamente onde o VALIDADOR era rechamado para sempre. V-040."
+            },
+            "description": { "type": "string", "description": "Uma frase legível, para o painel. U-022." }
+          },
+          "additionalProperties": false
+        },
+        "fireCount": { "type": "integer", "minimum": 0, "description": "Quantas vezes disparou. Alimenta a detecção de disparo anômalo e o painel. V-028, U-022." },
+        "proposedAtSimTime": { "type": "number" },
+        "sourceJudgmentId": { "type": "string", "description": "Julgamento do GM que a originou, para auditoria. V-024, X-005." },
+        "reasoning": { "type": "string", "description": "Por que o GM julgou que generaliza." },
+        "resolvedAtSimTime": { "type": ["number", "null"], "description": "Quando virou permanente ou foi rejeitada." }
+      },
+      "additionalProperties": false
+    },
+
+    "CommunityGoal": {
+      "type": "object",
+      "description": "Objetivo coletivo saído de assembleia. Vive no estado do mundo, não no do agente, porque pertence à comunidade e sobrevive à morte de qualquer participante. Entra no contexto de revisão de meta individual como pressão, nunca como imposição. S-028.",
+      "required": ["id", "text", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "rationale": { "type": "string" },
+        "sourceMeetingId": { "type": "string" },
+        "setAtSimTime": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "achieved", "abandoned"] },
+        "committedAgentIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Quem adotou o objetivo em meta própria. Quem não está aqui não é dissidente por omissão. S-029."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "FormulaBinding": {
+      "type": "object",
+      "description": "Uma simulação numérica generalizável, expressa como escolha de molde mais parâmetros. O VALIDADOR não escreve código: ele escolhe entre moldes declarados em config e preenche as constantes. É o que torna a promoção numérica auditável, determinística e impossível de malformar — modelo escrevendo expressão arbitrária que passa a rodar na engine não teria nenhuma das três propriedades. V-040.",
+      "required": ["templateId", "parameters", "output"],
+      "properties": {
+        "templateId": { "type": "string", "description": "Entrada do catálogo de moldes em config/formulas.json." },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Constantes que o molde declara. Um parâmetro fora do que o molde declara invalida a regra."
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "De onde vem cada variável do molde: caminho para grandeza do mundo, como massa do objeto ou velocidade relativa. Vocabulário fechado."
+        },
+        "output": {
+          "type": "object",
+          "required": ["kind"],
+          "description": "O que o resultado do cálculo vira.",
+          "properties": {
+            "kind": { "type": "string", "enum": ["damage", "probability", "integrity", "temperature", "displacement", "duration"] },
+            "damageType": { "$ref": "#/$defs/DamageType" },
+            "clampMin": { "type": "number" },
+            "clampMax": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "ValidationPolicy": {
+      "type": "object",
+      "description": "Onde o VALIDADOR barra e onde ele apenas calcula consequência. Fora dos domínios de porteiro a postura permissiva de V-003 vale integralmente: a ação acontece e o que o modelo produz são desfechos com probabilidade. Dentro deles a ação pode ser barrada e o pedido volta ao agente com explicação. Declarado por cenário. V-035, V-036.",
+      "required": ["gatekeeperDomains"],
+      "properties": {
+        "gatekeeperDomains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["physicalLaw", "inviolableLaw", "userProhibition", "bodyIntegrity", "socialNorm", "resourceConservation"]
+          },
+          "description": "Domínios em que negar é resultado legítimo e o agente é convidado a tentar de novo. Lista vazia significa VALIDADOR puramente consequencial."
+        },
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Tentativas adicionais após uma negação em domínio de porteiro. Só conta dentro desses domínios: negação fora deles é final e diegética, sem rechamada. V-036."
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "PlausibilityRegistry": {
+      "type": "object",
+      "description": "O que é fisicamente possível neste cenário. Declarado na geração e imutável em jogo. É o contrato que permite ao GM ser permissivo sem que a simulação vire fantasia: num cenário realista, transmutar um fêmur em gelo não está no registro e o pedido é reinterpretado. B-044, V-016.",
+      "required": ["allowedOperations", "inviolableLaws"],
+      "properties": {
+        "allowedOperations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identificadores do vocabulário de efeito de R-015 e B-037 admitidos neste cenário. Uma operação fora desta lista é recusada pela engine antes de mutar qualquer coisa. R-043, B-037."
+        },
+        "forbiddenOperations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exceções explícitas, para cenários que permitem uma família de efeitos menos um caso."
+        },
+        "inviolableLaws": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Frases curtas enviadas ao GM no contexto. Ex.: 'ninguém voa', 'não há magia'. Produzido pela geração de cenário. V-016."
+        },
+        "notes": { "type": "string" }
       },
       "additionalProperties": false
     }

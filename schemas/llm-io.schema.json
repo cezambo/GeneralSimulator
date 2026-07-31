@@ -27,10 +27,20 @@
           },
           "additionalProperties": false
         },
+        "memorability": {
+          "type": "object",
+          "description": "C-053. O quanto este instante marcou o agente, avaliado por ele no instante em que o viveu — não por um modelo relendo o dia depois. A engine compara a nota ao limiar derivado de consciência e atenção: acima, o texto vira memória; abaixo, nada acontece e o instante se perde, que é o comportamento correto. Custa zero chamada porque vem na mesma resposta que já decidiu a ação.",
+          "required": ["score"],
+          "properties": {
+            "score": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "what": { "type": "string", "description": "O fato que marcou, numa frase e em primeira pessoa. Só preenchido quando a nota é diferente de zero — é o texto que vira memória se passar do limiar." }
+          },
+          "additionalProperties": false
+        },
         "meta": {
           "type": "object",
           "properties": {
-            "requestedDeepThinking": { "type": "boolean" },
+            "requestedDeepThinking": { "type": "boolean", "description": "C-051. Só oferecido quando o orçamento de pensamento profundo do agente é maior que zero e ainda tem saldo." },
             "emotion": { "type": "string" },
             "urgency": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
           },
@@ -128,6 +138,47 @@
             "additionalProperties": false
           }
         }
+      },
+      "additionalProperties": false
+    },
+
+    "sieve_response": {
+      "description": "C-047. O Crivo. Tudo que o agente ouviu no período é destrinchado em temas e cada tema recebe um veredito à luz do contexto pessoal e do texto original. Roda em lote, uma chamada por agente por noite, junto do resto do lote — por tema seria o pior perfil de volume possível.",
+      "type": "object",
+      "required": ["verdicts"],
+      "properties": {
+        "verdicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["claim", "verdict"],
+            "properties": {
+              "claim": { "type": "string", "description": "O tema afirmado, numa frase, extraído do que foi dito." },
+              "topic": { "type": "string" },
+              "sourceAgentId": { "type": ["string", "null"] },
+              "verdict": { "$ref": "domain.schema.json#/$defs/SieveVerdict" },
+              "reason": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "Por que este agente, com esta memória e esta personalidade, reage assim. É o que distingue descartar por tédio de descartar de propósito."
+              },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "self_understanding_response": {
+      "description": "C-050. Como o agente se vê agora, a partir do que viveu desde a última vez. Gerado esporadicamente, cadência em tuning.",
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "description": "Primeira pessoa, atemporal, dentro do teto de palavras de tuning." },
+        "changedFromPrevious": { "type": "boolean", "description": "Falso quando nada mudou, e nesse caso o auto-entendimento anterior é preservado sem gravar versão nova." },
+        "changeSummary": { "type": "string", "description": "Uma frase sobre o que mudou. Alimenta a timeline e o export narrativo." }
       },
       "additionalProperties": false
     },
@@ -357,20 +408,58 @@
     },
 
     "gm_response": {
-      "description": "G-004 e G-005. Postura permissiva: denied é último recurso. Emite generalization quando aplicável.",
+      "description": "V-004 e V-035. Postura permissiva fora dos domínios de porteiro: denied é último recurso e só é recuperável por nova tentativa dentro dos domínios declarados em ValidationPolicy. Emite consequences quando o desfecho não é certo, e generalization quando o julgamento generaliza.",
       "type": "object",
       "required": ["verdict", "narrative", "worldMutations", "agentFeedback", "generalization"],
       "properties": {
         "verdict": { "type": "string", "enum": ["executed", "partial", "reinterpreted", "denied"] },
-        "narrative": { "type": "string", "description": "Terceira pessoa, para timeline e memória do GM." },
+        "narrative": { "type": "string", "description": "Terceira pessoa, para a timeline. O log causal de X-005 é o registro do que aconteceu; esta narrativa é só apresentação." },
+        "reasoning": {
+          "type": "string",
+          "description": "V-037. O caminho que levou ao veredito: que propriedades foram consideradas, que capacidade de quem foi pesada, por que o desfecho é esse. Auditável e nunca mostrado ao agente."
+        },
+        "deniedDomain": {
+          "type": "string",
+          "enum": ["physicalLaw", "inviolableLaw", "userProhibition", "bodyIntegrity", "socialNorm", "resourceConservation"],
+          "description": "Obrigatório quando verdict é denied. Se o domínio não consta em ValidationPolicy.gatekeeperDomains, a negação é final e não gera nova tentativa. V-036."
+        },
         "worldMutations": {
           "type": "array",
-          "items": { "$ref": "domain.schema.json#/$defs/WorldMutation" }
+          "items": { "$ref": "domain.schema.json#/$defs/WorldMutation" },
+          "description": "Mutações certas — as que acontecem independentemente de rolagem."
+        },
+        "consequences": {
+          "type": "array",
+          "description": "V-038. Desfechos possíveis com probabilidade estimada. A engine rola com dado semeado em (simTime, agentId, actionId), então a partida continua reproduzível pelo cassete. A maior parte das ações não deveria produzir nada aqui: desfecho certo vai em worldMutations e não é sorteado.",
+          "items": {
+            "type": "object",
+            "required": ["description", "probability", "mutations"],
+            "properties": {
+              "description": { "type": "string" },
+              "probability": { "type": "integer", "minimum": 1, "maximum": 100 },
+              "mutations": { "type": "array", "items": { "$ref": "domain.schema.json#/$defs/WorldMutation" } },
+              "exclusiveGroup": {
+                "type": "string",
+                "description": "Desfechos do mesmo grupo são mutuamente exclusivos e suas probabilidades precisam somar 100. Desfechos sem grupo são rolados de forma independente."
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "agentFeedback": { "type": "string", "description": "Sensorial e diegético. Nunca linguagem de sistema." },
         "generalization": { "$ref": "#/$defs/generalization" },
-        "followUpAffordances": { "type": "array", "items": { "type": "string" } },
-        "isMarcanteCandidate": { "type": "boolean", "description": "G-019. Falha crítica em momento de vida ou morte." },
+        "descriptionUpdate": {
+          "type": "object",
+          "description": "V-042. Informação que o julgamento revelou e que vale gravar na descrição do objeto, para poupar raciocínio nas próximas vezes. Sensorial é pública; funcional é oculta. V-042.",
+          "properties": {
+            "defId": { "type": "string" },
+            "sensoryAddendum": { "type": "string" },
+            "functionalAddendum": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "followUpAffordances": { "type": "array", "items": { "type": "string" }, "description": "Affordances que este julgamento passa a habilitar no alvo. V-041." },
+        "isMarcanteCandidate": { "type": "boolean", "description": "V-019. Sinalização, não decisão: quem pontua o quanto marcou é o agente, em C-053." },
         "witnessIds": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
@@ -381,8 +470,8 @@
       "required": ["seed", "mapWidth", "mapHeight", "waterRatio", "biomePrimary", "climate", "urbanDensity", "scenarioNarrative"],
       "properties": {
         "seed": { "type": "integer" },
-        "mapWidth": { "type": "integer", "minimum": 32, "maximum": 128 },
-        "mapHeight": { "type": "integer", "minimum": 32, "maximum": 128 },
+        "mapWidth": { "type": "integer", "minimum": 32, "maximum": 512, "description": "Em tiles de 0,5 m. O teto subiu de 128 porque a 0,5 m um grid de 128 daria um mundo de 64 m, menor que um quarteirão. W-001." },
+        "mapHeight": { "type": "integer", "minimum": 32, "maximum": 512 },
         "waterRatio": { "type": "number", "minimum": 0, "maximum": 1 },
         "waterStyle": { "type": "string", "enum": ["lago", "rio", "costa", "pantano", "nenhum"] },
         "elevationVariance": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -393,7 +482,7 @@
         "climate": { "type": "string", "enum": ["temperado", "arido", "frio", "tropical"] },
         "dangerZones": { "type": "array", "items": { "type": "string" } },
         "scenarioNarrative": { "type": "string", "description": "2 a 3 frases. Alimenta o construtor e os perfis." },
-        "inviolableLaws": { "type": "array", "items": { "type": "string" }, "description": "G-014. Regras do cenário que o GM não contorna." }
+        "inviolableLaws": { "type": "array", "items": { "type": "string" }, "description": "V-014. Regras do cenário que o GM não contorna." }
       },
       "additionalProperties": false
     },

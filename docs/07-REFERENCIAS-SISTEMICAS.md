@@ -79,7 +79,7 @@ Um mecanismo, e dele saem veneno, peçonha, álcool, remédio, droga, alergia, d
 Para um simulador **social**, isso é desproporcionalmente valioso: bebida, comida estragada, remédio, contágio e envenenamento deliberado são o mesmo sistema, e todos produzem estado interno que o agente sente e sobre o qual pensa.
 
 **Adotamos:** o payload genérico e os quatro vetores, com uma extensão — o payload pode alterar **cognição**, não só fisiologia.
-**Rejeitamos:** a modelagem por camada de tecido e por órgão. Custo alto demais para o retorno aqui.
+**Rejeitamos:** a modelagem por camada de tecido. O órgão, este sim adotamos, mas numa forma que o DF não reconheceria: quatro números a mais numa parte que já existia — vascularização, idade biológica, acúmulo tóxico e classe — desaguando num funcionamento derivado só (B-053 a B-055). O que se recusou foi a camada, que é onde o custo do DF mora.
 
 ### 3.2 Contaminantes — a ponte entre física e vida social
 
@@ -169,13 +169,15 @@ A assimetria é o desenho inteiro. Remédio sozinho não salva e repouso sozinho
 **Adotamos:** a árvore de partes com cobertura e vitalidade, o hediff como unidade única com estágios, as capacidades derivadas com consciência multiplicadora, e a corrida assimétrica da infecção.
 **Rejeitamos:** camadas de tecido por parte, cirurgia com procedimentos individuais, e farmacocinética.
 
-Detalhamento em [SPEC-B-corpo.md](spec/SPEC-B-corpo.md). O ponto que interessa aqui é que **é o mesmo motor do substrato de tiles com outra topologia** — árvore de vinte e cinco nós em vez de grid. Parte é tile, hediff é estado transiente, capacidade é campo calculado, matriz de lesão é matriz de reação, cascata pela árvore é propagação por vizinhança. Nada precisou ser inventado duas vezes.
+Detalhamento em [SPEC-B-corpo.md](spec/SPEC-B-corpo.md). O ponto que interessa aqui é que **é o mesmo motor do substrato de tiles com outra topologia** — árvore de vinte e oito nós em vez de grid. Parte é tile, hediff é estado transiente, capacidade é campo calculado, matriz de lesão é matriz de reação, cascata pela árvore é propagação por vizinhança. Nada precisou ser inventado duas vezes.
 
 **Onde fomos além do RimWorld:** lá, tecidos são uma tabela própria, separada dos materiais de construção. Aqui é um catálogo só (B-003) — pele e músculo ficam ao lado de carvalho e ferro, com as mesmas propriedades e etiquetas. Duas coisas caem no colo por causa disso.
 
 A primeira é que a matriz de lesão passa a ser escrita em propriedade, não em nome de tecido: `contusão + #frágil → fratura` cobre osso, vidro e cerâmica com a mesma linha.
 
 A segunda é que **transmutar o material de uma parte do corpo vira operação trivial** (B-038), e todas as consequências emergem sozinhas. Um osso transmutado em vidro para de cicatrizar porque perdeu a etiqueta `living`, e quebra com quase nada porque a resistência a impacto do vidro é zero. Ninguém escreveu regra para ossos de vidro. É a promessa de etiqueta-em-vez-de-identificador da BOTW cobrada no lugar onde ela dá o retorno mais alto.
+
+E fomos além em dois pontos que não vêm do catálogo único. A parte do corpo ganhou vascularização, idade biológica e carga tóxica próprias (B-053), o que faz dois órgãos do mesmo tecido se comportarem diferente sem que exista tabela de órgãos. E a corrida assimétrica da infecção foi **reusada** para a intoxicação (B-060) em vez de ganhar um segundo mecanismo com a mesma forma — um mecanismo calibrado uma vez, cobrando duas.
 
 ---
 
@@ -229,7 +231,9 @@ Isso libera e restringe ao mesmo tempo. Libera, porque a simulação pode ser be
 
 DF é advertência tanto quanto inspiração. Profundidade de simulação é um poço sem fundo, e este projeto não é sobre física.
 
-Fora de escopo, por decisão e não por esquecimento: hidrodinâmica com pressão, camadas de tecido e órgãos individuais, química real com estequiometria, balística, estrutura com cálculo de carga e propagação de colapso, e metabolismo nutricional detalhado.
+Fora de escopo, por decisão e não por esquecimento: hidrodinâmica com pressão, camadas de tecido por parte, química real com estequiometria, balística, estrutura com cálculo de carga e propagação de colapso, metabolismo nutricional detalhado, e dose de radiação com meia-vida e blindagem.
+
+Órgãos individuais saíram desta lista quando entraram em SPEC-B (B-053). A revisão vale a pena registrar porque mostra onde o critério de admissão morde: o órgão passou não por ser mais realista, e sim porque produz três fatos que a parte genérica não produzia — dois órgãos do mesmo tecido sangram diferente, envelhecem diferente e adoecem em ritmos diferentes — e porque cabe em quatro números que ninguém avalia por tick.
 
 O critério para admitir um sistema novo no substrato é um só: **ele produz fato que um agente pode perceber e sobre o qual vale a pena pensar?** Fumaça passa, porque esconde. Sangue passa, porque acusa. Fome passa, porque move. Estequiometria não passa.
 

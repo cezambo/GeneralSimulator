@@ -189,7 +189,9 @@ Tanto a matriz quanto o GM invocam pelo mesmo identificador e obtêm exatamente 
 ### R-016 — Propagação espacial
 `P0` · `V1` · decisão · dep: R-014
 
-Quatro modos, cada um com sua regra: fogo salta entre vizinhos inflamáveis com chance modulada por saturação e vento; líquido escorre para células de elevação igual ou menor; gás se difunde por células livres perdendo densidade; eletricidade percorre cadeias contíguas de material condutivo.
+Quatro modos, cada um com sua regra: fogo salta entre vizinhos inflamáveis com chance modulada por saturação e vento; líquido escorre para células de `baseHeight` igual ou menor; gás se difunde por células livres perdendo densidade; eletricidade percorre cadeias contíguas de material condutivo.
+
+Os quatro são planos: a vizinhança de uma célula é o que está ao lado dela no mesmo grid. O que atravessa entre grids empilhados, e por onde, está em R-051; o que a altura contínua acrescenta a escoamento e assentamento está em R-052.
 
 **Aceite:** óleo derramado escorre morro abaixo e, aceso numa ponta, queima ao longo de toda a poça.
 
@@ -243,7 +245,7 @@ Um tipo de tile ou objeto declara em que se transforma, com que chance por tick,
 ### R-020 — Líquidos como volume
 `P1` · `V2` · decisão de Qud · dep: R-016
 
-Líquido é medido em volume, não em presença. Uma poça tem quantidade, escorre conforme sua fluidez, e some quando o volume chega a zero.
+Líquido é medido em volume, não em presença. Uma poça tem quantidade, escorre conforme sua fluidez pelo relevo de `baseHeight` (R-052), e some quando o volume chega a zero.
 
 **Aceite:** derramar dobro de volume produz poça que cobre mais tiles e demora mais para evaporar.
 
@@ -265,6 +267,8 @@ Materiais absorventes retêm líquido em vez de deixá-lo escorrer, ficam satura
 `P1` · `V2` · derivado de Brogue e CDDA · dep: R-016
 
 Gases ocupam a camada superior da célula, têm densidade, difundem-se para células livres, sobem ou descem conforme a densidade, e dissipam com o tempo. Fumaça, vapor, gás tóxico e poeira.
+
+Subir e descer são movimento no plano enquanto não há para onde sair: gás leve satura a parte de cima do cômodo e gás pesado assenta nas células de solo mais baixo (R-052). Atravessar para o grid de cima ou de baixo exige abertura declarada (R-051).
 
 **Aceite:** fumaça de uma fogueira em ambiente fechado preenche o cômodo e escapa pela abertura.
 
@@ -368,12 +372,16 @@ Estado de tile afeta quem está sobre ele: chama causa dor, dano e propaga o est
 
 Emissores iluminam num raio; oclusores bloqueiam. O nível de luz de um tile determina o alcance de visão de quem está nele.
 
+O piso entre dois grids alinhados é oclusor total: luz só passa por abertura, e a abertura se comporta como emissor secundário da intensidade que chega nela (R-051). É o que faz um porão ser escuro sem que exista regra de porão.
+
 **Aceite:** apagar a única fonte de luz de um cômodo reduz o alcance de visão de todos os presentes.
 
 ### R-035 — Campo de som
 `P1` · `V2` · derivado · dep: R-005
 
 Eventos emitem som com intensidade; o som atenua por distância e é amortecido por paredes. Quem está no alcance percebe, mesmo sem linha de visão, com precisão de localização decrescente.
+
+O piso amortece como uma parede do mesmo material, e não mais que isso: som é a única coisa que atravessa entre andares sem precisar de abertura (R-051). É o que faz o andar de cima ser um lugar de onde se escuta.
 
 Grito, quebra de vidro, batida e desabamento são eventos audíveis — e o que faz um agente aparecer onde não estava.
 
@@ -528,7 +536,7 @@ Sem isso, uma cadeia de seis passos é indistinguível de um bug.
 ### R-049 — Orçamento de custo por tick
 `P1` · `V3` · derivado de X-008 · dep: R-014, R-005
 
-O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação restrita a entidades com estado ativo. **Campos calculados (R-005) invalidam e recomputam só tiles em escopo** — nunca o grid inteiro por tick.
+O substrato inteiro cabe num orçamento fixo de tempo por tick, medido e reportado. Avaliação restrita a entidades com estado ativo. **Campos calculados (R-005) invalidam e recomputam só tiles em escopo** — nunca um grid inteiro por tick, e nunca um grid em que nada mudou.
 
 **Aceite:** com cem tiles em estado ativo simultâneo, o tick permanece dentro do orçamento declarado em `config/tuning.json`; alterar um emissor de luz não dispara recomputação global de odor/som/luz.
 
@@ -541,8 +549,55 @@ Materiais, elementos, substâncias, reações, limiares, promoções e propagaç
 
 ---
 
+## Eixo Z
+
+O mundo é 2.5D (W-059): há grids empilhados e há altura contínua dentro da célula. O substrato precisa saber o que disso ele atravessa, e o critério é o mesmo que decide tudo neste documento — atravessa o que produz fato sobre o qual vale a pena pensar, e pelo caminho mais barato que produza esse fato.
+
+### R-051 — Propagação entre grids alinhados
+`P0` · `V2` · derivado · dep: R-016, W-060
+
+A vizinhança de uma célula ganha, no máximo, dois vizinhos: a célula correspondente no grid imediatamente abaixo e a do imediatamente acima. Um passo por tick e um `zLevel` por passo — uma cadeia que suba três andares sobe em três avaliações sucessivas, e o custo continua proporcional ao número de células ativas, nunca à altura da pilha.
+
+O que atravessa depende do mecanismo, e cada linha reusa o caminho que já existia no plano:
+
+| O que | Atravessa | Por onde |
+|---|---|---|
+| calor | sempre | condução pelo piso, que é material com calor específico próprio, pelo mesmo caminho de contato de R-008 |
+| som | sempre | amortecido pelo piso como por uma parede do mesmo material (R-035) |
+| gás e fumaça | só com abertura | difusão de R-023 pela célula aberta |
+| líquido | só com abertura | escoa e cai, chegando na célula correspondente de baixo (R-052) |
+| luz | só com abertura | o piso é oclusor total; o buraco é emissor secundário (R-034) |
+| linha de visão e projétil | só com abertura | oclusão de W-008 |
+| eletricidade | quando a cadeia condutiva é contígua | nenhuma regra nova: o piso é material como outro qualquer, e um piso condutivo conduz (R-011) |
+
+Nada atravessa **mais de um grid por passo**, e nada atravessa para grid destacado (R-053). Fogo não tem linha própria na tabela: fogo salta por vizinhança entre inflamáveis, e a abertura torna as duas células vizinhas — se o piso do andar de cima é de madeira, ele acende por calor ao cruzar o próprio ponto de ignição (R-009), sem que exista regra ligando incêndio a andar.
+
+**Aceite:** uma fogueira no andar de baixo aquece o piso do de cima sem abertura nenhuma, e a fumaça dela só sobe onde há buraco; um grito atravessa o piso com a mesma atenuação com que atravessaria uma parede do mesmo material; e abrir um alçapão faz gás, luz e linha de visão passarem a atravessar sem nenhuma regra específica de alçapão.
+
+### R-052 — Escoamento, assentamento e subida por altura
+`P0` · `V2` · derivado · dep: R-016, R-020, R-023, W-063
+
+Líquido escorre para a célula vizinha de `baseHeight` **estritamente menor**, e distribui entre as de altura igual; uma célula cuja soma de solo e material de tile seja maior que a do lado retém. É o relevo que decide o destino da poça, não uma regra por caso — óleo derramado num piso inclinado termina acumulado na célula de menor solo do trecho, e é lá que ele pega fogo por inteiro. Havendo abertura no chão, o líquido cai para a célula correspondente do grid de baixo (R-051), que é como um andar alagado goteja no andar de baixo sem sistema de goteira.
+
+Gás pesado — densidade acima da do ar ambiente — **assenta**: prefere a vizinha de `baseHeight` menor e acumula em depressão, porão e vala, que é onde ele se torna perigoso porque é onde alguém desce. Gás leve **sobe**: satura a parte de cima do cômodo e, havendo abertura, passa para o grid acima em passos sucessivos; sem abertura, ele fica, e a densidade da célula cresce até dissipar pelo caminho normal de R-023.
+
+**Aceite:** óleo derramado num piso com relevo se acumula na célula de menor `baseHeight` do trecho; fumaça num porão fechado satura o cômodo em vez de subir; abrir um alçapão faz a mesma fumaça migrar para o grid de cima ao longo de ticks sucessivos; e gás pesado solto num terreno com vala termina na vala.
+
+### R-053 — Grid destacado é ilha do substrato
+`P1` · `V3` · derivado · dep: R-051, W-061
+
+Um grid destacado não corresponde a lugar nenhum (W-061), e por isso não tem célula acima nem abaixo para atravessar nada. Nada do substrato cruza a sua fronteira — nem calor, nem som, nem gás, nem líquido, nem luz, nem eletricidade — com uma exceção, que é a **célula de entrada**: ali as duas células, a de dentro e a que a contém, são vizinhas comuns, e tudo que atravessaria entre duas células vizinhas atravessa por ali e só por ali.
+
+O isolamento não é decoração: é o que faz espaço extraespacial ser barato. Um grid destacado inativo nunca entra na varredura de vizinhança de grid nenhum, então declarar dez deles custa memória e zero CPU (X-013). E é também o que faz o espaço destacado significar algo narrativamente — um incêndio dentro de um baú mágico não queima a casa, e um grito lá dentro não é ouvido do lado de fora, o que é justamente o motivo de alguém esconder coisas ali.
+
+**Aceite:** um incêndio dentro de um grid destacado não altera a temperatura de nenhuma célula fora dele, exceto a célula de entrada e as vizinhas dela pelo caminho normal de R-008; um grito lá dentro não é percebido fora; e fechar a entrada isola por completo, inclusive a célula de entrada.
+
+---
+
 ## Não-objetivos
 
-Deliberadamente fora de escopo, por decisão e não por esquecimento: hidrodinâmica com pressão, camadas de tecido e órgãos individuais, química com estequiometria, balística, cálculo estrutural de carga e colapso, e metabolismo nutricional detalhado.
+Deliberadamente fora de escopo, por decisão e não por esquecimento: hidrodinâmica com pressão, camadas de tecido por parte, química com estequiometria, balística, cálculo estrutural de carga e colapso, e metabolismo nutricional detalhado.
+
+Órgãos individuais estavam nesta lista e **saíram**: eles entraram em escopo em B-053, na forma reduzida de campos a mais numa parte que já existia. O que se recusou foi a camada de tecido — que é o item caro do Dwarf Fortress — e não o órgão, que custa quatro números e paga em possibilidade narrativa.
 
 Dwarf Fortress é advertência tanto quanto inspiração. Profundidade de simulação é poço sem fundo, e este projeto não é sobre física — é sobre gente que percebe, pensa e convive. O substrato existe para dar a essa gente algo verdadeiro sobre o que pensar, e para na hora em que para de fazer isso.
