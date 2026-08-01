@@ -48,9 +48,10 @@ func set_connected(ok: bool, detail: String = "") -> void:
 		status_label.text = "Núcleo conectado (ws://127.0.0.1:8787)"
 		status_label.modulate = Color("8fbc8f")
 	else:
-		var extra := (" — " + detail) if detail != "" else ""
-		status_label.text = "Núcleo desconectado — tentando reconectar…" + extra
-		status_label.modulate = Color("e07a5f")
+		var extra := (" · " + detail) if detail != "" else ""
+		status_label.text = "Núcleo desconectado — a reconectar…" + extra
+		# Laranja durante retry; vermelho se ainda sem detalhe (estado inicial).
+		status_label.modulate = Color("f4a261") if detail != "" else Color("e07a5f")
 
 
 func apply_clock(payload: Dictionary) -> void:

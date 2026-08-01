@@ -25,6 +25,8 @@ Ou:
 godot --path packages/client-godot
 ```
 
+**Agentes (Cursor):** se o utilizador reportar “núcleo desconectado” (ou ao depurar a demo), ler `packages/client-godot/.local/core-connection.json` + o final de `.local/core-connection.log`, e no terminal do `npm run sim -- serve` as linhas JSON `client_connected` / `client_disconnected`. Não confiar só no Output do editor Godot.
+
 ## Controles
 
 | Input | Ação |
@@ -54,7 +56,7 @@ godot --path packages/client-godot
 | F7 | Carregar slot `demo` |
 | V | Liga/desliga cone de visão |
 
-Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; molhados azuis; integridade baixa escurece. `SIM_FIRE=0` desliga o seed. Caminhos são recalculados se uma parede cortar a rota.
+Com `npm run sim -- serve` (padrão), o núcleo acende uma chama em (1,1). Tiles em chamas ficam alaranjados; molhados azuis; integridade baixa escurece. Móvel consumido deixa carvão/cinza no chão. `SIM_FIRE=0` desliga o seed. Caminhos são recalculados se uma parede cortar a rota.
 
 ## O que o cliente faz / não faz
 

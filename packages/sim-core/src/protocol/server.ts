@@ -59,6 +59,16 @@ export function startProtocolServer(opts: ProtocolServerOptions): Promise<Protoc
         },
       };
       opts.hub.connect(sink);
+      // JSON numa linha — agentes leem o terminal do `npm run sim -- serve`.
+      console.log(
+        JSON.stringify({
+          event: 'client_connected',
+          clientId: id,
+          role,
+          clients: sockets.size,
+          at: new Date().toISOString(),
+        }),
+      );
 
       ws.on('message', (data) => {
         const text = typeof data === 'string' ? data : data.toString('utf8');
@@ -77,9 +87,21 @@ export function startProtocolServer(opts: ProtocolServerOptions): Promise<Protoc
         }
       });
 
-      ws.on('close', () => {
+      ws.on('close', (code, reasonBuf) => {
         opts.hub.disconnect(id);
         sockets.delete(id);
+        const reason = reasonBuf?.toString('utf8') || '';
+        console.log(
+          JSON.stringify({
+            event: 'client_disconnected',
+            clientId: id,
+            role,
+            code,
+            reason: reason || undefined,
+            clients: sockets.size,
+            at: new Date().toISOString(),
+          }),
+        );
       });
     });
   });

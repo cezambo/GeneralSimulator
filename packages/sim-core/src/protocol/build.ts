@@ -117,7 +117,8 @@ export class BuildHistory {
       pos: { x: gx + 0.5, y: gy + 0.5 },
       gridId,
       rotation,
-      integrity: 1,
+      integrity: 100,
+      states: [],
     };
     this.#sim.state.objects[obj.id] = obj;
     this.#push({ kind: 'placeObject', object: cloneObj(obj) });
@@ -213,6 +214,12 @@ export class BuildHistory {
     this.#world.setType(gridId, x, y, type);
     this.#world.setMaterial(gridId, x, y, materialId);
     const overlay = this.#sim.overlayAt(gridId, x, y, true);
+    // Geometria nova: limpa overlay reativo. Sem isto, integrity 0 de um
+    // escombro antigo (ou burning residual) sobrevive sob a parede pintada e o
+    // próximo commit do substrato (molhar, tick de fogo) derruba a parede.
+    overlay.states = [];
+    overlay.integrity = 100;
+    delete overlay.temperature;
     if (type === 'door') {
       try {
         this.#world.openDoor(gridId, x, y);
@@ -317,11 +324,21 @@ function objectVisible(o: WorldObject): {
   defId: string;
   pos: { x: number; y: number };
   rotation?: number;
+  states?: { type: string; intensity: number }[];
+  integrity?: number;
+  temperature?: number;
 } {
+  const states =
+    o.states && o.states.length > 0
+      ? o.states.map((s) => ({ type: s.type, intensity: s.intensity }))
+      : undefined;
   return {
     id: o.id,
     defId: o.defId,
     pos: { x: o.pos.x, y: o.pos.y },
     ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
+    ...(states ? { states } : {}),
+    ...(o.integrity !== undefined ? { integrity: o.integrity } : {}),
+    ...(o.temperature !== undefined ? { temperature: o.temperature } : {}),
   };
 }

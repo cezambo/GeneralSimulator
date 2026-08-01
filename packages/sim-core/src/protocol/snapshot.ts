@@ -109,12 +109,7 @@ export function buildWorldSnapshot(
     }
   }
 
-  const objects = Object.values(sim.state.objects).map((o) => ({
-    id: o.id,
-    defId: o.defId,
-    pos: { x: o.pos.x, y: o.pos.y },
-    ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
-  }));
+  const objects = Object.values(sim.state.objects).map((o) => objectVisible(o));
 
   const agents: AgentVisible[] = Object.values(sim.state.agents).map((a) =>
     agentVisible(a, motionOf?.(a.id)),
@@ -154,4 +149,28 @@ function agentVisible(a: Agent, motion: AgentVisible['motion'] | undefined): Age
     },
   };
   return motion ? { ...base, motion } : base;
+}
+
+function objectVisible(o: {
+  id: string;
+  defId: string;
+  pos: { x: number; y: number };
+  rotation?: number;
+  states?: readonly { type: string; intensity: number }[];
+  integrity?: number;
+  temperature?: number;
+}): WorldSnapshotPayload['objects'][number] {
+  const states =
+    o.states && o.states.length > 0
+      ? o.states.map((s) => ({ type: s.type, intensity: s.intensity }))
+      : undefined;
+  return {
+    id: o.id,
+    defId: o.defId,
+    pos: { x: o.pos.x, y: o.pos.y },
+    ...(o.rotation !== undefined ? { rotation: o.rotation } : {}),
+    ...(states ? { states } : {}),
+    ...(o.integrity !== undefined ? { integrity: o.integrity } : {}),
+    ...(o.temperature !== undefined ? { temperature: o.temperature } : {}),
+  };
 }

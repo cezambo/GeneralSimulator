@@ -82,7 +82,7 @@ export function createFireSession(opts: FireDemoOptions = {}): FireSession {
     availableSpeeds: cfg.tuning.availableSpeeds,
   });
 
-  const bridge = new TileReactiveBridge(sim, world);
+  const bridge = new TileReactiveBridge(sim, world, 20, cfg.objects);
   const substrate = new Substrate({
     materials: cfg.materials,
     matrix: cfg.reactions,
@@ -115,9 +115,9 @@ export function createFireSession(opts: FireDemoOptions = {}): FireSession {
     tick() {
       clock.tick();
       substrate.tick({ simTime: clock.simTime, world: bridge });
-      const dirty = bridge.commit();
+      const committed = bridge.commit();
       const burning = countBurning(sim, world, everBurned);
-      return { burning, dirty };
+      return { burning, dirty: committed.tiles };
     },
     run(ticks: number) {
       session.ignite();

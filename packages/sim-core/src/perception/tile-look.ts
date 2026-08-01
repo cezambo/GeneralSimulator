@@ -59,6 +59,9 @@ function tileNoun(
     case 'wall':
       return `parede de ${mat}`;
     case 'floor':
+      if (materialId === 'cinza' || materialId === 'carvao' || materialId === 'lascas') {
+        return `chão com ${mat}`;
+      }
       return `chão de ${mat}`;
     case 'door': {
       const open = Boolean(state?.['isOpen']);

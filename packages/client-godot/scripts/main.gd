@@ -49,13 +49,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			var world_pos := world_view.get_global_mouse_position()
+			var world_pos := world_view.to_global(world_view.get_local_mouse_position())
 			var pawn := agents.pick_nearest(world_pos)
 			if pawn:
 				agents.set_selected(pawn.agent_id)
 				hud.set_selection(pawn.describe())
 				return
-			var cell := WorldScale.px_to_cell(world_pos)
+			var cell := world_view.cell_at_mouse()
 			var info := world_view.tile_info_at(cell)
 			if String(info.get("type", "")) == "door":
 				core.toggle_door(cell.x, cell.y)
@@ -117,7 +117,7 @@ func _handle_construction_input(event: InputEvent) -> void:
 
 
 func _apply_sandbox_at_mouse() -> void:
-	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	var cell := world_view.cell_at_mouse()
 	if not world_view.in_bounds_cell(cell):
 		return
 	if cell == _last_painted:
@@ -126,16 +126,20 @@ func _apply_sandbox_at_mouse() -> void:
 	var effect: String = hud.current_sandbox_tool()
 	if effect == "":
 		return
+	# Alinha hover/inspect com o clique (mesmo convertor local).
+	world_view.set_hover_cell(cell)
 	core.apply_tool(effect, [{"x": cell.x, "y": cell.y}])
+	hud.set_selection("RT %s → (%d,%d)" % [effect, cell.x, cell.y])
 
 
 func _apply_tool_at_mouse(force_erase: bool = false) -> void:
-	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	var cell := world_view.cell_at_mouse()
 	if not world_view.in_bounds_cell(cell):
 		return
 	if cell == _last_painted:
 		return
 	_last_painted = cell
+	world_view.set_hover_cell(cell)
 	var tool_id: String = "erase" if force_erase else hud.current_build_tool()
 	match tool_id:
 		"erase":
@@ -160,7 +164,7 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 
 
 func _handle_move_furniture_click() -> void:
-	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	var cell := world_view.cell_at_mouse()
 	if not world_view.in_bounds_cell(cell):
 		return
 	if _move_from.x < 0:
@@ -173,7 +177,7 @@ func _handle_move_furniture_click() -> void:
 
 
 func _update_hover_inspect() -> void:
-	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	var cell := world_view.cell_at_mouse()
 	if world_view.in_bounds_cell(cell):
 		world_view.set_hover_cell(cell)
 		var line := world_view.describe_tile(cell)
@@ -190,10 +194,12 @@ func _update_hover_inspect() -> void:
 
 func _on_connected() -> void:
 	hud.set_connected(true)
+	print_rich("[color=lime][Main] HUD: núcleo conectado[/color]")
 
 
 func _on_disconnected() -> void:
-	hud.set_connected(false)
+	hud.set_connected(false, "queda de ligação")
+	print_rich("[color=orange][Main] HUD: núcleo desconectado — a reconectar…[/color]")
 
 
 func _on_status(text: String) -> void:
@@ -279,7 +285,7 @@ func _on_redo() -> void:
 func _on_rotate() -> void:
 	if not hud.is_construction():
 		return
-	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
+	var cell := world_view.cell_at_mouse()
 	if not world_view.in_bounds_cell(cell):
 		return
 	core.rotate_object_at(cell.x, cell.y, 90.0)

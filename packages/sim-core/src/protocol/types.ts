@@ -71,6 +71,9 @@ export interface WorldSnapshotPayload {
     defId: string;
     pos: { x: number; y: number };
     rotation?: number;
+    states?: readonly { type: string; intensity: number }[];
+    integrity?: number;
+    temperature?: number;
   }[];
   readonly agents: readonly AgentVisible[];
 }

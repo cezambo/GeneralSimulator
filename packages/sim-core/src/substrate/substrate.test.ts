@@ -366,6 +366,57 @@ describe('temperatura esparsa (R-008, R-009)', () => {
     s.tick({ simTime: 0, world: w });
     expect(vizinho.temperature).toBeGreaterThan(20);
   });
+
+  // R-008: alvo térmico = média(ambiente, contatos). Cluster quente retém calor;
+  // tile isolado esfria só contra o ambiente — o sumidouro não pode dominar sozinho.
+  it('cluster quente esfria mais devagar que tile isolado à mesma temperatura', () => {
+    const s = makeSubstrate([]);
+    const w = new FakeWorld();
+    const isolado = alvo('iso', 'pedra', { temperature: 400 });
+    const a = alvo('a', 'pedra', { temperature: 400 });
+    const b = alvo('b', 'pedra', { temperature: 400 });
+    const c = alvo('c', 'pedra', { temperature: 400 });
+    const d = alvo('d', 'pedra', { temperature: 400 });
+    const centro = alvo('centro', 'pedra', { temperature: 400 });
+    w.neighbors.set('centro', [a, b, c, d]);
+    w.neighbors.set('a', [centro]);
+    w.neighbors.set('b', [centro]);
+    w.neighbors.set('c', [centro]);
+    w.neighbors.set('d', [centro]);
+    for (const t of [isolado, a, b, c, d, centro]) s.activate(t);
+    s.tick({ simTime: 0, world: w });
+    const tIso = isolado.temperature ?? 20;
+    const tCentro = centro.temperature ?? 20;
+    expect(tCentro).toBeGreaterThan(tIso);
+    // Isolado: alvo = 20 → Δ = (20-400)/8 = -47.5 → ~352.5
+    expect(tIso).toBeCloseTo(352.5, 5);
+    // Centro com 4 vizinhos a 400: alvo = (20+400*4)/5 = 324 → Δ = (324-400)/8 = -9.5 → 390.5
+    expect(tCentro).toBeCloseTo(390.5, 5);
+  });
+
+  it('tile em chama sobe a centenas de °C (não estaciona ~90)', () => {
+    const s = makeSubstrate([]);
+    const w = new FakeWorld();
+    const fogo = alvo('f', 'madeira', { states: [{ type: 'burning', intensity: 55 }] });
+    w.neighbors.set('f', []);
+    s.activate(fogo);
+    for (let i = 0; i < 8; i += 1) s.tick({ simTime: i, world: w });
+    // I=55 → ambient+200+55*7 = 605 °C
+    expect(fogo.temperature).toBeGreaterThan(400);
+    expect(fogo.temperature).toBeLessThanOrEqual(620);
+  });
+
+  it('móvel inflamável na célula vizinha acende por fire-spread', () => {
+    const s = makeSubstrate([REGRA_FOGO_VIZINHO]);
+    const w = new FakeWorld();
+    const chao = alvo('chao', 'madeira', { states: [{ type: 'burning', intensity: 90 }] });
+    const cadeira = alvo('cadeira', 'madeira', { kind: 'object' });
+    w.neighbors.set('chao', [alvo('viz', 'pedra')]);
+    w.occupants.set('viz', [cadeira]);
+    s.activate(chao);
+    s.tick({ simTime: 0, world: w });
+    expect(cadeira.states.some((st) => st.type === 'burning')).toBe(true);
+  });
 });
 
 describe('propagação e cadência (R-016, R-017)', () => {

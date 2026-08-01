@@ -127,7 +127,7 @@ export async function startLiveServe(opts?: {
     });
   }
 
-  let bridge = new TileReactiveBridge(sim, world);
+  let bridge = new TileReactiveBridge(sim, world, 20, cfg.objects);
   let substrate = makeSubstrate(sim);
 
   const movers = new Map<string, MoverState>([
@@ -165,7 +165,7 @@ export async function startLiveServe(opts?: {
         scale: { metersPerTile: cfg.tuning.metersPerTile },
       });
       clock = new SimClock(sim.state.clock, calendar);
-      bridge = new TileReactiveBridge(sim, world);
+      bridge = new TileReactiveBridge(sim, world, 20, cfg.objects);
       substrate = makeSubstrate(sim);
       rehydrateSubstrate();
       rebuildMoversFromAgents();
@@ -211,6 +211,7 @@ export async function startLiveServe(opts?: {
         const t = bridge.targetAt(SPIKE_GRID, DEMO_IGNITE.x, DEMO_IGNITE.y);
         // Intensidade moderada: calor na vizinhança sobe sem auto-ignição térmica imediata.
         substrate.invoke('ignite', t, { simTime: clock.simTime, world: bridge }, { intensity: 55 });
+        // Cascata de contacto acende móvel na mesma célula, se houver.
         bridge.commit();
         fireLit = true;
         hub.broadcastSnapshot();
@@ -241,12 +242,17 @@ export async function startLiveServe(opts?: {
     stepMovers(minutes);
 
     let dirtyTiles: { x: number; y: number; gridId: string }[] = [];
+    const objectsUpsert: NonNullable<WorldDeltaPayload['objectsUpsert']> = [];
+    const objectsRemove: string[] = [];
     simAccMs += frameMs * speedFactor;
     while (simAccMs >= tickMs) {
       simAccMs -= tickMs;
       clock.tick();
       substrate.tick({ simTime: clock.simTime, world: bridge });
-      dirtyTiles = dirtyTiles.concat(bridge.commit());
+      const committed = bridge.commit();
+      dirtyTiles = dirtyTiles.concat(committed.tiles);
+      objectsUpsert.push(...committed.objectsUpsert);
+      objectsRemove.push(...committed.objectsRemove);
       patrolCooldown -= 1;
       if (patrolCooldown <= 0) {
         patrolCooldown = 45;
@@ -267,11 +273,16 @@ export async function startLiveServe(opts?: {
       console.log(JSON.stringify({ event: 'fire_status', burning, simTime: clock.simTime }));
     }
 
-    if (dirtyTiles.length > 0) {
+    if (dirtyTiles.length > 0 || objectsUpsert.length > 0 || objectsRemove.length > 0) {
       const uniq = new Map<string, { x: number; y: number; gridId: string }>();
       for (const d of dirtyTiles) uniq.set(`${d.gridId}:${d.x},${d.y}`, d);
+      const objById = new Map(objectsUpsert.map((o) => [o.id, o]));
       hub.broadcastDelta({
-        tiles: [...uniq.values()].map((d) => cellPayload(d.gridId, d.x, d.y)),
+        ...(uniq.size > 0
+          ? { tiles: [...uniq.values()].map((d) => cellPayload(d.gridId, d.x, d.y)) }
+          : {}),
+        ...(objById.size > 0 ? { objectsUpsert: [...objById.values()] } : {}),
+        ...(objectsRemove.length > 0 ? { objectsRemove: [...new Set(objectsRemove)] } : {}),
       });
       // Parede que virou escombro (ou porta queimada) reabre caminhos.
       revalidatePaths();
@@ -290,7 +301,7 @@ export async function startLiveServe(opts?: {
     return n;
   }
 
-  /** Reativa tiles com estado/temperatura depois de um load. */
+  /** Reativa tiles/objetos com estado/temperatura depois de um load. */
   function rehydrateSubstrate(): void {
     const grid = world.grid(SPIKE_GRID);
     for (let y = 0; y < grid.height; y += 1) {
@@ -303,6 +314,14 @@ export async function startLiveServe(opts?: {
         if (hasState || hasTemp || damaged) {
           substrate.activate(bridge.targetAt(SPIKE_GRID, x, y));
         }
+      }
+    }
+    for (const obj of Object.values(sim.state.objects)) {
+      const hasState = (obj.states?.length ?? 0) > 0;
+      const hasTemp = obj.temperature !== undefined;
+      const damaged = obj.integrity !== undefined && obj.integrity < 100;
+      if (hasState || hasTemp || damaged) {
+        substrate.activate(bridge.objectTarget(obj));
       }
     }
   }
@@ -416,22 +435,33 @@ export async function startLiveServe(opts?: {
 
   function applyTool(effect: ToolEffectId, cells: readonly { x: number; y: number }[]): WorldDeltaPayload {
     const ctx = { simTime: clock.simTime, world: bridge };
+    const touched: ReturnType<typeof bridge.targetAt>[] = [];
     for (const c of cells) {
       if (!world.inBounds(SPIKE_GRID, c.x, c.y)) continue;
       const t = bridge.targetAt(SPIKE_GRID, c.x, c.y);
       substrate.invoke(effect, t, ctx, effect === 'wet' ? { intensity: 90 } : {});
+      touched.push(t);
+      // Móvel na mesma célula também molha/apaga (R-007 / ocupantes).
+      for (const occ of bridge.occupantsOf(t)) {
+        substrate.invoke(effect, occ, ctx, effect === 'wet' ? { intensity: 90 } : {});
+        touched.push(occ);
+      }
     }
-    // Contínua burning+wet → extinguish no mesmo pedido (emergente via matriz).
-    substrate.tick(ctx);
-    const dirty = bridge.commit();
+    // Só contínua nos tiles tocados: burning+wet → extinguish no mesmo clique.
+    // Um tick() completo espalhava fogo / consumia paredes noutros sítios —
+    // sintoma: "apaguei aqui e o fogo moveu / outra célula apagou".
+    substrate.settleContinuous(touched, ctx);
+    const committed = bridge.commit();
     const uniq = new Map<string, { x: number; y: number; gridId: string }>();
-    for (const d of dirty) uniq.set(`${d.gridId}:${d.x},${d.y}`, d);
+    for (const d of committed.tiles) uniq.set(`${d.gridId}:${d.x},${d.y}`, d);
     for (const c of cells) {
       if (!world.inBounds(SPIKE_GRID, c.x, c.y)) continue;
       uniq.set(`${SPIKE_GRID}:${c.x},${c.y}`, { gridId: SPIKE_GRID, x: c.x, y: c.y });
     }
     return {
       tiles: [...uniq.values()].map((d) => cellPayload(d.gridId, d.x, d.y)),
+      ...(committed.objectsUpsert.length > 0 ? { objectsUpsert: committed.objectsUpsert } : {}),
+      ...(committed.objectsRemove.length > 0 ? { objectsRemove: committed.objectsRemove } : {}),
     };
   }
 

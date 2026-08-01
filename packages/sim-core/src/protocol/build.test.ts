@@ -31,6 +31,21 @@ describe('BuildHistory', () => {
     expect(world.tileAt(g, 3, 3)).toMatchObject({ type: 'floor', materialId: 'pinho' });
   });
 
+  it('paint sobre escombro zera integrity/states do overlay', () => {
+    const { build, sim, world } = hist();
+    const g = world.mainGridId;
+    const o = sim.overlayAt(g, 4, 4, true);
+    o.integrity = 0;
+    o.states = [{ type: 'burning', intensity: 80 }];
+    o.temperature = 400;
+    build.paintTiles('wall', 'pedra', [{ x: 4, y: 4 }]);
+    const after = sim.overlayAt(g, 4, 4)!;
+    expect(after.integrity).toBe(100);
+    expect(after.states).toEqual([]);
+    expect(after.temperature).toBeUndefined();
+    expect(world.tileAt(g, 4, 4).type).toBe('wall');
+  });
+
   it('coloca e remove móvel com undo/redo', () => {
     const { build, sim } = hist();
     const placed = build.placeObject('cadeira_madeira', { x: 5, y: 5 });

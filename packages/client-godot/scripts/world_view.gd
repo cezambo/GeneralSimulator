@@ -18,29 +18,39 @@ var _tile_data: Dictionary = {} # "x,y" -> Dictionary
 var _object_data: Dictionary = {} # id -> Dictionary
 
 
+func _ready() -> void:
+	# Móveis acima do brilho/fumaça do tile — evita “sumir” no overlay de fogo.
+	if objects_root:
+		objects_root.z_index = 5
+
+
 func apply_snapshot(payload: Dictionary) -> void:
-	_clear_children(tiles_root)
-	_clear_children(objects_root)
-	_tile_nodes.clear()
-	_fire_nodes.clear()
-	_smoke_nodes.clear()
-	_object_nodes.clear()
-	_tile_data.clear()
-	_object_data.clear()
+	# Upsert (não wipe): wipe+queue_free faz móveis piscarem a cada snapshot.
 	_grid_w = int(payload.get("width", 0))
 	_grid_h = int(payload.get("height", 0))
 
+	var seen_tiles: Dictionary = {}
 	var tiles: Array = payload.get("tiles", [])
 	for t in tiles:
 		if typeof(t) != TYPE_DICTIONARY:
 			continue
+		var tx := int(t.get("x", 0))
+		var ty := int(t.get("y", 0))
+		seen_tiles["%d,%d" % [tx, ty]] = true
 		_upsert_tile(t)
+	_prune_tiles(seen_tiles)
 
+	var seen_objs: Dictionary = {}
 	var objects: Array = payload.get("objects", [])
 	for o in objects:
 		if typeof(o) != TYPE_DICTIONARY:
 			continue
+		var oid := String(o.get("id", ""))
+		if oid == "":
+			continue
+		seen_objs[oid] = true
 		_upsert_object(o)
+	_prune_objects(seen_objs)
 	queue_redraw()
 
 
@@ -57,11 +67,7 @@ func apply_delta(payload: Dictionary) -> void:
 		_upsert_object(o)
 	var remove: Array = payload.get("objectsRemove", [])
 	for id_v in remove:
-		var id := String(id_v)
-		if _object_nodes.has(id):
-			(_object_nodes[id] as Node).queue_free()
-			_object_nodes.erase(id)
-		_object_data.erase(id)
+		_remove_object(String(id_v))
 
 
 func world_size_px() -> Vector2:
@@ -80,6 +86,15 @@ func set_hover_cell(cell: Vector2i) -> void:
 		return
 	_hover_cell = cell
 	queue_redraw()
+
+
+func hover_cell() -> Vector2i:
+	return _hover_cell
+
+
+## Célula sob o rato no espaço local do WorldView (respeita câmara/zoom).
+func cell_at_mouse() -> Vector2i:
+	return WorldScale.px_to_cell(get_local_mouse_position())
 
 
 func in_bounds_cell(cell: Vector2i) -> bool:
@@ -146,7 +161,7 @@ func _inspect_numbers(t: Dictionary) -> String:
 			bits.append("%s %d" % [st, inten])
 	if bits.is_empty():
 		return ""
-	return bits.join(" · ")
+	return " · ".join(bits)
 
 
 func _object_labels_at(cell: Vector2i) -> PackedStringArray:
@@ -201,18 +216,38 @@ func _upsert_object(obj: Dictionary) -> void:
 		marker = _object_nodes[id]
 	else:
 		marker = Polygon2D.new()
+		marker.z_index = 3
 		objects_root.add_child(marker)
 		_object_nodes[id] = marker
-	var half := 10.0
+	# Marcador centrado em pos (núcleo usa centro de célula: n+0.5).
+	# Cabe numa célula 0.5 m: cadeira ~48% da célula; mesa/cama ~78%.
+	var s := WorldScale.PIXELS_PER_TILE
+	var half := s * 0.24
 	if def_id.contains("mesa") or def_id.contains("cama"):
-		half = 16.0
+		half = s * 0.39
+	elif def_id.contains("banco"):
+		half = s * 0.28
 	marker.polygon = PackedVector2Array([
 		Vector2(-half, -half), Vector2(half, -half), Vector2(half, half), Vector2(-half, half)
 	])
+	var states: Array = obj.get("states", [])
+	var burning := _has_state(states, "burning")
+	# Histerese visual: temperatura alta mantém tint de fogo se o estado
+	# `burning` piscar entre ticks (decay vs re-ignição por contacto).
+	var temp := float(obj.get("temperature", 0.0)) if obj.has("temperature") else 0.0
+	var on_fire := burning or temp >= 100.0
 	var h := float(def_id.hash() % 360) / 360.0
-	marker.color = Color.from_hsv(h, 0.35, 0.85)
+	if on_fire:
+		# Amarelo-âmbar distinto do tile em chama (ff5a00) — não camufla.
+		marker.color = Color(1.0, 0.82, 0.22, 1.0)
+	else:
+		marker.color = Color.from_hsv(h, 0.4, 0.72)
+		if obj.has("integrity"):
+			var integ := clampf(float(obj.get("integrity", 100.0)) / 100.0, 0.0, 1.0)
+			marker.color = marker.color.darkened((1.0 - integ) * 0.65)
 	marker.position = WorldScale.tile_to_px(obj.get("pos", {}))
 	marker.rotation_degrees = float(obj.get("rotation", 0.0))
+	marker.visible = true
 
 
 func _upsert_tile(cell: Dictionary) -> void:
@@ -241,9 +276,11 @@ func _upsert_tile(cell: Dictionary) -> void:
 
 	poly.color = WorldScale.tile_color(tile_type, burning, material_id)
 	# wet = encharcado no tile (não é volume/fluxo de líquido — isso é V2).
+	# Parede: tint mais leve para não parecer que virou “só água/chão”.
 	if wet and not burning:
 		var wet_i := clampf(_state_intensity(states, "wet") / 100.0, 0.35, 1.0)
-		poly.color = poly.color.lerp(Color("2f6f9e"), 0.4 + 0.35 * wet_i)
+		var wet_mix := (0.22 + 0.18 * wet_i) if tile_type == "wall" else (0.4 + 0.35 * wet_i)
+		poly.color = poly.color.lerp(Color("2f6f9e"), wet_mix)
 	# smoky = névoa de estado no tile, não camada de gás (R-023).
 	if smoky and not burning:
 		poly.color = poly.color.lerp(Color("5c5c62"), 0.28)
@@ -322,6 +359,45 @@ func _state_intensity(states: Array, type_name: String) -> float:
 	return 0.0
 
 
-func _clear_children(node: Node) -> void:
-	for c in node.get_children():
-		c.queue_free()
+func _prune_tiles(keep: Dictionary) -> void:
+	var drop: Array = []
+	for key in _tile_nodes.keys():
+		if not keep.has(key):
+			drop.append(key)
+	for key in drop:
+		_free_node(_tile_nodes[key])
+		_tile_nodes.erase(key)
+		if _fire_nodes.has(key):
+			_free_node(_fire_nodes[key])
+			_fire_nodes.erase(key)
+		if _smoke_nodes.has(key):
+			_free_node(_smoke_nodes[key])
+			_smoke_nodes.erase(key)
+		_tile_data.erase(key)
+
+
+func _prune_objects(keep: Dictionary) -> void:
+	var drop: Array = []
+	for id in _object_nodes.keys():
+		if not keep.has(id):
+			drop.append(id)
+	for id in drop:
+		_remove_object(String(id))
+
+
+func _remove_object(id: String) -> void:
+	if _object_nodes.has(id):
+		_free_node(_object_nodes[id])
+		_object_nodes.erase(id)
+	_object_data.erase(id)
+
+
+func _free_node(node: Variant) -> void:
+	if node == null:
+		return
+	var n := node as Node
+	if n == null:
+		return
+	# free() imediato: queue_free deixa 1 frame sem marcador (flicker).
+	if is_instance_valid(n):
+		n.free()

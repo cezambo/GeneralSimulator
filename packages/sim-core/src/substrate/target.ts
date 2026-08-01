@@ -22,8 +22,9 @@ export interface ReactiveTarget {
   readonly kind: TargetKind;
   /** Onde está, para vizinhança e log. Ausente em parte de corpo, que se move junto do dono. */
   readonly gridId?: string;
-  readonly x?: number;
-  readonly y?: number;
+  /** Célula corrente — mutável em objetos que se deslocam (móvel arrastado). */
+  x?: number;
+  y?: number;
 
   materialId: string;
   states: TransientState[];

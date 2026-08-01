@@ -59,12 +59,15 @@ export function buildSpikeRoom(cfg: SimConfig, seed: string): { sim: Simulation;
     }
   }
 
+  // Centro da célula (W-002): inteiro = canto — o cliente desenha o marcador
+  // centrado em `pos`, e sem +0.5 a cadeira parece fora da grelha.
   const cadeira: WorldObject = {
     id: CHAIR_ID,
     defId: 'cadeira_madeira',
-    pos: { x: w / 2, y: h / 2 },
+    pos: { x: Math.floor(w / 2) + 0.5, y: Math.floor(h / 2) + 0.5 },
     gridId: SPIKE_GRID,
-    integrity: 1,
+    integrity: 100,
+    states: [],
   };
   sim.state.objects[CHAIR_ID] = cadeira;
 

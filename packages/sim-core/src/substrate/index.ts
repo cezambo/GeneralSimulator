@@ -118,6 +118,22 @@ export class Substrate {
     return Math.abs(t.temperature - ambient) > this.#o.tuning.thermalEquilibriumTolerance;
   }
 
+  /**
+   * Só reações contínuas nestes alvos — sem vizinhança, sem queima, sem decaimento.
+   *
+   * Usado por ferramentas GM (molhar/apagar): `burning+wet → extinguish` tem de
+   * fechar no mesmo clique, mas um `tick()` completo espalharia fogo e consumiria
+   * combustível em células que o jogador não tocou.
+   */
+  settleContinuous(targets: readonly ReactiveTarget[], ctx: TickContext): number {
+    let aplicados = 0;
+    for (const alvo of targets) {
+      this.activate(alvo);
+      aplicados += this.#evaluate(alvo, alvo, 'continuous', ctx, undefined);
+    }
+    return aplicados;
+  }
+
   tick(ctx: TickContext): TickReport {
     // Ordem por identificador, e não a de inserção do Map. A de inserção é
     // determinística em JavaScript, mas depende da sequência de eventos que
@@ -137,8 +153,19 @@ export class Substrate {
       // conjunto ativo no início do tick. Deixar a propagação encadear dentro
       // do mesmo tick faria o fogo atravessar o mapa inteiro num tick, e a
       // cadência espacial de R-016 deixaria de existir.
+      //
+      // Ocupantes da célula vizinha (móveis) e da própria célula entram na
+      // mesma ocasião — R-018: inflamável com chama adjacente / no mesmo sítio.
       for (const vizinho of ctx.world.neighborsOf(alvo)) {
         aplicados += this.#evaluate(alvo, vizinho, 'neighborhood', ctx, undefined);
+        for (const occ of ctx.world.occupantsOf(vizinho)) {
+          if (occ.id === alvo.id) continue;
+          aplicados += this.#evaluate(alvo, occ, 'neighborhood', ctx, undefined);
+        }
+      }
+      for (const occ of ctx.world.occupantsOf(alvo)) {
+        if (occ.id === alvo.id) continue;
+        aplicados += this.#evaluate(alvo, occ, 'neighborhood', ctx, undefined);
       }
     }
 
@@ -398,9 +425,26 @@ export class Substrate {
    * de calor o número de entidades visitadas é zero, que é o aceite de R-008 —
    * lidos ao pé da letra sem esta restrição, R-007 e R-008 mandariam convergir
    * 262 mil floats por tick por grid.
+   *
+   * R-008: a cada tick a entidade move-se em direção ao **ambiente e às
+   * entidades em contato**, pela diferença / calor específico. O alvo térmico
+   * é a média do clima com as temperaturas de contato (fotografia do início da
+   * passada — R-047). Sem isto, o sumidouro ambiente sozinho esfria um cluster
+   * quente no mesmo ritmo de um tile isolado.
    */
   #thermalPass(alvos: readonly ReactiveTarget[], ctx: TickContext): number {
     let transicoes = 0;
+
+    // Fotografia das temperaturas antes de qualquer escrita neste tick.
+    const snap = new Map<string, number>();
+    for (const alvo of alvos) {
+      const ambiente = ctx.world.ambientTemperature(alvo);
+      snap.set(alvo.id, alvo.temperature ?? ambiente);
+      for (const contato of this.#thermalContacts(alvo, ctx)) {
+        if (snap.has(contato.id)) continue;
+        snap.set(contato.id, contato.temperature ?? ctx.world.ambientTemperature(contato));
+      }
+    }
 
     for (const alvo of alvos) {
       const material = this.#o.materials.get(alvo.materialId);
@@ -414,22 +458,41 @@ export class Substrate {
       // graus voltaria a vinte e nunca teria passado pelo ponto de fusão.
       if (alvo.temperature !== undefined && this.#crossThresholds(alvo, ctx)) transicoes++;
 
-      if (material.thermal?.fixedTemperature === undefined && alvo.temperature !== undefined) {
+      if (material.thermal?.fixedTemperature === undefined && hasState(alvo, 'burning')) {
+        // Quem queima é a fonte (R-010): temperatura de chama, não
+        // "esfria para o ambiente" enquanto a chama existir. Sem isto, o
+        // equilíbrio ganho-vizinho vs convergência estacionava ~90 °C no
+        // centro do fogo — absurdo para madeira em chama (ignitePoint ~240–300).
         const ambiente = ctx.world.ambientTemperature(alvo);
-        // Catálogo de jogo usa calor específico ~1–10; materials.json traz
-        // números tipo DF/SI (~200–4000). Escala só os grandes para o esfriamento
-        // pós-fogo ser legível sem alterar os fixtures dos testes.
-        const calorEspecifico = thermalDivisor(material.numeric.specificHeat ?? 1);
-        let passo = (ambiente - alvo.temperature) / calorEspecifico;
-        // Sem chama local, relaxa mais depressa — o calor residual não deve
-        // parecer um forno eterno depois que o fogo apagou.
-        if (!hasState(alvo, 'burning')) passo *= 3;
+        const intensidade = alvo.states.find((s) => s.type === 'burning')!.intensity;
+        alvo.temperature = flameTemperature(ambiente, intensidade);
+      } else if (
+        material.thermal?.fixedTemperature === undefined &&
+        alvo.temperature !== undefined
+      ) {
+        const ambiente = ctx.world.ambientTemperature(alvo);
+        // Catálogo de jogo e materials.json usam a mesma fórmula DF: Δ / SPEC_HEAT.
+        // Números ~200–4000 são o ritmo certo (docs/07); não escalar para "ficar
+        // legível" — isso apagava a retenção de calor entre vizinhos quentes.
+        const calorEspecifico = Math.max(0.01, material.numeric.specificHeat ?? 1);
+        const contatos = this.#thermalContacts(alvo, ctx);
+        let soma = ambiente;
+        let n = 1;
+        for (const contato of contatos) {
+          soma += snap.get(contato.id) ?? ctx.world.ambientTemperature(contato);
+          n += 1;
+        }
+        const alvoTermico = soma / n;
+        let passo = (alvoTermico - alvo.temperature) / calorEspecifico;
         if (hasState(alvo, 'wet')) passo *= 1.5;
         const antes = alvo.temperature;
         alvo.temperature += passo;
-        // Nunca atravessa o ambiente (senão 20.3 com boost vira 19.4 e nunca sai).
-        if ((antes > ambiente && alvo.temperature < ambiente) || (antes < ambiente && alvo.temperature > ambiente)) {
-          alvo.temperature = ambiente;
+        // Nunca atravessa o alvo térmico do tick (ambiente+contatos).
+        if (
+          (antes > alvoTermico && alvo.temperature < alvoTermico) ||
+          (antes < alvoTermico && alvo.temperature > alvoTermico)
+        ) {
+          alvo.temperature = alvoTermico;
         }
         if (Math.abs(alvo.temperature - ambiente) <= this.#o.tuning.thermalEquilibriumTolerance) {
           // Volta a ser o ambiente. É o que tira o alvo do laço térmico.
@@ -438,22 +501,44 @@ export class Substrate {
       }
     }
 
-    // Quem queima aquece a vizinhança. R-010.
+    // Quem queima aquece a vizinhança e quem divide a célula. R-010.
     for (const alvo of alvos) {
       if (!hasState(alvo, 'burning')) continue;
       const intensidade = alvo.states.find((s) => s.type === 'burning')!.intensity;
-      for (const vizinho of ctx.world.neighborsOf(alvo)) {
+      const ambienteFonte = ctx.world.ambientTemperature(alvo);
+      const chama = flameTemperature(ambienteFonte, intensidade);
+      const aquecidos = new Map<string, ReactiveTarget>();
+      for (const v of ctx.world.neighborsOf(alvo)) aquecidos.set(v.id, v);
+      for (const occ of ctx.world.occupantsOf(alvo)) {
+        if (occ.id !== alvo.id) aquecidos.set(occ.id, occ);
+      }
+      for (const v of ctx.world.neighborsOf(alvo)) {
+        for (const occ of ctx.world.occupantsOf(v)) {
+          if (occ.id !== alvo.id) aquecidos.set(occ.id, occ);
+        }
+      }
+      for (const vizinho of aquecidos.values()) {
+        if (hasState(vizinho, 'burning')) continue;
         const ambiente = ctx.world.ambientTemperature(vizinho);
-        // Teto por tick evita rampa térmica irrealista quando vários vizinhos
-        // queimam (e o bridge deixa a soma acumular de verdade).
-        const ganho = intensidade / 12;
+        const ganho = intensidade / 8;
+        const teto = Math.min(chama - 40, ambiente + 420);
         const atual = vizinho.temperature ?? ambiente;
-        vizinho.temperature = Math.min(atual + ganho, ambiente + 280);
+        vizinho.temperature = Math.min(atual + ganho, Math.max(ambiente, teto));
         this.activate(vizinho);
       }
     }
 
     return transicoes;
+  }
+
+  /** Vizinhos de célula + quem divide a célula — "entidades em contato" de R-008. */
+  #thermalContacts(alvo: ReactiveTarget, ctx: TickContext): ReactiveTarget[] {
+    const out = new Map<string, ReactiveTarget>();
+    for (const v of ctx.world.neighborsOf(alvo)) out.set(v.id, v);
+    for (const occ of ctx.world.occupantsOf(alvo)) {
+      if (occ.id !== alvo.id) out.set(occ.id, occ);
+    }
+    return [...out.values()];
   }
 
   /**
@@ -567,8 +652,12 @@ export class Substrate {
   }
 }
 
-/** Divisor de convergência térmica. Ver comentário em #thermalPass. */
-function thermalDivisor(specificHeat: number): number {
-  if (specificHeat > 50) return Math.max(1, specificHeat / 100);
-  return Math.max(0.01, specificHeat);
+/**
+ * Temperatura de chama a partir da intensidade do estado `burning`.
+ * I=55 → ~605 °C; I=90 → ~850 °C — faixa de madeira em combustão, acima
+ * dos ignitePoint do catálogo (~150–300) e bem acima do ~90 °C que o
+ * equilíbrio antigo produzia.
+ */
+function flameTemperature(ambient: number, intensity: number): number {
+  return ambient + 200 + intensity * 7;
 }

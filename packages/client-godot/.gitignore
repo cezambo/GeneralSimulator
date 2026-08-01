@@ -3,3 +3,6 @@
 *.translation
 export_presets.cfg
 android/
+
+# Status/log da ligação ao núcleo (agentes Cursor leem; não versionar).
+.local/
