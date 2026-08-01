@@ -15,6 +15,7 @@ var _object_nodes: Dictionary = {} # id -> Polygon2D
 var _construction: bool = false
 var _hover_cell: Vector2i = Vector2i(-1, -1)
 var _tile_data: Dictionary = {} # "x,y" -> Dictionary
+var _object_data: Dictionary = {} # id -> Dictionary
 
 
 func apply_snapshot(payload: Dictionary) -> void:
@@ -25,6 +26,7 @@ func apply_snapshot(payload: Dictionary) -> void:
 	_smoke_nodes.clear()
 	_object_nodes.clear()
 	_tile_data.clear()
+	_object_data.clear()
 	_grid_w = int(payload.get("width", 0))
 	_grid_h = int(payload.get("height", 0))
 
@@ -59,6 +61,7 @@ func apply_delta(payload: Dictionary) -> void:
 		if _object_nodes.has(id):
 			(_object_nodes[id] as Node).queue_free()
 			_object_nodes.erase(id)
+		_object_data.erase(id)
 
 
 func world_size_px() -> Vector2:
@@ -96,25 +99,75 @@ func describe_tile(cell: Vector2i) -> String:
 		if in_bounds_cell(cell):
 			return "(%d,%d) — sem dados" % [cell.x, cell.y]
 		return "fora do mapa"
+	var look := String(t.get("look", "")).strip_edges()
+	# Fallback local se o núcleo ainda não mandou prosa (snapshot antigo).
+	if look == "":
+		look = _fallback_look(t)
+	# Objetos locais cobrem o caso em que o delta de tile veio sem lista de móveis.
+	var local_objs := _object_labels_at(cell)
+	for name in local_objs:
+		if not look.contains(name):
+			look += " · com %s" % name
+	var detail := _inspect_numbers(t)
+	if detail != "":
+		return "(%d,%d) %s\n%s" % [cell.x, cell.y, look, detail]
+	return "(%d,%d) %s" % [cell.x, cell.y, look]
+
+
+func _fallback_look(t: Dictionary) -> String:
 	var tile_type := String(t.get("type", "?"))
 	var material_id := String(t.get("materialId", "?"))
-	var parts: PackedStringArray = ["(%d,%d) %s · %s" % [cell.x, cell.y, tile_type, material_id]]
-	if t.has("integrity"):
-		parts.append("int %d" % int(t.get("integrity", 100)))
-	if t.has("temperature"):
-		parts.append("%.0f°" % float(t.get("temperature", 0.0)))
+	var parts: PackedStringArray = ["%s · %s" % [tile_type, material_id]]
 	var states: Array = t.get("states", [])
-	var state_bits: PackedStringArray = []
 	for s in states:
 		if typeof(s) != TYPE_DICTIONARY:
 			continue
 		var st := String(s.get("type", ""))
 		var inten := int(s.get("intensity", 0))
 		if st != "" and inten > 0:
-			state_bits.append("%s:%d" % [st, inten])
-	if state_bits.size() > 0:
-		parts.append(" · ".join(state_bits))
+			parts.append("%s" % st)
 	return " · ".join(parts)
+
+
+func _inspect_numbers(t: Dictionary) -> String:
+	## Segunda linha: números úteis para debug, sem poluir a prosa.
+	var bits: PackedStringArray = []
+	if t.has("integrity") and float(t.get("integrity", 100.0)) < 99.5:
+		bits.append("int %d" % int(t.get("integrity", 100)))
+	if t.has("temperature"):
+		bits.append("%.0f°C" % float(t.get("temperature", 0.0)))
+	var states: Array = t.get("states", [])
+	for s in states:
+		if typeof(s) != TYPE_DICTIONARY:
+			continue
+		var st := String(s.get("type", ""))
+		var inten := int(s.get("intensity", 0))
+		if st != "" and inten > 0:
+			bits.append("%s %d" % [st, inten])
+	if bits.is_empty():
+		return ""
+	return bits.join(" · ")
+
+
+func _object_labels_at(cell: Vector2i) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for id in _object_data.keys():
+		var obj: Dictionary = _object_data[id]
+		var pos: Dictionary = obj.get("pos", {})
+		var ox := int(floor(float(pos.get("x", -999.0))))
+		var oy := int(floor(float(pos.get("y", -999.0))))
+		if ox != cell.x or oy != cell.y:
+			continue
+		var def_id := String(obj.get("defId", "")).replace("_", " ")
+		if def_id == "":
+			continue
+		var label := def_id
+		if def_id.begins_with("cadeira") or def_id.begins_with("mesa") or def_id.begins_with("cama"):
+			label = "uma %s" % def_id
+		elif def_id.begins_with("banco"):
+			label = "um %s" % def_id
+		out.append(label)
+	return out
 
 
 func _draw() -> void:
@@ -141,6 +194,7 @@ func _upsert_object(obj: Dictionary) -> void:
 	var id := String(obj.get("id", ""))
 	if id == "":
 		return
+	_object_data[id] = obj.duplicate(true)
 	var def_id := String(obj.get("defId", ""))
 	var marker: Polygon2D
 	if _object_nodes.has(id):
@@ -193,6 +247,12 @@ func _upsert_tile(cell: Dictionary) -> void:
 	# smoky = névoa de estado no tile, não camada de gás (R-023).
 	if smoky and not burning:
 		poly.color = poly.color.lerp(Color("5c5c62"), 0.28)
+	# Calor residual (sem chama): tint laranja suave — legível pós-extinção.
+	if not burning and cell.has("temperature"):
+		var temp := float(cell.get("temperature", 20.0))
+		if temp >= 45.0:
+			var heat_t := clampf((temp - 45.0) / 200.0, 0.0, 1.0)
+			poly.color = poly.color.lerp(Color("c45a28"), 0.12 + 0.38 * heat_t)
 	if tile_type == "door" and bool(state.get("isOpen", false)) and not burning:
 		poly.color = WorldScale.tile_color("door", false, material_id).lightened(0.2)
 		if wet:

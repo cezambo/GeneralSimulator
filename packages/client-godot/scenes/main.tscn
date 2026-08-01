@@ -35,7 +35,7 @@ script = ExtResource("6_hud")
 [node name="Margin" type="MarginContainer" parent="Hud"]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 128.0
+offset_bottom = 168.0
 grow_horizontal = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 12
@@ -81,4 +81,5 @@ theme_override_colors/font_color = Color(0.75, 0.88, 0.95, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 12
-text = "Tile: —"
+autowrap_mode = 3
+text = "—"

@@ -38,7 +38,7 @@ func _ready() -> void:
 	if select_label:
 		select_label.text = _selection_text
 	if inspect_label:
-		inspect_label.text = "Tile: —"
+		inspect_label.text = "—"
 	set_connected(false)
 
 

@@ -54,6 +54,8 @@ export interface TileCellSnapshot {
   readonly states?: readonly { type: string; intensity: number }[];
   readonly integrity?: number;
   readonly temperature?: number;
+  /** Prosa de inspeção (hover). Determinística a partir do estado da célula. */
+  readonly look?: string;
 }
 
 export interface WorldSnapshotPayload {

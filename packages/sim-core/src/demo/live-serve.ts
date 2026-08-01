@@ -25,6 +25,7 @@ import {
   type ToolEffectId,
   type WorldDeltaPayload,
 } from '../protocol/index.js';
+import { describeTileLook } from '../perception/tile-look.js';
 import { motionFromMover } from '../protocol/snapshot.js';
 import {
   buildSpikeRoom,
@@ -321,16 +322,31 @@ export async function startLiveServe(opts?: {
   function cellPayload(gridId: string, x: number, y: number) {
     const t = world.tileAt(gridId, x, y);
     const o = sim.overlayAt(gridId, x, y);
+    const states = o?.states?.length
+      ? o.states.map((s) => ({ type: s.type, intensity: s.intensity }))
+      : ([] as { type: string; intensity: number }[]);
+    const objects = Object.values(sim.state.objects)
+      .filter((obj) => Math.floor(obj.pos.x) === x && Math.floor(obj.pos.y) === y)
+      .map((obj) => ({ defId: obj.defId }));
+    const look = describeTileLook({
+      type: t.type,
+      materialId: t.materialId,
+      states,
+      ...(o?.integrity !== undefined ? { integrity: o.integrity } : {}),
+      ...(o?.temperature !== undefined ? { temperature: o.temperature } : {}),
+      ...(t.state && Object.keys(t.state).length > 0 ? { state: { ...t.state } } : {}),
+      ...(objects.length > 0 ? { objects } : {}),
+    });
     return {
       x,
       y,
       type: t.type,
       materialId: t.materialId,
-      ...(o?.states?.length
-        ? { states: o.states.map((s) => ({ type: s.type, intensity: s.intensity })) }
-        : { states: [] as { type: string; intensity: number }[] }),
+      ...(t.state && Object.keys(t.state).length > 0 ? { state: { ...t.state } } : {}),
+      states,
       ...(o?.integrity !== undefined ? { integrity: o.integrity } : {}),
       ...(o?.temperature !== undefined ? { temperature: o.temperature } : {}),
+      look,
     };
   }
 

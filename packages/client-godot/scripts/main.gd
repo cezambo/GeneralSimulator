@@ -176,7 +176,7 @@ func _update_hover_inspect() -> void:
 	var cell := WorldScale.px_to_cell(world_view.get_global_mouse_position())
 	if world_view.in_bounds_cell(cell):
 		world_view.set_hover_cell(cell)
-		var line := "Tile: %s" % world_view.describe_tile(cell)
+		var line := world_view.describe_tile(cell)
 		var sid := agents.get_selected_id()
 		if sid != "" and not hud.is_construction():
 			var pawn := agents.get_pawn(sid)
@@ -185,7 +185,7 @@ func _update_hover_inspect() -> void:
 		hud.set_inspect(line)
 	else:
 		world_view.set_hover_cell(Vector2i(-1, -1))
-		hud.set_inspect("Tile: —")
+		hud.set_inspect("—")
 
 
 func _on_connected() -> void:

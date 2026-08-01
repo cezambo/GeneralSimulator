@@ -1,5 +1,11 @@
 import type { PerceptibleFact } from '../types/domain.js';
 
+export {
+  describeTileLook,
+  type TileLookInput,
+  type TileLookState,
+} from './tile-look.js';
+
 /**
  * Montagem do relato de percepção. A-031, A-032, A-033.
  *

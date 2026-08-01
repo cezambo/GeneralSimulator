@@ -4,6 +4,7 @@
 
 import type { Simulation } from '../state/index.js';
 import type { Agent } from '../types/domain.js';
+import { describeTileLook } from '../perception/tile-look.js';
 import type { World } from '../world/grid.js';
 import type { SimClock } from '../world/clock.js';
 import { isMoving, type MoverState } from '../spatial/movement.js';
@@ -64,17 +65,32 @@ export function tileCellSnapshot(
 ): TileCellSnapshot {
   const t = world.tileAt(gridId, x, y);
   const overlay = sim.overlayAt(gridId, x, y);
+  const states =
+    overlay?.states && overlay.states.length > 0
+      ? overlay.states.map((s) => ({ type: s.type, intensity: s.intensity }))
+      : [];
+  const objects = Object.values(sim.state.objects)
+    .filter((o) => Math.floor(o.pos.x) === x && Math.floor(o.pos.y) === y)
+    .map((o) => ({ defId: o.defId }));
+  const look = describeTileLook({
+    type: t.type,
+    materialId: t.materialId,
+    states,
+    ...(overlay?.integrity !== undefined ? { integrity: overlay.integrity } : {}),
+    ...(overlay?.temperature !== undefined ? { temperature: overlay.temperature } : {}),
+    ...(t.state && Object.keys(t.state).length > 0 ? { state: { ...t.state } } : {}),
+    ...(objects.length > 0 ? { objects } : {}),
+  });
   return {
     x,
     y,
     type: t.type,
     materialId: t.materialId,
     ...(t.state && Object.keys(t.state).length > 0 ? { state: { ...t.state } } : {}),
-    ...(overlay?.states && overlay.states.length > 0
-      ? { states: overlay.states.map((s) => ({ type: s.type, intensity: s.intensity })) }
-      : { states: [] }),
+    states,
     ...(overlay?.integrity !== undefined ? { integrity: overlay.integrity } : {}),
     ...(overlay?.temperature !== undefined ? { temperature: overlay.temperature } : {}),
+    look,
   };
 }
 
