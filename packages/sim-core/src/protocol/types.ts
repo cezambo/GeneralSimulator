@@ -54,6 +54,8 @@ export interface TileCellSnapshot {
   readonly states?: readonly { type: string; intensity: number }[];
   readonly integrity?: number;
   readonly temperature?: number;
+  /** O₂ local 0–100; omitido = ambiente cheio (cliente só pinta starve se vier). */
+  readonly oxygen?: number;
   /** Prosa de inspeção (hover). Determinística a partir do estado da célula. */
   readonly look?: string;
 }
@@ -88,4 +90,15 @@ export interface WorldDeltaPayload {
 export interface ErrorPayload {
   readonly code: string;
   readonly message: string;
+}
+
+/** `cmd.tool.apply` — ferramentas GM (água / apagar). */
+export interface ToolApplyPayload {
+  readonly effect: 'wet' | 'extinguish';
+  readonly cells: readonly { x: number; y: number }[];
+  /**
+   * Intensidade do efeito (0–100). Ex.: 15 molhado leve vs 90 encharcar.
+   * Omitido → default do servidor (~90 em `wet`).
+   */
+  readonly intensity?: number;
 }

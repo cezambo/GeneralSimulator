@@ -4,6 +4,7 @@ export {
   TILE_BLOCKING,
   blocksMovement,
   blocksVision,
+  blocksNeighborhood,
   type TileBlocking,
   type StructuralState,
 } from './tiles.js';

@@ -94,6 +94,14 @@ export function createFireSession(opts: FireDemoOptions = {}): FireSession {
       thermalEquilibriumTolerance: cfg.tuning.thermalEquilibriumTolerance,
       maxCascadeStepsPerTick: cfg.tuning.maxCascadeStepsPerTick,
       burnIntegrityLossPerTick: cfg.tuning.burnIntegrityLossPerTick,
+      oxygenAmbient: cfg.tuning.oxygenAmbient,
+      burnOxygenConsumePerTick: cfg.tuning.burnOxygenConsumePerTick,
+      oxygenWeakenThreshold: cfg.tuning.oxygenWeakenThreshold,
+      oxygenExtinguishThreshold: cfg.tuning.oxygenExtinguishThreshold,
+      burnIntensityGrowthPerTick: cfg.tuning.burnIntensityGrowthPerTick,
+      burnIntensityWeakenPerTick: cfg.tuning.burnIntensityWeakenPerTick,
+      smokeFromOxygenConsume: cfg.tuning.smokeFromOxygenConsume,
+      oxygenRecoveryPerTick: cfg.tuning.oxygenRecoveryPerTick,
     },
   });
 

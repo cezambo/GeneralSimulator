@@ -8,7 +8,7 @@
 
 import type { Simulation } from '../state/index.js';
 import type { ObjectDef, TransientState, WorldObject } from '../types/domain.js';
-import { blocksMovement } from '../world/tiles.js';
+import { blocksMovement, blocksNeighborhood } from '../world/tiles.js';
 import type { World } from '../world/grid.js';
 import type { ReactiveTarget } from './target.js';
 
@@ -73,6 +73,7 @@ export class TileReactiveBridge {
         states: overlay.states,
         integrity: overlay.integrity,
         ...(overlay.temperature !== undefined ? { temperature: overlay.temperature } : {}),
+        ...(overlay.oxygen !== undefined ? { oxygen: overlay.oxygen } : {}),
       };
       this.#targets.set(id, t);
     } else {
@@ -90,6 +91,8 @@ export class TileReactiveBridge {
         t.integrity = overlay.integrity ?? 100;
         if (overlay.temperature !== undefined) t.temperature = overlay.temperature;
         else delete t.temperature;
+        if (overlay.oxygen !== undefined) t.oxygen = overlay.oxygen;
+        else delete t.oxygen;
       } else if (t.integrity !== undefined) {
         // Mesmo array: proxy é a fonte da verdade até commit.
         overlay.integrity = t.integrity;
@@ -151,11 +154,22 @@ export class TileReactiveBridge {
     this.#targets.delete(tileTargetId(gridId, x, y));
   }
 
+  /**
+   * Vizinhos ortogonais para ocasião `neighborhood` e troca térmica.
+   * Porta fechada isola a aresta (não entra nem sai); aberta acopla de novo.
+   */
   neighborsOf(target: ReactiveTarget): ReactiveTarget[] {
     if (target.gridId === undefined || target.x === undefined || target.y === undefined) return [];
+    const gridId = target.gridId;
+    const from = this.#world.tileAt(gridId, target.x, target.y);
+    if (blocksNeighborhood(from.type, from.state)) return [];
     return this.#world
-      .neighbors4(target.gridId, target.x, target.y)
-      .map((p) => this.targetAt(target.gridId!, p.x, p.y));
+      .neighbors4(gridId, target.x, target.y)
+      .filter((p) => {
+        const tile = this.#world.tileAt(gridId, p.x, p.y);
+        return !blocksNeighborhood(tile.type, tile.state);
+      })
+      .map((p) => this.targetAt(gridId, p.x, p.y));
   }
 
   /**
@@ -252,12 +266,15 @@ export class TileReactiveBridge {
         overlay.temperature,
         tileBefore.materialId,
         tileBefore.type,
+        overlay.oxygen,
       );
 
       overlay.states = t.states;
       if (t.integrity !== undefined) overlay.integrity = t.integrity;
       if (t.temperature !== undefined) overlay.temperature = t.temperature;
       else delete overlay.temperature;
+      if (t.oxygen !== undefined) overlay.oxygen = t.oxygen;
+      else delete overlay.oxygen;
 
       if (tileBefore.materialId !== t.materialId) {
         this.#world.setMaterial(t.gridId, t.x, t.y, t.materialId);
@@ -273,8 +290,8 @@ export class TileReactiveBridge {
         this.#world.setType(t.gridId, t.x, t.y, 'floor');
         if (overlay.state) {
           const { isOpen: _o, isLocked: _l, ...rest } = overlay.state;
-          overlay.state = Object.keys(rest).length > 0 ? rest : undefined;
-          if (overlay.state === undefined) delete overlay.state;
+          if (Object.keys(rest).length > 0) overlay.state = rest;
+          else delete overlay.state;
         }
       }
 
@@ -285,6 +302,7 @@ export class TileReactiveBridge {
         overlay.temperature,
         tileAfter.materialId,
         tileAfter.type,
+        overlay.oxygen,
       );
       if (before !== after) dirty.push({ gridId: t.gridId, x: t.x, y: t.y });
     }
@@ -313,8 +331,16 @@ function fingerprint(
   temperature: number | undefined,
   materialId: string,
   tileType: string,
+  oxygen?: number,
 ): string {
-  return JSON.stringify({ states: states ?? [], integrity, temperature, materialId, tileType });
+  return JSON.stringify({
+    states: states ?? [],
+    integrity,
+    temperature,
+    oxygen,
+    materialId,
+    tileType,
+  });
 }
 
 function objectFingerprint(obj: WorldObject): string {

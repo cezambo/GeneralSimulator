@@ -39,6 +39,11 @@ export interface ReactiveTarget {
    */
   temperature?: number;
   integrity?: number;
+  /**
+   * Oxigênio local 0–100. `undefined` = ambiente cheio (esparso, como temperatura).
+   * V1: fogo consome; fumaça correlaciona. Sem difusão de gás (R-023 = V2).
+   */
+  oxygen?: number;
   /** Só o que o Validador pode trocar. `transmute` escreve aqui. */
   emitsLight?: boolean;
 }

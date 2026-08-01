@@ -18,6 +18,27 @@ Mapa de módulos e a spec dona de cada um. Antes de escrever num módulo, leia a
 | `llm/` | OpenRouter, tier→modelo, saída estruturada, cassetes, custo | [SPEC-L](../../../docs/spec/SPEC-L-llm.md) |
 | `protocol/` | WebSocket com cliente e painéis | [X-007](../../../docs/spec/SPEC-X-transversal.md) |
 | `cli/` | Entradas de linha de comando, incluindo o spike | [X-001](../../../docs/spec/SPEC-X-transversal.md) |
+| `demo/` | Demos (fogo, live-serve) + harness WS autónomo | — |
+
+### Harness da demo (agentes)
+
+Após mudanças na demo: correr e ler o relatório — não pedir ao César confirmação de mecânicas cobertas aqui.
+
+```bash
+npm run sim -- harness
+```
+
+Escreve `packages/sim-core/.local/harness-report.json` (`ok`, `failed[]`). Exit ≠ 0 se falhar. Vitest: `src/demo/demo-harness.test.ts`.
+
+### Drive ao vivo (Godot a ver)
+
+Com `npm run sim -- serve` + Godot ligados:
+
+```bash
+npm run sim -- drive --fresh   # preferido: reset + sala limpa + fogo em (1,1)
+```
+
+Ler `packages/sim-core/.local/live-drive-report.json`. Antes de afirmar disconnect: `packages/client-godot/.local/core-connection.json`.
 
 ## Três regras que não se negociam
 

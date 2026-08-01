@@ -25,7 +25,7 @@ Ou:
 godot --path packages/client-godot
 ```
 
-**Agentes (Cursor):** se o utilizador reportar “núcleo desconectado” (ou ao depurar a demo), ler `packages/client-godot/.local/core-connection.json` + o final de `.local/core-connection.log`, e no terminal do `npm run sim -- serve` as linhas JSON `client_connected` / `client_disconnected`. Não confiar só no Output do editor Godot.
+**Agentes (Cursor):** após mudanças na demo — `npm run sim -- harness` e ler `packages/sim-core/.local/harness-report.json`. Ao vivo: `npm run sim -- drive --fresh` → `live-drive-report.json`. Antes de afirmar disconnect: `.local/core-connection.json` (+ fim de `core-connection.log`). Humanos só para visuals; não pedir ao César confirmação de mecânicas que o harness cobre.
 
 ## Controles
 
@@ -39,7 +39,7 @@ godot --path packages/client-godot
 | Clique no agente | Selecionar |
 | Clique no chão (com seleção) | Pedir caminho (`cmd.agent.move`) |
 | Clique na porta | Abrir / fechar (`cmd.world.toggleDoor`) |
-| Hover | Info do tile (e do pawn selecionado) no HUD |
+| Hover | Info do tile (porta aberta/fechada, estados) no HUD |
 | G | Ferramenta RT: água (`wet`) — molha; apaga fogo se houver |
 | Q | Ferramenta RT: apagar fogo (`extinguish`) |
 | Botão direito (com ferramenta RT) | Cancela a ferramenta |

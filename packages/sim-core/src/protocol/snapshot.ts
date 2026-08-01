@@ -90,6 +90,7 @@ export function tileCellSnapshot(
     states,
     ...(overlay?.integrity !== undefined ? { integrity: overlay.integrity } : {}),
     ...(overlay?.temperature !== undefined ? { temperature: overlay.temperature } : {}),
+    ...(overlay?.oxygen !== undefined ? { oxygen: overlay.oxygen } : {}),
     look,
   };
 }

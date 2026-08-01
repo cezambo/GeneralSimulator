@@ -5,10 +5,15 @@
  *   npm run sim -- spike
  *   npm run sim -- serve
  *   npm run sim -- fire
+ *   npm run sim -- harness
+ *   npm run sim -- drive
+ *   npm run sim -- drive --fresh
  */
 
 import { runFireDemo } from '../demo/fire.js';
+import { runLiveDrive } from '../demo/live-drive.js';
 import { startLiveServe } from '../demo/live-serve.js';
+import { runHarnessScenarios, writeHarnessReport } from '../demo/ws-harness.js';
 import { runSpike } from '../spike/index.js';
 
 async function main(): Promise<void> {
@@ -30,9 +35,29 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(r, null, 2));
     return;
   }
+  if (cmd === 'harness') {
+    await runHarnessCmd();
+    return;
+  }
+  if (cmd === 'drive') {
+    const report = await runLiveDrive({
+      fresh: process.argv.includes('--fresh') || process.env['SIM_DRIVE_FRESH'] === '1',
+    });
+    if (!report.ok) process.exitCode = 1;
+    return;
+  }
 
-  console.error(`comando desconhecido: ${cmd}. Disponível: spike, serve, fire`);
+  console.error(
+    `comando desconhecido: ${cmd}. Disponível: spike, serve, fire, harness, drive [--fresh]`,
+  );
   process.exitCode = 1;
+}
+
+async function runHarnessCmd(): Promise<void> {
+  const report = await runHarnessScenarios();
+  const path = writeHarnessReport(report);
+  console.log(JSON.stringify({ ...report, reportPath: path }, null, 2));
+  if (!report.ok) process.exitCode = 1;
 }
 
 async function runSpikeCmd(): Promise<void> {

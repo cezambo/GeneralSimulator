@@ -33,7 +33,8 @@ export function describeTileLook(input: TileLookInput): string {
   const integrityBit = integrityPhrase(input.integrity);
   if (integrityBit) bits.push(integrityBit);
 
-  const tempBit = temperaturePhrase(input.temperature);
+  const wet = wetIntensity(input.states);
+  const tempBit = temperaturePhrase(input.temperature, wet === undefined);
   if (tempBit) bits.push(tempBit);
 
   for (const st of input.states ?? []) {
@@ -47,6 +48,16 @@ export function describeTileLook(input: TileLookInput): string {
 
   // Uma linha compacta; o cliente pode partir em duas se quiser.
   return bits.join(' · ');
+}
+
+function wetIntensity(states: readonly TileLookState[] | undefined): number | undefined {
+  if (!states) return undefined;
+  let max: number | undefined;
+  for (const st of states) {
+    if (st.type !== 'wet' || st.intensity <= 0) continue;
+    max = max === undefined ? st.intensity : Math.max(max, st.intensity);
+  }
+  return max;
 }
 
 function tileNoun(
@@ -116,14 +127,21 @@ function integrityPhrase(integrity: number | undefined): string | undefined {
   return 'destruído';
 }
 
-function temperaturePhrase(temperature: number | undefined): string | undefined {
+/**
+ * Temperatura: com humidade presente, descreve o calor actual;
+ * seco e acima do ambiente = calor residual (não implica molhado).
+ */
+function temperaturePhrase(
+  temperature: number | undefined,
+  dry: boolean,
+): string | undefined {
   if (temperature === undefined) return undefined;
   const t = temperature;
   // Demo V1 usa °C (ambiente ~20). Kelvin (~288) cairia no ramo "frio".
-  if (t >= 250) return 'ardente';
-  if (t >= 120) return 'muito quente';
-  if (t >= 55) return 'quente';
-  if (t >= AMBIENT_C + 12) return 'morno';
+  if (t >= 250) return dry ? 'ainda ardente' : 'ardente';
+  if (t >= 120) return dry ? 'ainda muito quente' : 'muito quente';
+  if (t >= 55) return dry ? 'ainda quente' : 'quente';
+  if (t >= AMBIENT_C + 12) return dry ? 'ainda morno' : 'morno';
   if (t <= 0) return 'gelado';
   if (t < AMBIENT_C - 8) return 'frio';
   return undefined;
@@ -136,13 +154,15 @@ function statePhrase(type: string, intensity: number): string | undefined {
       if (intensity >= 35) return 'queimando';
       return 'chamejando fraco';
     case 'wet':
+      // Alta = encharcado; baixa = húmido (não inventar molhado sem intensidade).
       if (intensity >= 70) return 'encharcado';
       if (intensity >= 35) return 'molhado';
-      return 'úmido';
+      return 'húmido';
     case 'smoky':
-      if (intensity >= 60) return 'cheio de fumaça';
-      if (intensity >= 25) return 'fumegante';
-      return 'com cheiro de fumaça';
+      // Alta = fumo denso; média = fumegante; baixa = neblina.
+      if (intensity >= 70) return 'fumo denso';
+      if (intensity >= 35) return 'fumegante';
+      return 'neblina';
     case 'frozen':
       return 'congelado';
     default:

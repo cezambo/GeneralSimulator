@@ -1,5 +1,14 @@
 import type { Rng } from '../rng/index.js';
 import type { CausalEntry } from '../types/domain.js';
+import {
+  consumeOxygenOnBurn,
+  DEFAULT_ATMOSPHERE,
+  effectiveOxygen,
+  modulateBurnIntensity,
+  oxygenFactor,
+  recoverOxygen,
+  type AtmosphereTuning,
+} from './atmosphere.js';
 import { EffectCatalog, isEffectId, type EffectId } from './effects.js';
 import { ReactionMatrix, type Occasion, type ReactionRule } from './matrix.js';
 import { hasState, type MaterialLookup, type ReactiveTarget } from './target.js';
@@ -7,6 +16,7 @@ import { hasState, type MaterialLookup, type ReactiveTarget } from './target.js'
 export * from './target.js';
 export * from './matrix.js';
 export * from './effects.js';
+export * from './atmosphere.js';
 export { TileReactiveBridge, tileTargetId } from './world-bridge.js';
 
 /**
@@ -27,6 +37,10 @@ export { TileReactiveBridge, tileTargetId } from './world-bridge.js';
  * consulta — não mudança no motor.
  */
 export interface WorldView {
+  /**
+   * Vizinhos ortogonais. Porta fechada não aparece (nem o alvo-porta fechada
+   * devolve vizinhos) — barreira de vizinhança / calor até reabrir.
+   */
   neighborsOf(target: ReactiveTarget): ReactiveTarget[];
   /** Quem divide a célula com o alvo. Alimenta a cascata de contato dentro do tick. */
   occupantsOf(target: ReactiveTarget): ReactiveTarget[];
@@ -47,6 +61,22 @@ export interface SubstrateTuning {
    * R-027: tile/objeto em chamas perde integridade a cada tick.
    */
   readonly burnIntegrityLossPerTick: number;
+  /** `substrato.oxigenioAmbiente` — ausente no alvo = este valor (0–100). */
+  readonly oxygenAmbient?: number;
+  /** `substrato.consumoOxigenioQueimaPorTick` — em intensidade 100. */
+  readonly burnOxygenConsumePerTick?: number;
+  /** `substrato.limiarOxigenioEnfraqueceFogo`. */
+  readonly oxygenWeakenThreshold?: number;
+  /** `substrato.limiarOxigenioApagaFogo`. */
+  readonly oxygenExtinguishThreshold?: number;
+  /** `substrato.crescimentoIntensidadeQueimaPorTick`. */
+  readonly burnIntensityGrowthPerTick?: number;
+  /** `substrato.enfraquecimentoIntensidadeQueimaPorTick`. */
+  readonly burnIntensityWeakenPerTick?: number;
+  /** `substrato.fumacaPorConsumoOxigenio`. */
+  readonly smokeFromOxygenConsume?: number;
+  /** `substrato.recuperacaoOxigenioPorTick`. */
+  readonly oxygenRecoveryPerTick?: number;
 }
 
 export interface SubstrateOptions {
@@ -114,8 +144,30 @@ export class Substrate {
    */
   #stillActive(t: ReactiveTarget, ambient: number): boolean {
     if (t.states.some((s) => s.intensity > 0)) return true;
+    const o2Amb = this.#atmosphere().oxygenAmbient;
+    if (t.oxygen !== undefined && t.oxygen < o2Amb - this.#o.tuning.thermalEquilibriumTolerance) {
+      return true;
+    }
     if (t.temperature === undefined) return false;
     return Math.abs(t.temperature - ambient) > this.#o.tuning.thermalEquilibriumTolerance;
+  }
+
+  #atmosphere(): AtmosphereTuning {
+    const t = this.#o.tuning;
+    return {
+      oxygenAmbient: t.oxygenAmbient ?? DEFAULT_ATMOSPHERE.oxygenAmbient,
+      burnOxygenConsumePerTick:
+        t.burnOxygenConsumePerTick ?? DEFAULT_ATMOSPHERE.burnOxygenConsumePerTick,
+      oxygenWeakenThreshold: t.oxygenWeakenThreshold ?? DEFAULT_ATMOSPHERE.oxygenWeakenThreshold,
+      oxygenExtinguishThreshold:
+        t.oxygenExtinguishThreshold ?? DEFAULT_ATMOSPHERE.oxygenExtinguishThreshold,
+      burnIntensityGrowthPerTick:
+        t.burnIntensityGrowthPerTick ?? DEFAULT_ATMOSPHERE.burnIntensityGrowthPerTick,
+      burnIntensityWeakenPerTick:
+        t.burnIntensityWeakenPerTick ?? DEFAULT_ATMOSPHERE.burnIntensityWeakenPerTick,
+      smokeFromOxygenConsume: t.smokeFromOxygenConsume ?? DEFAULT_ATMOSPHERE.smokeFromOxygenConsume,
+      oxygenRecoveryPerTick: t.oxygenRecoveryPerTick ?? DEFAULT_ATMOSPHERE.oxygenRecoveryPerTick,
+    };
   }
 
   /**
@@ -170,7 +222,11 @@ export class Substrate {
     }
 
     aplicados += this.#thermalPass(alvos, ctx);
-    this.#decayPass(alvos);
+    this.#decayPass(alvos, ctx);
+    // Atmosfera / intensidade de chama — passadas próprias, fora de
+    // `#crossThresholds` (outro agente pode mexer em ignição espontânea).
+    this.#burnOxygenPass(alvos, ctx);
+    aplicados += this.#burnIntensityPass(alvos, ctx);
     this.#burnConsumePass(alvos, ctx);
 
     let desativados = 0;
@@ -312,7 +368,18 @@ export class Substrate {
       const escala = this.#modifierScale(nome, actor, receiver);
       if (escala !== undefined) chance += peso * escala;
     }
+    // Fonte em chama com pouco O₂ / muita fumaça propaga pior (R-016).
+    if (rule.effect === 'ignite' && hasState(actor, 'burning')) {
+      chance *= this.#oxygenSpreadFactor(actor);
+    }
     return Math.max(0, Math.min(1, chance));
+  }
+
+  /** Eficácia de alastramento da fonte (0–1) a partir do oxigênio efetivo. */
+  #oxygenSpreadFactor(source: ReactiveTarget): number {
+    const atm = this.#atmosphere();
+    const o2 = effectiveOxygen(source, atm.oxygenAmbient);
+    return oxygenFactor(o2, atm.oxygenAmbient, atm.oxygenWeakenThreshold);
   }
 
   /**
@@ -542,24 +609,59 @@ export class Substrate {
   }
 
   /**
+   * Ponto de ebulição do resíduo molhado. R-009.
+   *
+   * O estado `wet` é água no alvo, não o material do tile — ferve no limiar da
+   * água (dado), não no da madeira/pedra. Fallback 100 °C se o catálogo ainda
+   * não tiver o elemento.
+   */
+  #moistureBoilPoint(): number {
+    if (this.#o.materials.has('agua')) {
+      const bp = this.#o.materials.get('agua').thermal?.boilPoint;
+      if (bp !== undefined) return bp;
+    }
+    return 100;
+  }
+
+  /**
    * Cruzar um limiar dispara a transição, sem regra na matriz. R-009.
    *
    * Gelo aquecido acima do ponto de fusão vira água sem que exista reação
    * ligando fogo a gelo: é aritmética, e escrever isso como regra seria escrever
    * uma linha por par de material e elemento.
+   *
+   * Ordem no tick: contínua (água apaga fogo) roda **antes** desta passada —
+   * `burning+wet → extinguish` fecha, e só então o calor seca o que sobrou.
    */
   #crossThresholds(target: ReactiveTarget, ctx: TickContext): boolean {
     const t = target.temperature!;
+
+    // Resíduo molhado ferve: limiar da água, não regra na matriz (R-018).
+    // Independente de o hospedeiro declarar bloco thermal (pedra molhada também seca).
+    // Poça (I alto) perde pouco por tick; orvalho (I baixo) some rápido — nunca
+    // wipe instantâneo de I≈90 num tick só (isso deixava o fogo voltar na hora).
+    if (hasState(target, 'wet') && t >= this.#moistureBoilPoint()) {
+      return this.#boilEvaporateWet(target, ctx);
+    }
+
     const limiares = this.#o.materials.get(target.materialId).thermal;
     if (!limiares) return false;
 
     // Molhado não auto-acende por limiar: a matriz já pune ignição com wet
     // (R-012); o caminho térmico tem de respeitar a mesma intuição.
+    //
+    // Calor residual sozinho também não basta. Após extinguish/dry o tile pode
+    // ficar ≥ ignitePoint por vários ticks (vizinhos quentes, dumpHeat parcial).
+    // Auto-ignição por limiar exige chama em contato (vizinho ou co-ocupante
+    // burning) — fonte de ignição real. Sem isso, só matriz (contato/vizinhança)
+    // ou `invoke('ignite')` do Validador/tool acendem. Evita combustão espontânea
+    // ao secar poça sobre madeira ainda quente.
     if (
       limiares.ignitePoint !== undefined &&
       t >= limiares.ignitePoint &&
       !hasState(target, 'burning') &&
-      !hasState(target, 'wet')
+      !hasState(target, 'wet') &&
+      this.#hasFlameContact(target, ctx)
     ) {
       return this.#applyEffect('ignite', target, ctx, { kind: 'time', ref: 'ignitePoint' });
     }
@@ -572,20 +674,120 @@ export class Substrate {
     return false;
   }
 
-  #decayPass(alvos: readonly ReactiveTarget[]): void {
+  /**
+   * Chama em contato: vizinho ortogonal ou co-ocupante com `burning`.
+   * Critério de auto-ignição por `ignitePoint` (R-009) — calor residual sem
+   * fonte de chama não reacende.
+   */
+  #hasFlameContact(target: ReactiveTarget, ctx: TickContext): boolean {
+    for (const vizinho of ctx.world.neighborsOf(target)) {
+      if (hasState(vizinho, 'burning')) return true;
+      for (const occ of ctx.world.occupantsOf(vizinho)) {
+        if (occ.id !== target.id && hasState(occ, 'burning')) return true;
+      }
+    }
+    for (const occ of ctx.world.occupantsOf(target)) {
+      if (occ.id !== target.id && hasState(occ, 'burning')) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Evaporação no limiar de ebulição: remove um pedaço de intensidade por tick,
+   * escalado por `wetEvaporationFactor`. Só aplica `dry` quando o wet acaba.
+   */
+  #boilEvaporateWet(target: ReactiveTarget, ctx: TickContext): boolean {
+    const wet = target.states.find((s) => s.type === 'wet');
+    if (!wet || wet.intensity <= 0) return false;
+
+    // Base limpa orvalho (I~15–18) num tick; poça (I~90) perde ~1–2/tick.
+    const perda = Math.max(0.5, 36 * wetEvaporationFactor(wet.intensity));
+    wet.intensity = Math.max(0, wet.intensity - perda);
+    if (wet.intensity <= 0) {
+      return this.#applyEffect('dry', target, ctx, { kind: 'time', ref: 'boilPoint' });
+    }
+    this.activate(target);
+    return true;
+  }
+
+  #decayPass(alvos: readonly ReactiveTarget[], ctx: TickContext): void {
     const decaimento = this.#o.tuning.stateDecayPerTick * 100;
+    const boil = this.#moistureBoilPoint();
     for (const alvo of alvos) {
+      const ambient = ctx.world.ambientTemperature(alvo);
+      const temp = alvo.temperature ?? ambient;
       for (let i = alvo.states.length - 1; i >= 0; i--) {
         const estado = alvo.states[i]!;
         if (estado.remainingTicks !== undefined) {
           estado.remainingTicks = Math.max(0, estado.remainingTicks - 1);
           if (estado.remainingTicks === 0) estado.intensity = 0;
+        } else if (estado.type === 'wet' && temp >= boil) {
+          // T≥boil: a passada térmica já tirou o pedaço do tick — não empilhar
+          // decaimento base no mesmo tick (senão poça some depressa demais).
         } else {
-          estado.intensity = Math.max(0, estado.intensity - decaimento);
+          let perda = decaimento;
+          // Calor acelera evaporação do molhado (clima / R-022), escalado pela
+          // intensidade: poça resiste; película some rápido.
+          if (estado.type === 'wet' && temp > ambient) {
+            const span = Math.max(1, boil - ambient);
+            const heat = Math.min(1, (temp - ambient) / span);
+            perda += heat * 20 * wetEvaporationFactor(estado.intensity);
+          }
+          estado.intensity = Math.max(0, estado.intensity - perda);
         }
         if (estado.intensity <= 0) alvo.states.splice(i, 1);
       }
     }
+  }
+
+  /**
+   * Consumo de oxigênio + emissão correlata de `smoky`. V1 mínimo (não R-023).
+   *
+   * Alvo sem chama recupera O₂ em direção ao ambiente e volta a ser esparso.
+   */
+  #burnOxygenPass(alvos: readonly ReactiveTarget[], ctx: TickContext): void {
+    const atm = this.#atmosphere();
+    for (const alvo of alvos) {
+      if (hasState(alvo, 'burning')) {
+        const intensidade = alvo.states.find((s) => s.type === 'burning')!.intensity;
+        const { consumed } = consumeOxygenOnBurn(alvo, intensidade, atm);
+        if (consumed > 0) {
+          this.activate(alvo);
+          this.#log(ctx.simTime, 'burn_consume', alvo, {
+            kind: 'time',
+            ref: 'oxygen',
+          });
+        }
+      } else if (recoverOxygen(alvo, atm)) {
+        this.activate(alvo);
+      }
+    }
+  }
+
+  /**
+   * Crescimento / enfraquecimento / extinção da intensidade de `burning` por O₂.
+   * Passada separada do consumo e da integridade — fácil de calibrar e testar.
+   */
+  #burnIntensityPass(alvos: readonly ReactiveTarget[], ctx: TickContext): number {
+    const atm = this.#atmosphere();
+    let aplicados = 0;
+    for (const alvo of alvos) {
+      if (!hasState(alvo, 'burning')) continue;
+      const veredito = modulateBurnIntensity(alvo, atm);
+      if (veredito === 'extinguish') {
+        if (
+          this.#applyEffect('extinguish', alvo, ctx, {
+            kind: 'time',
+            ref: 'oxygen',
+          })
+        ) {
+          aplicados += 1;
+        }
+      } else if (veredito === 'changed') {
+        this.activate(alvo);
+      }
+    }
+    return aplicados;
   }
 
   /**
@@ -660,4 +862,16 @@ export class Substrate {
  */
 function flameTemperature(ambient: number, intensity: number): number {
   return ambient + 200 + intensity * 7;
+}
+
+/**
+ * Fator de evaporação do `wet` por intensidade (não-linear).
+ *
+ * Referência ~18: orvalho fino evapora a ritmo pleno; poça (I≈90) fica
+ * ~(18/90)² ≈ 0,04× — quase lenta. I≈15 fica >1× e some rápido.
+ */
+function wetEvaporationFactor(intensity: number): number {
+  const ref = 18;
+  const i = Math.max(1, intensity);
+  return (ref / i) ** 2;
 }

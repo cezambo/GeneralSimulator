@@ -7,6 +7,7 @@ import {
   TILE_BLOCKING,
   World,
   blocksMovement,
+  blocksNeighborhood,
   blocksVision,
   cellOf,
   metersToTiles,
@@ -41,7 +42,7 @@ describe('Tipos de tile (W-003, W-004)', () => {
     expect(TILE_BLOCKING.window).toEqual({
       blocksMovement: true,
       blocksVision: false,
-      canOpen: false,
+      canOpen: true,
     });
     expect(TILE_BLOCKING.floor).toEqual({
       blocksMovement: false,
@@ -55,6 +56,19 @@ describe('Tipos de tile (W-003, W-004)', () => {
     expect(blocksVision('door')).toBe(true);
     expect(blocksMovement('door', { isOpen: true })).toBe(false);
     expect(blocksVision('door', { isOpen: true })).toBe(false);
+    expect(blocksNeighborhood('door')).toBe(true);
+    expect(blocksNeighborhood('door', { isOpen: true })).toBe(false);
+    expect(blocksNeighborhood('wall')).toBe(false);
+    expect(blocksNeighborhood('floor')).toBe(false);
+  });
+
+  it('janela fechada isola vizinhança; aberta acopla; visão nunca oclui', () => {
+    expect(blocksMovement('window')).toBe(true);
+    expect(blocksVision('window')).toBe(false);
+    expect(blocksNeighborhood('window')).toBe(true);
+    expect(blocksMovement('window', { isOpen: true })).toBe(false);
+    expect(blocksVision('window', { isOpen: true })).toBe(false);
+    expect(blocksNeighborhood('window', { isOpen: true })).toBe(false);
   });
 });
 
@@ -108,11 +122,14 @@ describe('World — grid e overlay (W-001, W-058, W-059)', () => {
     expect(() => world.openDoor(g, 1, 1)).toThrow(/trancada/);
   });
 
-  it('janela bloqueia movimento mas não visão', () => {
+  it('janela bloqueia movimento mas não visão; abrir libera movimento', () => {
     const { world } = mundo();
     const g = world.mainGridId;
     world.setType(g, 4, 4, 'window');
     expect(world.blocksMovementAt(g, 4, 4)).toBe(true);
+    expect(world.blocksVisionAt(g, 4, 4)).toBe(false);
+    world.setStructural(g, 4, 4, { isOpen: true });
+    expect(world.blocksMovementAt(g, 4, 4)).toBe(false);
     expect(world.blocksVisionAt(g, 4, 4)).toBe(false);
   });
 

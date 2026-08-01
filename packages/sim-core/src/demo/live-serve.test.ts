@@ -143,6 +143,89 @@ describe('live serve (Godot)', () => {
     expect(motion.pathLen).toBeGreaterThan(0);
   }, 15000);
 
+  it('cmd.sim.reset volta a sala limpa e reacende o foco', async () => {
+    handle = await startLiveServe({ port: 0, fire: true, seed: 'live-reset', tickMs: 40 });
+    const url = `ws://127.0.0.1:${handle.port}`;
+
+    const ok = await new Promise<boolean>((resolve, reject) => {
+      const ws = new WebSocket(url);
+      let seq = 0;
+      let phase: 'boot' | 'dirty' | 'resetting' | 'check' = 'boot';
+      const timer = setTimeout(() => {
+        ws.close();
+        reject(new Error('timeout reset'));
+      }, 12000);
+
+      const send = (type: string, payload: Record<string, unknown>, reqId?: string) => {
+        seq += 1;
+        ws.send(
+          JSON.stringify({
+            v: 1,
+            type,
+            seq,
+            simTime: 0,
+            payload,
+            ...(reqId ? { reqId } : {}),
+          }),
+        );
+      };
+
+      ws.on('message', (data) => {
+        const env = JSON.parse(data.toString()) as {
+          type: string;
+          reqId?: string;
+          payload: {
+            tiles?: {
+              x: number;
+              y: number;
+              type: string;
+              states?: { type: string; intensity: number }[];
+            }[];
+            mode?: string;
+          };
+        };
+        if (env.type === 'world.snapshot' && phase === 'boot') {
+          send('cmd.sim.setMode', { mode: 'construction' });
+          phase = 'dirty';
+          return;
+        }
+        if (env.type === 'world.snapshot' && env.payload.mode === 'construction' && phase === 'dirty') {
+          send('cmd.build.paintTile', {
+            tileType: 'wall',
+            materialId: 'pedra',
+            cells: [{ x: 5, y: 5 }],
+          });
+          return;
+        }
+        if (env.type === 'world.delta' && phase === 'dirty') {
+          const t = env.payload.tiles?.find((c) => c.x === 5 && c.y === 5);
+          if (t?.type !== 'wall') return;
+          send('cmd.sim.reset', {}, 'reset1');
+          phase = 'resetting';
+          return;
+        }
+        if (env.type === 'res.ok' && env.reqId === 'reset1' && phase === 'resetting') {
+          phase = 'check';
+          return;
+        }
+        if (env.type === 'world.snapshot' && phase === 'check') {
+          const wall = env.payload.tiles?.find((c) => c.x === 5 && c.y === 5);
+          if (wall?.type === 'wall') return; // ainda o snapshot antigo
+          // Espera o foco reacender (pode vir no mesmo snapshot ou num seguinte).
+          const focus = env.payload.tiles?.find((c) => c.x === 1 && c.y === 1);
+          const burning = focus?.states?.some((s) => s.type === 'burning' && s.intensity > 0);
+          if (!burning) return;
+          clearTimeout(timer);
+          ws.close();
+          resolve(wall?.type !== 'wall' && Boolean(burning));
+        }
+      });
+      ws.on('error', reject);
+    });
+
+    expect(ok).toBe(true);
+  }, 20000);
+
   it('save e load restauram parede pintada', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'live-save-'));
     const prev = process.env['SIM_SAVE_DIR'];

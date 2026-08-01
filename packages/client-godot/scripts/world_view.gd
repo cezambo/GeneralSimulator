@@ -9,19 +9,58 @@ extends Node2D
 var _grid_w: int = 0
 var _grid_h: int = 0
 var _tile_nodes: Dictionary = {} # "x,y" -> Polygon2D
-var _fire_nodes: Dictionary = {} # "x,y" -> Polygon2D (brilho)
+## "x,y" -> Node2D stack (outer + core Polygon2D). Upsert — nunca wipe.
+var _fire_nodes: Dictionary = {}
 var _smoke_nodes: Dictionary = {} # "x,y" -> Polygon2D (fumaça)
 var _object_nodes: Dictionary = {} # id -> Polygon2D
 var _construction: bool = false
 var _hover_cell: Vector2i = Vector2i(-1, -1)
 var _tile_data: Dictionary = {} # "x,y" -> Dictionary
 var _object_data: Dictionary = {} # id -> Dictionary
+## Camada de manchas (cinza/carvão/escombro) acima dos Polygon2D de tile.
+var _residue_layer: Node2D
+var _fire_flicker_on: bool = false
 
 
 func _ready() -> void:
 	# Móveis acima do brilho/fumaça do tile — evita “sumir” no overlay de fogo.
 	if objects_root:
 		objects_root.z_index = 5
+	# _draw do WorldView fica atrás dos filhos; manchas precisam de nó próprio.
+	var layer := _ResidueMarksLayer.new()
+	layer.host = self
+	layer.z_index = 3
+	layer.z_as_relative = true
+	add_child(layer)
+	_residue_layer = layer
+	set_process(false)
+
+
+func _process(_delta: float) -> void:
+	# Flicker só no glow de fogo (nós upsertados). Não toca em móveis.
+	if not _fire_flicker_on:
+		return
+	var t_sec := Time.get_ticks_msec() * 0.001
+	var any := false
+	for key in _fire_nodes.keys():
+		var stack: Node2D = _fire_nodes[key]
+		if stack == null or not is_instance_valid(stack) or not stack.visible:
+			continue
+		any = true
+		var burn_i := float(stack.get_meta("burn_i", 50.0))
+		var starve := float(stack.get_meta("starve", 0.0))
+		var cx := int(stack.get_meta("cx", 0))
+		var cy := int(stack.get_meta("cy", 0))
+		var phase := float((cx * 13 + cy * 7) % 17) * 0.41
+		var speed := 5.5 + burn_i * 0.045
+		var flick := 0.86 + 0.14 * sin(t_sec * speed + phase)
+		# Chama fraca treme menos; starve amortece o pico.
+		flick = lerpf(0.92, flick, clampf(burn_i / 55.0, 0.35, 1.0))
+		flick = lerpf(flick, 0.78, starve)
+		stack.modulate = Color(1, 1, 1, flick)
+	if not any:
+		_fire_flicker_on = false
+		set_process(false)
 
 
 func apply_snapshot(payload: Dictionary) -> void:
@@ -52,6 +91,7 @@ func apply_snapshot(payload: Dictionary) -> void:
 		_upsert_object(o)
 	_prune_objects(seen_objs)
 	queue_redraw()
+	_redraw_residue_marks()
 
 
 func apply_delta(payload: Dictionary) -> void:
@@ -68,6 +108,8 @@ func apply_delta(payload: Dictionary) -> void:
 	var remove: Array = payload.get("objectsRemove", [])
 	for id_v in remove:
 		_remove_object(String(id_v))
+	# Marcas de cinza/escombro — sem recrear nós de móveis.
+	_redraw_residue_marks()
 
 
 func world_size_px() -> Vector2:
@@ -132,7 +174,13 @@ func describe_tile(cell: Vector2i) -> String:
 func _fallback_look(t: Dictionary) -> String:
 	var tile_type := String(t.get("type", "?"))
 	var material_id := String(t.get("materialId", "?"))
-	var parts: PackedStringArray = ["%s · %s" % [tile_type, material_id]]
+	var parts: PackedStringArray = []
+	if tile_type == "door":
+		var state: Dictionary = t.get("state", {})
+		var open := bool(state.get("isOpen", false))
+		parts.append("porta de %s (%s)" % [material_id, "aberta" if open else "fechada"])
+	else:
+		parts.append("%s · %s" % [tile_type, material_id])
 	var states: Array = t.get("states", [])
 	for s in states:
 		if typeof(s) != TYPE_DICTIONARY:
@@ -205,6 +253,11 @@ func _draw() -> void:
 		draw_rect(r, edge, false, 2.0)
 
 
+func _redraw_residue_marks() -> void:
+	if _residue_layer and is_instance_valid(_residue_layer):
+		_residue_layer.queue_redraw()
+
+
 func _upsert_object(obj: Dictionary) -> void:
 	var id := String(obj.get("id", ""))
 	if id == "":
@@ -259,9 +312,17 @@ func _upsert_tile(cell: Dictionary) -> void:
 	var material_id := String(cell.get("materialId", ""))
 	var state: Dictionary = cell.get("state", {})
 	var states: Array = cell.get("states", [])
-	var burning := _has_state(states, "burning")
-	var smoky := _has_state(states, "smoky")
+	var burn_i := _state_intensity(states, "burning")
+	var smoke_i := _state_intensity(states, "smoky")
+	var burning := burn_i > 0.0
+	var smoky := smoke_i > 0.0
 	var wet := _has_state(states, "wet")
+	var integ := float(cell.get("integrity", 100.0)) if cell.has("integrity") else 100.0
+	var residue := _is_residue_material(material_id)
+	# Parede/porta consumida → floor com integrity 0 (escombro atravessável).
+	var rubble := tile_type == "floor" and integ <= 0.0 and not residue
+	# Oxigênio opcional no snapshot — só dim se o campo existir.
+	var starve := _oxygen_starve_factor(cell, smoke_i, burn_i)
 
 	var poly: Polygon2D
 	if _tile_nodes.has(key):
@@ -274,58 +335,158 @@ func _upsert_tile(cell: Dictionary) -> void:
 		tiles_root.add_child(poly)
 		_tile_nodes[key] = poly
 
-	poly.color = WorldScale.tile_color(tile_type, burning, material_id)
+	poly.color = _tile_surface_color(tile_type, burn_i, material_id, residue, rubble)
 	# wet = encharcado no tile (não é volume/fluxo de líquido — isso é V2).
-	# Parede: tint mais leve para não parecer que virou “só água/chão”.
+	# Intensidade 0–100 do snapshot: leve = azul subtil; forte (encharcado) = azul óbvio.
+	# Parede/resíduo: mix mais baixo para não apagar cinza/carvão/escombro.
+	var wet_i := 0.0
 	if wet and not burning:
-		var wet_i := clampf(_state_intensity(states, "wet") / 100.0, 0.35, 1.0)
-		var wet_mix := (0.22 + 0.18 * wet_i) if tile_type == "wall" else (0.4 + 0.35 * wet_i)
-		poly.color = poly.color.lerp(Color("2f6f9e"), wet_mix)
+		wet_i = clampf(_state_intensity(states, "wet") / 100.0, 0.0, 1.0)
+		# Curva suave: baixo fica discreto; ≥70 (encharcado) sobe rápido.
+		var wet_t := wet_i * wet_i * (3.0 - 2.0 * wet_i) # smoothstep
+		var wet_col: Color
+		if residue or rubble:
+			wet_col = Color("3a6a7a").lerp(Color("1a6a9a"), wet_t)
+		else:
+			wet_col = Color("4a7a8e").lerp(Color("1e5f8a"), wet_t)
+		var wet_mix: float
+		if tile_type == "wall":
+			wet_mix = 0.06 + 0.34 * wet_t
+		elif residue or rubble:
+			wet_mix = 0.08 + 0.36 * wet_t
+		else:
+			wet_mix = 0.12 + 0.68 * wet_t
+		poly.color = poly.color.lerp(wet_col, wet_mix)
 	# smoky = névoa de estado no tile, não camada de gás (R-023).
-	if smoky and not burning:
-		poly.color = poly.color.lerp(Color("5c5c62"), 0.28)
-	# Calor residual (sem chama): tint laranja suave — legível pós-extinção.
+	if smoky and (not burning or burn_i < 35.0):
+		var smoke_tint := clampf(smoke_i / 100.0, 0.0, 1.0)
+		var tint_mix := lerpf(0.12, 0.38, smoke_tint)
+		if residue:
+			tint_mix *= 0.75
+		if burning:
+			tint_mix *= 0.55
+		poly.color = poly.color.lerp(Color("4a4a50"), tint_mix)
+	# Calor residual (sem chama): laranja distinto do molhado; em cinza/carvão sobe um pouco.
 	if not burning and cell.has("temperature"):
 		var temp := float(cell.get("temperature", 20.0))
 		if temp >= 45.0:
 			var heat_t := clampf((temp - 45.0) / 200.0, 0.0, 1.0)
-			poly.color = poly.color.lerp(Color("c45a28"), 0.12 + 0.38 * heat_t)
+			var heat_col := Color("e06830") if residue or rubble else Color("c45a28")
+			var heat_mix := 0.18 + 0.42 * heat_t
+			if wet:
+				# Molhado + quente → vapor morno; wet forte segura mais o laranja.
+				heat_mix *= lerpf(0.7, 0.4, wet_i)
+				heat_col = Color("b86a48")
+			poly.color = poly.color.lerp(heat_col, heat_mix)
 	if tile_type == "door" and bool(state.get("isOpen", false)) and not burning:
-		poly.color = WorldScale.tile_color("door", false, material_id).lightened(0.2)
+		poly.color = _structure_color("door", material_id).lightened(0.22)
 		if wet:
-			poly.color = poly.color.lerp(Color("2f6f9e"), 0.4)
-	if cell.has("integrity") and not burning:
-		var integ := clampf(float(cell.get("integrity", 100.0)) / 100.0, 0.0, 1.0)
-		poly.color = poly.color.darkened((1.0 - integ) * 0.55)
+			poly.color = poly.color.lerp(Color("2f6f9e"), 0.1 + 0.55 * wet_i)
+	elif tile_type == "window" and bool(state.get("isOpen", false)) and not burning:
+		poly.color = _structure_color("window", material_id).lightened(0.18)
+		if wet:
+			poly.color = poly.color.lerp(Color("2f6f9e"), 0.08 + 0.4 * wet_i)
+	# Integridade: dano em chão normal escurece; resíduo já é escuro (só um toque);
+	# escombro (integrity 0) já tem cor própria — não escurecer de novo.
+	if cell.has("integrity") and not burning and not rubble:
+		var integ_n := clampf(integ / 100.0, 0.0, 1.0)
+		var darken := (1.0 - integ_n) * (0.28 if residue else 0.55)
+		poly.color = poly.color.darkened(darken)
+	# Starve: smoky alto + chama fraca + O₂ presente → tile mais abafado.
+	if starve > 0.0:
+		poly.color = poly.color.darkened(0.12 + 0.28 * starve)
+		poly.color = poly.color.lerp(Color("2a2a2e"), 0.1 + 0.22 * starve)
 
-	_set_fire_glow(key, x, y, burning)
-	var smoke_intensity := _state_intensity(states, "smoky") if smoky and not burning else 0.0
-	_set_smoke_haze(key, x, y, smoke_intensity)
+	_set_fire_glow(key, x, y, burn_i, starve)
+	# Fumaça por intensidade; sob chama fraca ainda aparece (chama forte cobre).
+	var smoke_draw := 0.0
+	if smoky and (not burning or burn_i < 40.0):
+		smoke_draw = smoke_i
+		if burning:
+			smoke_draw *= lerpf(0.85, 0.35, clampf(burn_i / 40.0, 0.0, 1.0))
+	_set_smoke_haze(key, x, y, smoke_draw, starve)
 
 
-func _set_fire_glow(key: String, x: int, y: int, burning: bool) -> void:
-	if burning:
-		var glow: Polygon2D
+## 0 = sem efeito; 1 = starve máximo. Só se `oxygen` vier no snapshot.
+func _oxygen_starve_factor(cell: Dictionary, smoke_i: float, burn_i: float) -> float:
+	if not cell.has("oxygen"):
+		return 0.0
+	# Precisa de muita fumaça + chama baixa/ausente para o look “abafado”.
+	if smoke_i < 45.0:
+		return 0.0
+	if burn_i >= 45.0:
+		return 0.0
+	var o2 := clampf(float(cell.get("oxygen", 100.0)), 0.0, 100.0)
+	if o2 >= 55.0:
+		return 0.0
+	var o2_t := 1.0 - clampf(o2 / 55.0, 0.0, 1.0)
+	var smoke_t := clampf((smoke_i - 45.0) / 55.0, 0.0, 1.0)
+	var low_fire_t := 1.0 - clampf(burn_i / 45.0, 0.0, 1.0)
+	return clampf(o2_t * smoke_t * lerpf(0.55, 1.0, low_fire_t), 0.0, 1.0)
+
+
+func _set_fire_glow(key: String, x: int, y: int, intensity: float, starve: float = 0.0) -> void:
+	if intensity > 0.0:
+		var stack: Node2D
+		var outer: Polygon2D
+		var core: Polygon2D
 		if _fire_nodes.has(key):
-			glow = _fire_nodes[key]
+			stack = _fire_nodes[key]
+			outer = stack.get_node("outer") as Polygon2D
+			core = stack.get_node("core") as Polygon2D
 		else:
-			glow = Polygon2D.new()
-			var s := WorldScale.PIXELS_PER_TILE
-			var m := 10.0
-			glow.polygon = PackedVector2Array([
-				Vector2(m, m), Vector2(s - m, m), Vector2(s - m, s - m), Vector2(m, s - m)
-			])
-			glow.position = WorldScale.cell_to_px(x, y)
-			glow.z_index = 1
-			tiles_root.add_child(glow)
-			_fire_nodes[key] = glow
-		glow.color = Color(1.0, 0.92, 0.2, 0.85)
-		glow.visible = true
+			stack = Node2D.new()
+			stack.position = WorldScale.cell_to_px(x, y)
+			stack.z_index = 1
+			outer = Polygon2D.new()
+			outer.name = "outer"
+			core = Polygon2D.new()
+			core.name = "core"
+			stack.add_child(outer)
+			stack.add_child(core)
+			tiles_root.add_child(stack)
+			_fire_nodes[key] = stack
+		var s := WorldScale.PIXELS_PER_TILE
+		var t := clampf(intensity / 100.0, 0.0, 1.0)
+		# Outer: brasa laranja; cresce com intensidade.
+		var m_out := lerpf(12.0, 5.0, t)
+		outer.polygon = PackedVector2Array([
+			Vector2(m_out, m_out), Vector2(s - m_out, m_out),
+			Vector2(s - m_out, s - m_out), Vector2(m_out, s - m_out),
+		])
+		var out_col := Color("c43808").lerp(Color("ff7a18"), t)
+		out_col.a = lerpf(0.38, 0.78, t)
+		# Core: amarelo-branco só em chama média+; inset maior.
+		var m_core := lerpf(18.0, 12.0, t)
+		core.polygon = PackedVector2Array([
+			Vector2(m_core, m_core), Vector2(s - m_core, m_core),
+			Vector2(s - m_core, s - m_core), Vector2(m_core, s - m_core),
+		])
+		var core_col := Color("ffb020").lerp(Color("fff0a0"), t)
+		core_col.a = lerpf(0.0, 0.9, clampf((t - 0.22) / 0.55, 0.0, 1.0))
+		if starve > 0.0:
+			# Chama abafada: menos amarelo, mais vermelho-escuro, alpha baixo.
+			out_col = out_col.lerp(Color("6a2010"), 0.35 + 0.4 * starve)
+			out_col.a *= lerpf(1.0, 0.45, starve)
+			core_col.a *= lerpf(1.0, 0.25, starve)
+			core_col = core_col.lerp(Color("a04018"), 0.5 * starve)
+		outer.color = out_col
+		core.color = core_col
+		core.visible = core_col.a > 0.04
+		stack.set_meta("burn_i", intensity)
+		stack.set_meta("starve", starve)
+		stack.set_meta("cx", x)
+		stack.set_meta("cy", y)
+		stack.modulate = Color(1, 1, 1, 1)
+		stack.visible = true
+		if not _fire_flicker_on:
+			_fire_flicker_on = true
+			set_process(true)
 	elif _fire_nodes.has(key):
-		(_fire_nodes[key] as Polygon2D).visible = false
+		(_fire_nodes[key] as Node2D).visible = false
 
 
-func _set_smoke_haze(key: String, x: int, y: int, intensity: float) -> void:
+func _set_smoke_haze(key: String, x: int, y: int, intensity: float, starve: float = 0.0) -> void:
 	if intensity > 0.0:
 		var haze: Polygon2D
 		if _smoke_nodes.has(key):
@@ -340,12 +501,153 @@ func _set_smoke_haze(key: String, x: int, y: int, intensity: float) -> void:
 			haze.z_index = 2
 			tiles_root.add_child(haze)
 			_smoke_nodes[key] = haze
-		# Névoa acinzentada-amarronzada (fuligem), não "gás" volumétrico.
-		var a := clampf(intensity / 100.0, 0.18, 0.62)
-		haze.color = Color(0.42, 0.4, 0.38, a)
+		# Densidade por intensidade (curva suave): leve = véu; alto = fuligem opaca.
+		var t := clampf(intensity / 100.0, 0.0, 1.0)
+		var t2 := t * t * (3.0 - 2.0 * t)
+		var a := lerpf(0.10, 0.78, t2)
+		var g := lerpf(0.52, 0.26, t2)
+		var col := Color(g, g * 0.96, g * 0.9, a)
+		if starve > 0.0:
+			col = col.lerp(Color(0.18, 0.17, 0.16, a), 0.35 + 0.4 * starve)
+			col.a = clampf(col.a * lerpf(1.0, 1.15, starve), 0.0, 0.88)
+		haze.color = col
 		haze.visible = true
 	elif _smoke_nodes.has(key):
 		(_smoke_nodes[key] as Polygon2D).visible = false
+
+
+func _is_residue_material(material_id: String) -> bool:
+	# Resíduos de combustão / destroços (mesmo conjunto que o núcleo deposita).
+	match material_id:
+		"cinza", "carvao", "lascas", "entulho", "sucata", "cacos":
+			return true
+		_:
+			return false
+
+
+func _structure_color(tile_type: String, material_id: String) -> Color:
+	## Cores de parede/porta/janela mais distintas entre si e do chão.
+	var wood := material_id in ["pinho", "carvalho", "madeira", "freixo", "cedro"]
+	match tile_type:
+		"wall":
+			if wood:
+				return Color("5a4030")
+			if material_id == "tijolo":
+				return Color("8a4a3a")
+			if material_id == "adobe":
+				return Color("9a7a52")
+			# pedra / default — azul-ardósia frio (contrasta com chão quente)
+			return Color("3a4552")
+		"door":
+			if material_id == "ferro" or material_id == "metal":
+				return Color("4a5058")
+			# madeira — âmbar mais quente que parede
+			return Color("9a5c2e")
+		"window":
+			if material_id == "vidro" or material_id == "":
+				return Color("6ab0c8")
+			if wood:
+				return Color("5a8a9a")
+			return Color("58a0b8")
+		_:
+			return WorldScale.tile_color(tile_type, false, material_id)
+
+
+func _tile_surface_color(
+	tile_type: String,
+	burn_intensity: float,
+	material_id: String,
+	residue: bool,
+	rubble: bool,
+) -> Color:
+	if burn_intensity > 0.0:
+		var t := clampf(burn_intensity / 100.0, 0.0, 1.0)
+		# Fraco = brasa escura; forte = laranja vivo.
+		return Color("a02800").lerp(Color("ff6a12"), t)
+	# Cinza/carvão do móvel queimado: cores próprias, mais óbvias que o chão de pinho.
+	if residue:
+		match material_id:
+			"carvao":
+				return Color("14100c")
+			"lascas":
+				return Color("4a3420")
+			"entulho":
+				return Color("7a7264")
+			"sucata":
+				return Color("5a6068")
+			"cacos":
+				return Color("8a6458")
+			_:
+				# cinza — cinza-claro acastanhado, distinto do carvão preto
+				return Color("7a7268")
+	# Escombro de estrutura (parede/porta → floor integrity 0): pedregulho bege-acinzentado.
+	if rubble:
+		return Color("8e8678")
+	match tile_type:
+		"wall", "door", "window":
+			return _structure_color(tile_type, material_id)
+		_:
+			return WorldScale.tile_color(tile_type, false, material_id)
+
+
+## Manchas determinísticas em cinza/carvão/escombro (seed por célula — estável).
+func paint_residue_marks(ci: CanvasItem) -> void:
+	if _grid_w <= 0:
+		return
+	var s := WorldScale.PIXELS_PER_TILE
+	for key in _tile_data.keys():
+		var t: Dictionary = _tile_data[key]
+		var material_id := String(t.get("materialId", ""))
+		var tile_type := String(t.get("type", "floor"))
+		var residue := _is_residue_material(material_id)
+		var integ := float(t.get("integrity", 100.0)) if t.has("integrity") else 100.0
+		var rubble := tile_type == "floor" and integ <= 0.0 and not residue
+		if not residue and not rubble:
+			continue
+		var states: Array = t.get("states", [])
+		if _has_state(states, "burning"):
+			continue
+		var x := int(t.get("x", 0))
+		var y := int(t.get("y", 0))
+		var origin := Vector2(float(x), float(y)) * s
+		var cell_seed := int(x * 73856093) ^ int(y * 19349663)
+		var n := 10 if material_id == "carvao" or material_id == "cinza" else 7
+		if rubble:
+			n = 8
+		for i in range(n):
+			var h := cell_seed + i * 83492791
+			var fx := float(h & 255) / 255.0
+			var fy := float((h >> 8) & 255) / 255.0
+			var sz_mul := 0.08 + 0.1 * float((h >> 16) & 3) / 3.0
+			if rubble:
+				sz_mul *= 1.25
+			elif material_id == "cinza":
+				sz_mul *= 0.85
+			var sz := s * sz_mul
+			var col := _residue_speckle_color(material_id, rubble, h)
+			var pos := origin + Vector2(fx * (s - sz), fy * (s - sz))
+			ci.draw_rect(Rect2(pos, Vector2(sz, sz)), col, true)
+
+
+func _residue_speckle_color(material_id: String, rubble: bool, h: int) -> Color:
+	var alt := (h & 1) == 0
+	if rubble:
+		# Pedras irregulares — contraste alto bege/cinza.
+		return Color(0.28, 0.26, 0.22, 0.7) if alt else Color(0.72, 0.68, 0.58, 0.55)
+	match material_id:
+		"carvao":
+			return Color(0.04, 0.03, 0.02, 0.95) if alt else Color(0.28, 0.2, 0.12, 0.65)
+		"lascas":
+			return Color(0.18, 0.12, 0.06, 0.8) if alt else Color(0.55, 0.42, 0.26, 0.55)
+		"entulho":
+			return Color(0.36, 0.34, 0.3, 0.65) if alt else Color(0.62, 0.56, 0.46, 0.5)
+		"sucata":
+			return Color(0.22, 0.26, 0.3, 0.7) if alt else Color(0.58, 0.56, 0.5, 0.45)
+		"cacos":
+			return Color(0.5, 0.3, 0.26, 0.65) if alt else Color(0.72, 0.58, 0.5, 0.5)
+		_:
+			# cinza — pó claro + manchas média (não preto como carvão)
+			return Color(0.42, 0.4, 0.36, 0.7) if alt else Color(0.78, 0.74, 0.68, 0.55)
 
 
 func _has_state(states: Array, type_name: String) -> bool:
@@ -401,3 +703,12 @@ func _free_node(node: Variant) -> void:
 	# free() imediato: queue_free deixa 1 frame sem marcador (flicker).
 	if is_instance_valid(n):
 		n.free()
+
+
+## Desenha manchas acima dos tiles (z_index 3), abaixo dos móveis (z_index 5).
+class _ResidueMarksLayer extends Node2D:
+	var host: WorldView
+
+	func _draw() -> void:
+		if host:
+			host.paint_residue_marks(self)

@@ -39,6 +39,7 @@ import { ReactionMatrix } from '../substrate/matrix.js';
 import { Substrate, TileReactiveBridge } from '../substrate/index.js';
 import { World } from '../world/grid.js';
 import { SimClock } from '../world/clock.js';
+import { avoidBurningCost, pathNeedsRepath } from './mover-fire.js';
 
 /** Intervalo real entre ticks na demo visual (~1 hop de fogo a cada poucos segundos). */
 const DEMO_TICK_MS = 700;
@@ -76,15 +77,7 @@ export async function startLiveServe(opts?: {
   const tickMs = opts?.tickMs ?? DEMO_TICK_MS;
   // Em testes com tickMs baixo, frame = tick; na demo, subpasso visual ~10 Hz.
   const frameMs = opts?.frameMs ?? (tickMs <= 120 ? tickMs : 100);
-  let { sim, world } = buildSpikeRoom(cfg, opts?.seed ?? process.env['SIM_SEED'] ?? 'serve-v0');
-  const { lia, rui } = loadSpikeAgents();
-  lia.vision = { angle: 100, range: 5 };
-  rui.vision = { angle: 100, range: 5 };
-  sim.state.agents[lia.id] = lia;
-  sim.state.agents[rui.id] = rui;
-  // Parte pausada até o primeiro cliente — o fogo não queima “nos bastidores”.
-  sim.state.clock.paused = true;
-  sim.state.clock.speed = 0;
+  let sessionSeed = opts?.seed ?? process.env['SIM_SEED'] ?? 'serve-v0';
 
   const calendar = {
     minutesPerTick: cfg.tuning.minutesPerTick,
@@ -93,7 +86,6 @@ export async function startLiveServe(opts?: {
     seasonsPerYear: cfg.tuning.seasonsPerYear,
     availableSpeeds: cfg.tuning.availableSpeeds,
   };
-  let clock = new SimClock(sim.state.clock, calendar);
 
   // Matriz só desta sessão: propaga mais devagar sem alterar o JSON de aceite.
   const demoMatrix = new ReactionMatrix(
@@ -121,23 +113,77 @@ export async function startLiveServe(opts?: {
         maxActiveTargets: cfg.tuning.maxActiveTargets,
         thermalEquilibriumTolerance: cfg.tuning.thermalEquilibriumTolerance,
         maxCascadeStepsPerTick: 1,
-        // ~100 ticks até virar resíduo — tempo de ver o alastramento.
-        burnIntegrityLossPerTick: 1,
+        // Meio-termo: perda 4 (tuning) consome o foco em ~25 ticks e parte
+        // o harness (door/wet); perda 1 + O₂ cheio nunca chega a cinza de
+        // móvel. 2 ≈ 50 ticks de chama — dá para isolar porta e ainda ash.
+        burnIntegrityLossPerTick: Math.min(cfg.tuning.burnIntegrityLossPerTick, 2),
+        oxygenAmbient: cfg.tuning.oxygenAmbient,
+        // Demo aberta sem difusão (R-023=V2): consumo 3 apaga o cluster cedo
+        // demais. Suaviza para a chama cobrir os ~50 ticks de combustível.
+        burnOxygenConsumePerTick: Math.min(cfg.tuning.burnOxygenConsumePerTick, 0.7),
+        oxygenWeakenThreshold: cfg.tuning.oxygenWeakenThreshold,
+        oxygenExtinguishThreshold: cfg.tuning.oxygenExtinguishThreshold,
+        burnIntensityGrowthPerTick: cfg.tuning.burnIntensityGrowthPerTick,
+        burnIntensityWeakenPerTick: cfg.tuning.burnIntensityWeakenPerTick,
+        smokeFromOxygenConsume: Math.min(cfg.tuning.smokeFromOxygenConsume, 0.4),
+        oxygenRecoveryPerTick: cfg.tuning.oxygenRecoveryPerTick,
       },
     });
   }
 
-  let bridge = new TileReactiveBridge(sim, world, 20, cfg.objects);
-  let substrate = makeSubstrate(sim);
-
-  const movers = new Map<string, MoverState>([
-    [lia.id, createMover(SPIKE_GRID, lia.pos.x, lia.pos.y, lia.rotation)],
-    [rui.id, createMover(SPIKE_GRID, rui.pos.x, rui.pos.y, rui.rotation)],
-  ]);
+  let sim!: Simulation;
+  let world!: World;
+  let clock!: SimClock;
+  let bridge!: TileReactiveBridge;
+  let substrate!: Substrate;
+  let liaId = 'ag_lia';
+  let ruiId = 'ag_rui';
+  const movers = new Map<string, MoverState>();
   /** Agentes com destino pedido pelo cliente — patrulha não sobrescreve. */
   const manualControl = new Set<string>();
   /** Último destino pedido — usado para recalcular quando a geometria muda. */
   const goals = new Map<string, { x: number; y: number }>();
+  let fireLit = false;
+  let started = false;
+  let patrolCooldown = 0;
+  let lastBurningLogged = -1;
+  /** Acumula ms reais até fechar um tick de fogo/relógio. */
+  let simAccMs = 0;
+
+  function bootRoom(seed: string, pauseUntilClient: boolean): void {
+    sessionSeed = seed;
+    ({ sim, world } = buildSpikeRoom(cfg, seed));
+    const { lia, rui } = loadSpikeAgents();
+    liaId = lia.id;
+    ruiId = rui.id;
+    lia.vision = { angle: 100, range: 5 };
+    rui.vision = { angle: 100, range: 5 };
+    sim.state.agents[lia.id] = lia;
+    sim.state.agents[rui.id] = rui;
+    if (pauseUntilClient) {
+      // Parte pausada até o primeiro cliente — o fogo não queima “nos bastidores”.
+      sim.state.clock.paused = true;
+      sim.state.clock.speed = 0;
+    } else {
+      sim.state.clock.paused = false;
+      sim.state.clock.speed = 1;
+    }
+    clock = new SimClock(sim.state.clock, calendar);
+    bridge = new TileReactiveBridge(sim, world, 20, cfg.objects);
+    substrate = makeSubstrate(sim);
+    movers.clear();
+    movers.set(lia.id, createMover(SPIKE_GRID, lia.pos.x, lia.pos.y, lia.rotation));
+    movers.set(rui.id, createMover(SPIKE_GRID, rui.pos.x, rui.pos.y, rui.rotation));
+    manualControl.clear();
+    goals.clear();
+    fireLit = false;
+    started = false;
+    patrolCooldown = 0;
+    lastBurningLogged = -1;
+    simAccMs = 0;
+  }
+
+  bootRoom(sessionSeed, true);
 
   const saveDir = process.env['SIM_SAVE_DIR'] ?? join(process.cwd(), 'saves');
 
@@ -152,7 +198,7 @@ export async function startLiveServe(opts?: {
     },
     onAgentMove: (agentId, goal) => orderMove(agentId, goal.x, goal.y, true),
     onGeometryChanged: () => revalidatePaths(),
-    onToolApply: (effect, cells) => applyTool(effect, cells),
+    onToolApply: (effect, cells, intensity) => applyTool(effect, cells, intensity),
     onSave: (slot) => {
       const path = saveSlot(saveDir, slot, sim.serialize());
       console.log(JSON.stringify({ event: 'saved', slot, path }));
@@ -177,16 +223,26 @@ export async function startLiveServe(opts?: {
       hub.pushFrame();
       console.log(JSON.stringify({ event: 'loaded', slot, simTime: clock.simTime }));
     },
+    onReset: (resetOpts) => {
+      const seed = resetOpts?.seed ?? sessionSeed;
+      // Clientes já ligados: não fica pausado — o timer reacende o fogo no próximo frame.
+      bootRoom(seed, hub.clientCount === 0);
+      hub.rebind({ sim, world, clock });
+      hub.broadcastSnapshot();
+      hub.pushFrame();
+      console.log(
+        JSON.stringify({
+          event: 'reset',
+          seed,
+          fire: withFire,
+          clients: hub.clientCount,
+          simTime: clock.simTime,
+        }),
+      );
+    },
   });
   const port = opts?.port ?? Number(process.env['SIM_PORT'] ?? DEFAULT_PORT);
   const server = await startProtocolServer({ hub, port, host: '0.0.0.0' });
-
-  let fireLit = false;
-  let started = false;
-  let patrolCooldown = 0;
-  let lastBurningLogged = -1;
-  /** Acumula ms reais até fechar um tick de fogo/relógio. */
-  let simAccMs = 0;
 
   console.log(
     JSON.stringify({
@@ -224,8 +280,8 @@ export async function startLiveServe(opts?: {
         );
       }
       // Patrulha inicial (só se o jogador ainda não mandou ninguém).
-      if (!manualControl.has(lia.id)) orderMove(lia.id, SPIKE_WIDTH - 3, SPIKE_HEIGHT - 3, false);
-      if (!manualControl.has(rui.id)) orderMove(rui.id, 2, 2, false);
+      if (!manualControl.has(liaId)) orderMove(liaId, SPIKE_WIDTH - 3, SPIKE_HEIGHT - 3, false);
+      if (!manualControl.has(ruiId)) orderMove(ruiId, 2, 2, false);
       // Um frame só com o foco: não espalha no mesmo instante do acender.
       hub.pushFrame();
       return;
@@ -242,7 +298,7 @@ export async function startLiveServe(opts?: {
     stepMovers(minutes);
 
     let dirtyTiles: { x: number; y: number; gridId: string }[] = [];
-    const objectsUpsert: NonNullable<WorldDeltaPayload['objectsUpsert']> = [];
+    const objectsUpsert: NonNullable<WorldDeltaPayload['objectsUpsert']>[number][] = [];
     const objectsRemove: string[] = [];
     simAccMs += frameMs * speedFactor;
     while (simAccMs >= tickMs) {
@@ -256,13 +312,13 @@ export async function startLiveServe(opts?: {
       patrolCooldown -= 1;
       if (patrolCooldown <= 0) {
         patrolCooldown = 45;
-        const liaM = movers.get(lia.id)!;
-        const ruiM = movers.get(rui.id)!;
-        if (!manualControl.has(lia.id) && !isMoving(liaM)) {
-          orderMove(lia.id, Math.floor(ruiM.x), Math.floor(ruiM.y), false);
+        const liaM = movers.get(liaId)!;
+        const ruiM = movers.get(ruiId)!;
+        if (!manualControl.has(liaId) && !isMoving(liaM)) {
+          orderMove(liaId, Math.floor(ruiM.x), Math.floor(ruiM.y), false);
         }
-        if (!manualControl.has(rui.id) && !isMoving(ruiM)) {
-          orderMove(rui.id, Math.floor(liaM.x), Math.floor(liaM.y), false);
+        if (!manualControl.has(ruiId) && !isMoving(ruiM)) {
+          orderMove(ruiId, Math.floor(liaM.x), Math.floor(liaM.y), false);
         }
       }
     }
@@ -391,8 +447,11 @@ export async function startLiveServe(opts?: {
       x: Math.floor(mover.x),
       y: Math.floor(mover.y),
     };
-    // Ortogonal: caminho alinhado ao grid (legível no top-down pequeno).
-    const path = findPath(world, start, { gridId: SPIKE_GRID, x: gx, y: gy }, { connectivity: 4 });
+    // Ortogonal + evita chamas (Infinity). Sem desvio: NO_PATH → caller pausa.
+    const path = findPath(world, start, { gridId: SPIKE_GRID, x: gx, y: gy }, {
+      connectivity: 4,
+      cost: avoidBurningCost,
+    });
     if (!path.found || path.path.length === 0) {
       return { ok: false, code: 'NO_PATH', message: `sem caminho até (${gx},${gy})` };
     }
@@ -410,18 +469,10 @@ export async function startLiveServe(opts?: {
     return { ok: true };
   }
 
-  function pathBlocked(m: MoverState): boolean {
-    for (let i = Math.max(0, m.waypointIndex); i < m.path.length; i += 1) {
-      const n = m.path[i]!;
-      if (world.blocksMovementAt(n.gridId, n.x, n.y)) return true;
-    }
-    return false;
-  }
-
-  /** Recalcula (ou cancela) caminhos que atravessam paredes novas. */
+  /** Recalcula (ou pausa) caminhos cortados por parede ou fogo novo. */
   function revalidatePaths(): void {
     for (const [id, m] of movers) {
-      if (!isMoving(m) || !pathBlocked(m)) continue;
+      if (!isMoving(m) || !pathNeedsRepath(world, m)) continue;
       const goal = goals.get(id);
       if (!goal) {
         clearPath(m);
@@ -429,21 +480,33 @@ export async function startLiveServe(opts?: {
       }
       const fromPlayer = manualControl.has(id);
       const result = orderMove(id, goal.x, goal.y, fromPlayer);
+      // Sem rota livre de fogo: pausa; patrulha / próximo dirty tenta de novo.
       if (!result.ok) clearPath(m);
     }
   }
 
-  function applyTool(effect: ToolEffectId, cells: readonly { x: number; y: number }[]): WorldDeltaPayload {
+  function applyTool(
+    effect: ToolEffectId,
+    cells: readonly { x: number; y: number }[],
+    intensity?: number,
+  ): WorldDeltaPayload {
     const ctx = { simTime: clock.simTime, world: bridge };
+    // Default histórico: wet ~90 (soak). Intensity explícita cobre wet e extinguish.
+    const invokeOpts =
+      intensity !== undefined
+        ? { intensity }
+        : effect === 'wet'
+          ? { intensity: 90 }
+          : {};
     const touched: ReturnType<typeof bridge.targetAt>[] = [];
     for (const c of cells) {
       if (!world.inBounds(SPIKE_GRID, c.x, c.y)) continue;
       const t = bridge.targetAt(SPIKE_GRID, c.x, c.y);
-      substrate.invoke(effect, t, ctx, effect === 'wet' ? { intensity: 90 } : {});
+      substrate.invoke(effect, t, ctx, invokeOpts);
       touched.push(t);
       // Móvel na mesma célula também molha/apaga (R-007 / ocupantes).
       for (const occ of bridge.occupantsOf(t)) {
-        substrate.invoke(effect, occ, ctx, effect === 'wet' ? { intensity: 90 } : {});
+        substrate.invoke(effect, occ, ctx, invokeOpts);
         touched.push(occ);
       }
     }
@@ -469,7 +532,7 @@ export async function startLiveServe(opts?: {
     if (minutes <= 0) return;
     for (const [id, m] of movers) {
       if (m.waypointIndex < 0) continue;
-      if (pathBlocked(m)) {
+      if (pathNeedsRepath(world, m)) {
         const goal = goals.get(id);
         if (goal) {
           const result = orderMove(id, goal.x, goal.y, manualControl.has(id));

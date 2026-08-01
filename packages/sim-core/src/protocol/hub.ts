@@ -44,9 +44,14 @@ export type ToolEffectId = 'wet' | 'extinguish';
 export type ToolApplyHandler = (
   effect: ToolEffectId,
   cells: readonly { x: number; y: number }[],
+  /** Intensidade opcional do payload (0–100). */
+  intensity?: number,
 ) => WorldDeltaPayload;
 
 export type SaveLoadHandler = (slot: string) => void;
+
+/** Reseed da sala demo (live-serve) — mapa limpo + foco de fogo de novo. */
+export type ResetHandler = (opts?: { seed?: string }) => void;
 
 export interface ProtocolHubOptions {
   readonly sim: Simulation;
@@ -66,6 +71,8 @@ export interface ProtocolHubOptions {
   /** Persistência X-003 / U-013 — a sessão (live-serve) escreve o arquivo. */
   readonly onSave?: SaveLoadHandler;
   readonly onLoad?: SaveLoadHandler;
+  /** Reinicia a sala demo sem derrubar o WebSocket. */
+  readonly onReset?: ResetHandler;
 }
 
 export class ProtocolHub {
@@ -79,6 +86,7 @@ export class ProtocolHub {
   readonly #onToolApply: ToolApplyHandler | undefined;
   readonly #onSave: SaveLoadHandler | undefined;
   readonly #onLoad: SaveLoadHandler | undefined;
+  readonly #onReset: ResetHandler | undefined;
   readonly #objects: ReadonlyMap<string, ObjectDef> | undefined;
   #build: BuildHistory;
   readonly #clients = new Map<string, ProtocolSink>();
@@ -97,6 +105,7 @@ export class ProtocolHub {
     this.#onToolApply = opts.onToolApply;
     this.#onSave = opts.onSave;
     this.#onLoad = opts.onLoad;
+    this.#onReset = opts.onReset;
     this.#objects = opts.objects;
     this.#build = new BuildHistory(opts.sim, opts.world, opts.objects);
   }
@@ -267,6 +276,22 @@ export class ProtocolHub {
         if (env.reqId) this.#sendTo(client, 'res.ok', { ok: true, slot }, env.reqId);
         return;
       }
+      case 'cmd.sim.reset': {
+        if (!this.#onReset) {
+          throw new ProtocolError('UNSUPPORTED', 'cmd.sim.reset não está ativo nesta sessão');
+        }
+        this.#mode = 'normal';
+        const seed = p['seed'] !== undefined ? String(p['seed']) : undefined;
+        try {
+          this.#onReset(seed !== undefined ? { seed } : undefined);
+        } catch (e) {
+          throw new ProtocolError('RESET_FAILED', e instanceof Error ? e.message : String(e));
+        }
+        if (env.reqId) {
+          this.#sendTo(client, 'res.ok', { ok: true, ...(seed !== undefined ? { seed } : {}) }, env.reqId);
+        }
+        return;
+      }
       case 'cmd.build.paintTile': {
         if (this.#mode !== 'construction') {
           throw new ProtocolError('WRONG_MODE', 'paint só em modo construção');
@@ -422,10 +447,23 @@ export class ProtocolHub {
         if (cells.length === 0) {
           throw new ProtocolError('BAD_CELLS', 'cmd.tool.apply exige cells');
         }
-        const delta = this.#onToolApply(effect, cells);
+        let intensity: number | undefined;
+        if (p['intensity'] !== undefined && p['intensity'] !== null) {
+          const raw = Number(p['intensity']);
+          if (!Number.isFinite(raw)) {
+            throw new ProtocolError('BAD_INTENSITY', 'intensity exige número finito');
+          }
+          intensity = Math.max(0, Math.min(100, raw));
+        }
+        const delta = this.#onToolApply(effect, cells, intensity);
         this.broadcastDelta(delta);
         if (env.reqId) {
-          this.#sendTo(client, 'res.ok', { ok: true, effect, cells: cells.length }, env.reqId);
+          this.#sendTo(
+            client,
+            'res.ok',
+            { ok: true, effect, cells: cells.length, ...(intensity !== undefined ? { intensity } : {}) },
+            env.reqId,
+          );
         }
         return;
       }

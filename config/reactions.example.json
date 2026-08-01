@@ -53,8 +53,8 @@
       "in": ["burning", "#inflammable"],
       "effect": "ignite",
       "chance": 0.35,
-      "modifiedBy": { "wet": -0.9, "flammabilitySpeed": 0.3, "windToward": 0.25 },
-      "porque": "Fogo salta para vizinhos inflamaveis, mais rapido a favor do vento e mais devagar se estiverem molhados."
+      "modifiedBy": { "wet": -0.9, "flammabilitySpeed": 0.3, "windToward": 0.25, "smoky": -0.45 },
+      "porque": "Fogo salta para vizinhos inflamaveis, mais rapido a favor do vento e mais devagar se estiverem molhados ou sob fumaca densa. Oxigenio baixo na fonte ainda reduz a chance na engine."
     },
     {
       "id": "water-douses-fire",

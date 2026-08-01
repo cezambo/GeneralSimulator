@@ -1382,6 +1382,12 @@
         "gravityMultiplier": { "type": "number", "minimum": 0 },
         "temperature": { "type": "number" },
         "integrity": { "type": "number", "minimum": 0, "maximum": 100 },
+        "oxygen": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Oxigênio local da célula (0–100). Ausente = ambiente cheio. V1 mínimo: fogo consome, fumaça correlaciona; sem difusão de gás (R-023 fica em V2)."
+        },
         "rotation": { "type": "integer", "enum": [0, 90, 180, 270] },
         "state": { "type": "object", "additionalProperties": true },
         "states": { "type": "array", "items": { "$ref": "#/$defs/TransientState" } },

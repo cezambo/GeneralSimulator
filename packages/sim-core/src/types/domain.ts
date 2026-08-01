@@ -1789,6 +1789,10 @@ export interface TileOverlay {
   gravityMultiplier?: number;
   temperature?: number;
   integrity?: number;
+  /**
+   * Oxigênio local da célula (0–100). Ausente = ambiente cheio. V1 mínimo: fogo consome, fumaça correlaciona; sem difusão de gás (R-023 fica em V2).
+   */
+  oxygen?: number;
   rotation?: 0 | 90 | 180 | 270;
   state?: {
     [k: string]: unknown;

@@ -38,6 +38,14 @@ export interface TuningConfig {
   readonly thermalEquilibriumTolerance: number;
   readonly maxCascadeStepsPerTick: number;
   readonly burnIntegrityLossPerTick: number;
+  readonly oxygenAmbient: number;
+  readonly burnOxygenConsumePerTick: number;
+  readonly oxygenWeakenThreshold: number;
+  readonly oxygenExtinguishThreshold: number;
+  readonly burnIntensityGrowthPerTick: number;
+  readonly burnIntensityWeakenPerTick: number;
+  readonly smokeFromOxygenConsume: number;
+  readonly oxygenRecoveryPerTick: number;
   readonly raw: Readonly<Record<string, unknown>>;
 }
 
@@ -177,18 +185,31 @@ export function stripComments(value: unknown): unknown {
 }
 
 function loadMaterials(raw: unknown): Material[] {
-  const root = stripComments(raw) as { materials?: Record<string, Record<string, unknown>> };
+  const root = stripComments(raw) as {
+    materials?: Record<string, Record<string, unknown>>;
+    elements?: Record<string, Record<string, unknown>>;
+  };
   if (!root.materials || typeof root.materials !== 'object') {
     throw new ConfigError('materials: objeto "materials" ausente');
   }
   const list: Material[] = [];
-  for (const [id, body] of Object.entries(root.materials)) {
-    const material = { id, ...body } as Material;
-    const check = validateDomain('Material', material);
-    if (!check.valid) {
-      throw new ConfigError(`material "${id}": ${check.message}`);
+  const blocks: Array<readonly [string, Record<string, Record<string, unknown>>]> = [
+    ['materials', root.materials],
+  ];
+  // Elementos (água, gelo, vapor, …) vivem no mesmo arquivo e no mesmo catálogo
+  // (R-002, R-009). Sem isto o boilPoint da água nunca entrava na engine.
+  if (root.elements && typeof root.elements === 'object') {
+    blocks.push(['elements', root.elements]);
+  }
+  for (const [bloco, entries] of blocks) {
+    for (const [id, body] of Object.entries(entries)) {
+      const material = { id, ...body } as Material;
+      const check = validateDomain('Material', material);
+      if (!check.valid) {
+        throw new ConfigError(`${bloco} "${id}": ${check.message}`);
+      }
+      list.push(material);
     }
-    list.push(material);
   }
   if (list.length === 0) throw new ConfigError('materials: catálogo vazio');
   return list;
@@ -300,6 +321,14 @@ function loadTuning(raw: unknown): TuningConfig {
     thermalEquilibriumTolerance: num(substrato, 'toleranciaEquilibrioTermico', 0.5),
     maxCascadeStepsPerTick: num(substrato, 'maxPassosDeCascataPorTick', 4),
     burnIntegrityLossPerTick: num(substrato, 'perdaIntegridadeQueimaPorTick', 4),
+    oxygenAmbient: num(substrato, 'oxigenioAmbiente', 100),
+    burnOxygenConsumePerTick: num(substrato, 'consumoOxigenioQueimaPorTick', 3),
+    oxygenWeakenThreshold: num(substrato, 'limiarOxigenioEnfraqueceFogo', 50),
+    oxygenExtinguishThreshold: num(substrato, 'limiarOxigenioApagaFogo', 10),
+    burnIntensityGrowthPerTick: num(substrato, 'crescimentoIntensidadeQueimaPorTick', 2),
+    burnIntensityWeakenPerTick: num(substrato, 'enfraquecimentoIntensidadeQueimaPorTick', 6),
+    smokeFromOxygenConsume: num(substrato, 'fumacaPorConsumoOxigenio', 1),
+    oxygenRecoveryPerTick: num(substrato, 'recuperacaoOxigenioPorTick', 1.5),
     raw: root,
   };
 }

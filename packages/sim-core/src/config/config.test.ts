@@ -18,6 +18,8 @@ describe('loadConfig (X-008)', () => {
     const cfg = loadConfig();
     expect(cfg.materials.has('osso')).toBe(true);
     expect(cfg.materials.has('carvalho')).toBe(true);
+    expect(cfg.materials.has('agua')).toBe(true);
+    expect(cfg.materials.get('agua').thermal?.boilPoint).toBe(100);
     expect(cfg.body.parts.length).toBe(28);
     expect(cfg.conditions.has('laceration')).toBe(true);
     expect(cfg.injury.rules.length).toBeGreaterThan(5);

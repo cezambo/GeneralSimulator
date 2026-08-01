@@ -26,6 +26,11 @@ const TUNING: SubstrateTuning = {
   thermalEquilibriumTolerance: 0.5,
   maxCascadeStepsPerTick: 4,
   burnIntegrityLossPerTick: 4,
+  // Fixtures antigos assumem chama estável; atmosfera V1 fica nos testes dedicados.
+  burnOxygenConsumePerTick: 0,
+  burnIntensityGrowthPerTick: 0,
+  burnIntensityWeakenPerTick: 0,
+  smokeFromOxygenConsume: 0,
 };
 
 function material(id: string, over: Partial<Material> = {}): Material {
@@ -54,7 +59,13 @@ const FIXTURE_MATERIALS = new MaterialCatalog([
     numeric: { specificHeat: 1 },
     thermal: { meltPoint: 1 },
   }),
-  material('agua', { category: 'element', properties: {}, tags: ['liquid'], numeric: { specificHeat: 1 } }),
+  material('agua', {
+    category: 'element',
+    properties: {},
+    tags: ['liquid'],
+    numeric: { specificHeat: 1 },
+    thermal: { freezePoint: 0, boilPoint: 100 },
+  }),
   material('carne', { properties: { organic: true }, tags: ['creature', 'living'], numeric: { specificHeat: 3 } }),
   material('acido', { category: 'element', properties: { corrosive: true }, numeric: { specificHeat: 1 } }),
 ]);
@@ -319,11 +330,24 @@ describe('temperatura esparsa (R-008, R-009)', () => {
     expect(gelo.states.some((st) => st.type === 'wet')).toBe(true);
   });
 
-  it('madeira aquecida além do ponto de ignição acende sozinha', () => {
+  it('calor residual sozinho não acende — precisa de chama em contato', () => {
     const s = makeSubstrate([]);
     const m = alvo('m', 'madeira', { temperature: 400 });
     s.activate(m);
     s.tick({ simTime: 0, world: new FakeWorld() });
+    expect(m.states.some((st) => st.type === 'burning')).toBe(false);
+  });
+
+  it('acima do ignitePoint com vizinho em chama auto-acende por limiar', () => {
+    const s = makeSubstrate([]);
+    const w = new FakeWorld();
+    const fonte = alvo('f', 'madeira', { states: [{ type: 'burning', intensity: 90 }] });
+    const m = alvo('m', 'madeira', { temperature: 400 });
+    w.neighbors.set('m', [fonte]);
+    w.neighbors.set('f', [m]);
+    s.activate(fonte);
+    s.activate(m);
+    s.tick({ simTime: 0, world: w });
     expect(m.states.some((st) => st.type === 'burning')).toBe(true);
   });
 
@@ -335,7 +359,146 @@ describe('temperatura esparsa (R-008, R-009)', () => {
     });
     s.activate(m);
     s.tick({ simTime: 0, world: new FakeWorld() });
+    // Poça (I alto) ainda está molhada após um tick a 400 °C — bloqueia ignição.
     expect(m.states.some((st) => st.type === 'burning')).toBe(false);
+    expect(m.states.some((st) => st.type === 'wet')).toBe(true);
+    expect(m.states.find((st) => st.type === 'wet')!.intensity).toBeGreaterThan(70);
+  });
+
+  // Bug: após molhar/apagar, a poça seca com T ainda ≥ ignitePoint e o limiar
+  // reacendia sozinho — combustão espontânea. Sem vizinho em chama, não.
+  it('após apagar e secar quente, não reacende sem vizinho em chama', () => {
+    const s = makeSubstrate([REGRA_AGUA_APAGA_SOAK]);
+    const w = new FakeWorld();
+    const t = alvo('t', 'madeira', {
+      temperature: 400,
+      states: [
+        { type: 'burning', intensity: 90 },
+        { type: 'wet', intensity: 90 },
+      ],
+    });
+    s.activate(t);
+    s.tick({ simTime: 0, world: w });
+    expect(t.states.some((st) => st.type === 'burning')).toBe(false);
+    expect(t.states.some((st) => st.type === 'wet')).toBe(true);
+
+    // Mantém quente enquanto a poça seca — sem vizinho em chama, limiar não reacende.
+    let secouEm = -1;
+    for (let i = 1; i < 100; i++) {
+      t.temperature = 400;
+      s.activate(t);
+      s.tick({ simTime: i, world: w });
+      expect(t.states.some((st) => st.type === 'burning')).toBe(false);
+      if (secouEm < 0 && !t.states.some((st) => st.type === 'wet')) secouEm = i;
+    }
+    expect(secouEm).toBeGreaterThan(0);
+    expect(t.states.some((st) => st.type === 'burning')).toBe(false);
+  });
+
+  it('após secar quente, vizinho em chama pode reacender', () => {
+    // Sem regra de matriz: só limiar + chama em contato (caminho do bug).
+    const s = makeSubstrate([]);
+    const w = new FakeWorld();
+    const t = alvo('t', 'madeira', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 18 }],
+    });
+    const vizinho = alvo('v', 'madeira', { states: [{ type: 'burning', intensity: 90 }] });
+    w.neighbors.set('t', [vizinho]);
+    w.neighbors.set('v', [t]);
+    s.activate(t);
+    s.activate(vizinho);
+
+    let secou = false;
+    for (let i = 0; i < 40; i++) {
+      t.temperature = 400;
+      s.tick({ simTime: i, world: w });
+      if (!t.states.some((st) => st.type === 'wet')) secou = true;
+      // Enquanto molhado, limiar não acende mesmo com vizinho em chama.
+      if (!secou) expect(t.states.some((st) => st.type === 'burning')).toBe(false);
+      if (t.states.some((st) => st.type === 'burning')) break;
+    }
+    expect(secou).toBe(true);
+    expect(t.states.some((st) => st.type === 'burning')).toBe(true);
+  });
+
+  // R-009 / R-018: ferver não é wipe instantâneo — ritmo ∝ 1/I². Poça (I≈90)
+  // sobrevive muitos ticks a 400 °C; orvalho (I≈15) some cedo. Ambiente só
+  // decai o base lento.
+  it('poça a ~400 °C dura bem mais que orvalho; no ambiente a poça permanece', () => {
+    const world = new FakeWorld();
+
+    const sLight = makeSubstrate([]);
+    const light = alvo('light', 'pedra', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 15 }],
+    });
+    sLight.activate(light);
+    let ticksLight = 0;
+    for (let i = 0; i < 40; i++) {
+      light.temperature = 400;
+      sLight.tick({ simTime: i, world });
+      ticksLight++;
+      if (!light.states.some((st) => st.type === 'wet')) break;
+    }
+    expect(ticksLight).toBeLessThanOrEqual(2);
+
+    const sHeavy = makeSubstrate([]);
+    const heavy = alvo('heavy', 'pedra', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 90 }],
+    });
+    sHeavy.activate(heavy);
+    let ticksHeavy = 0;
+    for (let i = 0; i < 80; i++) {
+      heavy.temperature = 400;
+      sHeavy.tick({ simTime: i, world });
+      ticksHeavy++;
+      if (!heavy.states.some((st) => st.type === 'wet')) break;
+    }
+    expect(ticksHeavy).toBeGreaterThan(ticksLight * 5);
+    expect(ticksHeavy).toBeGreaterThan(15);
+
+    const sCold = makeSubstrate([]);
+    const cold = alvo('cold', 'pedra', {
+      states: [{ type: 'wet', intensity: 90 }],
+    });
+    sCold.activate(cold);
+    for (let i = 0; i < 3; i++) sCold.tick({ simTime: i, world: new FakeWorld() });
+    expect(cold.states.find((st) => st.type === 'wet')!.intensity).toBeGreaterThan(80);
+
+    for (let i = 3; i < 20; i++) sCold.tick({ simTime: i, world: new FakeWorld() });
+    expect(cold.states.some((st) => st.type === 'wet')).toBe(true);
+  });
+
+  it('wet presente bloqueia re-ignição térmica mesmo após vários ticks quentes', () => {
+    const s = makeSubstrate([]);
+    const m = alvo('m', 'madeira', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 90 }],
+    });
+    s.activate(m);
+    for (let i = 0; i < 12; i++) {
+      m.temperature = 400;
+      s.tick({ simTime: i, world: new FakeWorld() });
+      expect(m.states.some((st) => st.type === 'wet')).toBe(true);
+      expect(m.states.some((st) => st.type === 'burning')).toBe(false);
+    }
+  });
+
+  it('água ainda apaga fogo antes de evaporar no mesmo tick', () => {
+    const s = makeSubstrate([REGRA_AGUA_APAGA_SOAK]);
+    const t = alvo('t', 'madeira', {
+      temperature: 400,
+      states: [
+        { type: 'burning', intensity: 90 },
+        { type: 'wet', intensity: 90 },
+      ],
+    });
+    s.activate(t);
+    s.tick({ simTime: 0, world: new FakeWorld() });
+    expect(t.states.some((st) => st.type === 'burning')).toBe(false);
+    expect(t.states.some((st) => st.type === 'smoky')).toBe(true);
   });
 
   it('temperatura fixa é imune à convergência', () => {
@@ -618,11 +781,18 @@ describe('log causal (R-048, X-005)', () => {
   });
 
   it('o limiar térmico aparece como causa própria', () => {
+    // Sem regra de matriz: só o limiar R-009, com chama em contato exigida.
     const s = makeSubstrate([]);
+    const w = new FakeWorld();
+    const fonte = alvo('f', 'madeira', { states: [{ type: 'burning', intensity: 90 }] });
     const m = alvo('m', 'madeira', { temperature: 400 });
+    w.neighbors.set('m', [fonte]);
+    w.neighbors.set('f', [m]);
+    s.activate(fonte);
     s.activate(m);
-    s.tick({ simTime: 3, world: new FakeWorld() });
-    expect(s.causalLog[0]?.cause).toMatchObject({ kind: 'time', ref: 'ignitePoint' });
+    s.tick({ simTime: 3, world: w });
+    const entrada = s.causalLog.find((e) => e.targetId === 'm' && e.effect === 'ignite');
+    expect(entrada?.cause).toMatchObject({ kind: 'time', ref: 'ignitePoint' });
   });
 
   // Registrar efeito que nao mudou nada encheria a janela de retencao de X-017
@@ -741,6 +911,7 @@ describe('modificadores (R-012)', () => {
   });
 
   // A secagem é o outro lado da mesma moeda, e vale ter por escrito.
+  // Poça alta demora (fator não-linear); eventualmente seca e o fogo pega.
   it('mas a madeira encharcada acaba secando e aí acende', () => {
     const regra: ReactionRule = { ...REGRA_FOGO_VIZINHO, chance: 0.9, modifiedBy: { wet: -0.9 } };
     const s = makeSubstrate([regra], 'seca');
@@ -749,8 +920,12 @@ describe('modificadores (R-012)', () => {
     const encharcado = alvo('b', 'madeira', { states: [{ type: 'wet', intensity: 100 }] });
     w.neighbors.set('a', [encharcado]);
     s.activate(fogo);
-    for (let i = 0; i < 40; i++) s.tick({ simTime: i, world: w });
-    expect(encharcado.states.some((x) => x.type === 'burning')).toBe(true);
+    let chegouAPegar = false;
+    for (let i = 0; i < 80; i++) {
+      s.tick({ simTime: i, world: w });
+      if (encharcado.states.some((x) => x.type === 'burning')) chegouAPegar = true;
+    }
+    expect(chegouAPegar).toBe(true);
   });
 
   it('modificador que não se aplica é ignorado, e não vira zero', () => {
@@ -763,5 +938,147 @@ describe('modificadores (R-012)', () => {
     s.activate(fogo);
     s.tick({ simTime: 0, world: w });
     expect(b.states.some((x) => x.type === 'burning')).toBe(true);
+  });
+
+  it('smoky no receptor zera a chance efetiva de fire-spread (modifiedBy)', () => {
+    const regra: ReactionRule = {
+      ...REGRA_FOGO_VIZINHO,
+      chance: 0.4,
+      modifiedBy: { smoky: -0.45 },
+    };
+    const s = makeSubstrate([regra], 'smoky-spread');
+    const w = new FakeWorld();
+    const fogo = alvo('a', 'madeira', { states: [{ type: 'burning', intensity: 90 }] });
+    const fumacento = alvo('b', 'madeira', { states: [{ type: 'smoky', intensity: 100 }] });
+    w.neighbors.set('a', [fumacento]);
+    s.activate(fogo);
+    // Um tick: 0.4 + (−0.45)×1 = 0. Sem laço longo — calor residual
+    // poderia cruzar ignitePoint e acender por limiar (R-009), fora do modificador.
+    s.tick({ simTime: 0, world: w });
+    expect(fumacento.states.some((x) => x.type === 'burning')).toBe(false);
+  });
+});
+
+describe('oxigênio / fumaça × fogo (V1 mínimo)', () => {
+  const ATM: SubstrateTuning = {
+    ...TUNING,
+    burnOxygenConsumePerTick: 8,
+    oxygenWeakenThreshold: 50,
+    oxygenExtinguishThreshold: 12,
+    burnIntensityGrowthPerTick: 3,
+    burnIntensityWeakenPerTick: 10,
+    smokeFromOxygenConsume: 1,
+    oxygenRecoveryPerTick: 2,
+    oxygenAmbient: 100,
+  };
+
+  function makeAtm(rules: ReactionRule[] = [], seed = 'atm') {
+    return new Substrate({
+      materials: FIXTURE_MATERIALS,
+      matrix: new ReactionMatrix(rules, FIXTURE_MATERIALS),
+      effects: FIXTURE_EFFECTS,
+      rng: new SeedRoot(seed).stream('substrato'),
+      tuning: ATM,
+    });
+  }
+
+  it('fogo consome oxigênio e emite smoky correlacionado', () => {
+    const s = makeAtm();
+    const w = new FakeWorld();
+    const fogo = alvo('f', 'madeira', {
+      states: [{ type: 'burning', intensity: 90 }],
+      oxygen: 100,
+    });
+    s.activate(fogo);
+    s.tick({ simTime: 0, world: w });
+    expect(fogo.oxygen).toBeDefined();
+    expect(fogo.oxygen!).toBeLessThan(100);
+    expect(fogo.states.some((st) => st.type === 'smoky' && st.intensity > 0)).toBe(true);
+  });
+
+  it('oxigênio baixo apaga a chama', () => {
+    const s = makeAtm();
+    const w = new FakeWorld();
+    const fogo = alvo('f', 'madeira', {
+      states: [{ type: 'burning', intensity: 80 }],
+      oxygen: 18,
+    });
+    s.activate(fogo);
+    for (let i = 0; i < 6; i++) s.tick({ simTime: i, world: w });
+    expect(fogo.states.some((st) => st.type === 'burning')).toBe(false);
+    expect(fogo.states.some((st) => st.type === 'smoky')).toBe(true);
+  });
+
+  it('com O₂ pleno a intensidade da chama cresce; com O₂ baixo enfraquece', () => {
+    const sHi = makeAtm([], 'o2-hi');
+    const sLo = makeAtm([], 'o2-lo');
+    const w = new FakeWorld();
+    const rico = alvo('r', 'madeira', {
+      states: [{ type: 'burning', intensity: 40 }],
+      oxygen: 100,
+    });
+    const pobre = alvo('p', 'madeira', {
+      states: [{ type: 'burning', intensity: 40 }],
+      oxygen: 30,
+    });
+    sHi.activate(rico);
+    sLo.activate(pobre);
+    // Um tick: consumo ainda deixa rico acima do limiar de enfraquecimento.
+    sHi.tick({ simTime: 0, world: w });
+    sLo.tick({ simTime: 0, world: w });
+    const iRico = rico.states.find((st) => st.type === 'burning')?.intensity ?? 0;
+    const iPobre = pobre.states.find((st) => st.type === 'burning')?.intensity ?? 0;
+    expect(iRico).toBeGreaterThan(40);
+    expect(iPobre).toBeLessThan(40);
+  });
+
+  it('fonte sem oxigênio não alastra; fonte com O₂ pleno alastra', () => {
+    const regra: ReactionRule = { ...REGRA_FOGO_VIZINHO, chance: 1 };
+    const wRico = new FakeWorld();
+    const wPobre = new FakeWorld();
+
+    const fonteRica = alvo('fr', 'madeira', {
+      states: [{ type: 'burning', intensity: 90 }],
+      oxygen: 100,
+    });
+    const vizRico = alvo('vr', 'madeira');
+    wRico.neighbors.set('fr', [vizRico]);
+
+    const fontePobre = alvo('fp', 'madeira', {
+      oxygen: 0,
+      states: [
+        { type: 'burning', intensity: 90 },
+        { type: 'smoky', intensity: 80 },
+      ],
+    });
+    const vizPobre = alvo('vp', 'madeira');
+    wPobre.neighbors.set('fp', [vizPobre]);
+
+    const sRico = makeAtm([regra], 'spread-o2');
+    sRico.activate(fonteRica);
+    sRico.tick({ simTime: 0, world: wRico });
+    expect(vizRico.states.some((st) => st.type === 'burning')).toBe(true);
+
+    const sPobre = makeAtm([regra], 'spread-o2');
+    sPobre.activate(fontePobre);
+    sPobre.tick({ simTime: 0, world: wPobre });
+    expect(vizPobre.states.some((st) => st.type === 'burning')).toBe(false);
+  });
+
+  it('smoky denso sem campo oxygen deriva O₂ baixo o bastante para apagar', () => {
+    const s = makeAtm();
+    const w = new FakeWorld();
+    // Correlação 0,35: smoky 100 → O₂ derivado 65 — não apaga sozinho.
+    // Com oxygen materializado crítico, a passada de intensidade apaga.
+    const fogo = alvo('f', 'madeira', {
+      oxygen: 8,
+      states: [
+        { type: 'burning', intensity: 70 },
+        { type: 'smoky', intensity: 95 },
+      ],
+    });
+    s.activate(fogo);
+    for (let i = 0; i < 4; i++) s.tick({ simTime: i, world: w });
+    expect(fogo.states.some((st) => st.type === 'burning')).toBe(false);
   });
 });

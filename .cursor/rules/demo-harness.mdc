@@ -1,0 +1,15 @@
+---
+description: Verificar a demo Godot/live-serve com o harness WS headless antes de pedir visuals humanos.
+globs: packages/sim-core/src/demo/**/*.{ts,tsx},packages/client-godot/**/*
+alwaysApply: false
+---
+
+# Demo harness
+
+Após mudanças na demo (fogo, wet, porta, mover, parede/wet, cinza de móvel):
+
+1. Correr `npm run sim -- harness` (raiz do repo ou `packages/sim-core`).
+2. Ler `packages/sim-core/.local/harness-report.json` (`ok`, `failed[]`).
+3. Para ver no Godot ao vivo: `npm run sim -- drive --fresh` e ler `packages/sim-core/.local/live-drive-report.json`.
+4. Antes de afirmar “núcleo desconectado”: ler `packages/client-godot/.local/core-connection.json` (e o final de `core-connection.log`).
+5. Só pedir Godot/humano para validação visual. Não pedir ao César para confirmar mecânicas que o harness já cobre.

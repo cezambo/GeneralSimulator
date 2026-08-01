@@ -3,18 +3,43 @@
 
 extends Node
 
+const PauseMenuScript := preload("res://scripts/pause_menu.gd")
+const TopBarScript := preload("res://scripts/top_bar.gd")
+
 @onready var core: CoreClient = $CoreClient
 @onready var world_view: WorldView = $World/WorldView
 @onready var agents: AgentsLayer = $World/Agents
 @onready var camera: CameraRig = $World/CameraRig
 @onready var hud: Hud = $Hud
 
+var pause_menu: PauseMenu
+var top_bar: TopBar
+
 var _paint_dragging: bool = false
 var _last_painted: Vector2i = Vector2i(-999, -999)
 var _move_from: Vector2i = Vector2i(-999, -999)
+var _speed_before_menu: int = 1
+var _menu_paused_sim: bool = false
 
 
 func _ready() -> void:
+	_setup_overlays()
+	_wire_core()
+	_wire_hud()
+	_wire_overlays()
+
+
+func _setup_overlays() -> void:
+	pause_menu = PauseMenuScript.new() as PauseMenu
+	pause_menu.name = "PauseMenu"
+	add_child(pause_menu)
+
+	top_bar = TopBarScript.new() as TopBar
+	top_bar.name = "TopBar"
+	add_child(top_bar)
+
+
+func _wire_core() -> void:
 	core.connected.connect(_on_connected)
 	core.disconnected.connect(_on_disconnected)
 	core.status_changed.connect(_on_status)
@@ -23,6 +48,9 @@ func _ready() -> void:
 	core.clock_updated.connect(_on_clock)
 	core.delta_received.connect(_on_delta)
 	core.protocol_error.connect(_on_error)
+
+
+func _wire_hud() -> void:
 	hud.speed_requested.connect(_on_speed)
 	hud.vision_toggled.connect(_on_vision)
 	hud.construction_toggled.connect(_on_construction)
@@ -33,11 +61,27 @@ func _ready() -> void:
 	hud.load_requested.connect(_on_load)
 
 
+func _wire_overlays() -> void:
+	pause_menu.resume_requested.connect(_on_pause_resume)
+	pause_menu.help_requested.connect(_on_pause_help)
+	top_bar.speed_requested.connect(_on_speed)
+
+
 func _process(_delta: float) -> void:
+	if pause_menu != null and pause_menu.is_open():
+		return
 	_update_hover_inspect()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_pause_menu_toggle(event):
+		_toggle_pause_menu()
+		get_viewport().set_input_as_handled()
+		return
+
+	if pause_menu != null and pause_menu.is_open():
+		return
+
 	if hud.is_construction():
 		_handle_construction_input(event)
 		return
@@ -46,6 +90,58 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_sandbox_input(event)
 		return
 
+	_handle_world_pick_input(event)
+
+
+func _is_pause_menu_toggle(event: InputEvent) -> bool:
+	if not event is InputEventKey:
+		return false
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return false
+	var code: Key = key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
+	return code == KEY_ESCAPE or code == KEY_P
+
+
+func _toggle_pause_menu() -> void:
+	if pause_menu.is_open():
+		pause_menu.close()
+		_on_pause_resume()
+	else:
+		_speed_before_menu = top_bar.resume_speed() if top_bar else 1
+		_menu_paused_sim = true
+		core.set_speed(0)
+		if top_bar:
+			top_bar.set_paused_visual(true)
+		pause_menu.open()
+
+
+func _on_pause_resume() -> void:
+	if _menu_paused_sim:
+		_menu_paused_sim = false
+		core.set_speed(_speed_before_menu if _speed_before_menu > 0 else 1)
+	if pause_menu.is_open():
+		pause_menu.close()
+
+
+func _on_pause_help() -> void:
+	# Mantém a sim pausada; encaminha para o HUD se houver sinal, senão dispara H (overlay existente).
+	if not _menu_paused_sim:
+		_speed_before_menu = top_bar.resume_speed() if top_bar else 1
+		_menu_paused_sim = true
+		core.set_speed(0)
+	if hud.has_signal("help_requested"):
+		hud.emit_signal("help_requested")
+		return
+	var ev := InputEventKey.new()
+	ev.pressed = true
+	ev.echo = false
+	ev.keycode = KEY_H
+	ev.physical_keycode = KEY_H
+	get_viewport().push_unhandled_input(ev)
+
+
+func _handle_world_pick_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
@@ -129,7 +225,7 @@ func _apply_sandbox_at_mouse() -> void:
 	# Alinha hover/inspect com o clique (mesmo convertor local).
 	world_view.set_hover_cell(cell)
 	core.apply_tool(effect, [{"x": cell.x, "y": cell.y}])
-	hud.set_selection("RT %s → (%d,%d)" % [effect, cell.x, cell.y])
+	hud.note_sandbox_apply(cell.x, cell.y)
 
 
 func _apply_tool_at_mouse(force_erase: bool = false) -> void:
@@ -156,6 +252,8 @@ func _apply_tool_at_mouse(force_erase: bool = false) -> void:
 			core.paint_tiles("floor", "pinho", [{"x": cell.x, "y": cell.y}])
 		"door":
 			core.paint_tiles("door", "pinho", [{"x": cell.x, "y": cell.y}])
+		"window":
+			core.paint_tiles("window", hud.current_build_material(), [{"x": cell.x, "y": cell.y}])
 		"wall_wood":
 			core.paint_tiles("wall", "pinho", [{"x": cell.x, "y": cell.y}])
 		_:
@@ -214,6 +312,8 @@ func _on_snapshot(payload: Dictionary) -> void:
 	camera.set_bounds(world_view.world_size_px())
 	if payload.has("clock"):
 		hud.apply_clock(payload["clock"])
+		if top_bar:
+			top_bar.apply_clock(payload["clock"])
 	var mode := String(payload.get("mode", "normal"))
 	var construction := mode == "construction"
 	if construction != hud.is_construction():
@@ -233,6 +333,8 @@ func _on_agents(payload: Dictionary) -> void:
 func _on_clock(payload: Dictionary) -> void:
 	hud.apply_clock(payload)
 	agents.apply_clock(payload)
+	if top_bar:
+		top_bar.apply_clock(payload)
 
 
 func _on_delta(payload: Dictionary) -> void:
@@ -256,6 +358,11 @@ func _on_error(payload: Dictionary) -> void:
 
 
 func _on_speed(speed: int) -> void:
+	if speed > 0:
+		_menu_paused_sim = false
+		_speed_before_menu = speed
+		if pause_menu != null and pause_menu.is_open():
+			pause_menu.close()
 	core.set_speed(speed)
 
 

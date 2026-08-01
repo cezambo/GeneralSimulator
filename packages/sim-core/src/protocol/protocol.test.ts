@@ -280,7 +280,9 @@ describe('ProtocolHub (X-007)', () => {
   });
 
   it('cmd.tool.apply chama o handler e emite world.delta', () => {
-    let applied: { effect: string; cells: { x: number; y: number }[] } | undefined;
+    let applied:
+      | { effect: string; cells: { x: number; y: number }[]; intensity?: number }
+      | undefined;
     let geomCalls = 0;
     const cfg = loadConfig();
     const { sim, world } = buildSpikeRoom(cfg, 'proto-tool');
@@ -303,15 +305,15 @@ describe('ProtocolHub (X-007)', () => {
       onGeometryChanged: () => {
         geomCalls += 1;
       },
-      onToolApply: (effect, cells) => {
-        applied = { effect, cells: [...cells] };
+      onToolApply: (effect, cells, intensity) => {
+        applied = { effect, cells: [...cells], intensity };
         return {
           tiles: cells.map((c) => ({
             x: c.x,
             y: c.y,
             type: 'floor',
             materialId: 'pinho',
-            states: [{ type: 'wet', intensity: 90 }],
+            states: [{ type: 'wet', intensity: intensity ?? 90 }],
           })),
         };
       },
@@ -350,12 +352,28 @@ describe('ProtocolHub (X-007)', () => {
       reqId: 'wet1',
       payload: { effect: 'wet', cells: [{ x: 1, y: 1 }] },
     });
-    expect(applied).toEqual({ effect: 'wet', cells: [{ x: 1, y: 1 }] });
+    expect(applied).toEqual({ effect: 'wet', cells: [{ x: 1, y: 1 }], intensity: undefined });
     expect(c.last('res.ok')?.reqId).toBe('wet1');
     const delta = c.last('world.delta')!.payload as {
       tiles: { states?: { type: string }[] }[];
     };
     expect(delta.tiles[0]!.states?.some((s) => s.type === 'wet')).toBe(true);
+
+    c.clear();
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.tool.apply',
+      seq: 5,
+      simTime: 0,
+      reqId: 'wetLight',
+      payload: { effect: 'wet', cells: [{ x: 3, y: 3 }], intensity: 15 },
+    });
+    expect(applied).toEqual({ effect: 'wet', cells: [{ x: 3, y: 3 }], intensity: 15 });
+    expect(c.last('res.ok')?.payload).toMatchObject({ ok: true, intensity: 15 });
+    const lightDelta = c.last('world.delta')!.payload as {
+      tiles: { states?: { type: string; intensity: number }[] }[];
+    };
+    expect(lightDelta.tiles[0]!.states).toEqual([{ type: 'wet', intensity: 15 }]);
   });
 
   it('cmd.sim.save e load chamam handlers', () => {
@@ -401,6 +419,42 @@ describe('ProtocolHub (X-007)', () => {
     });
     expect(c.last('res.ok')?.reqId).toBe('l1');
     expect(calls).toEqual(['save:demo', 'load:demo']);
+  });
+
+  it('cmd.sim.reset chama handler e volta a modo normal', () => {
+    const calls: string[] = [];
+    const cfg = loadConfig();
+    const { sim, world } = buildSpikeRoom(cfg, 'proto-reset');
+    const clock = new SimClock(sim.state.clock, {
+      minutesPerTick: cfg.tuning.minutesPerTick,
+      hoursPerDay: cfg.tuning.hoursPerDay,
+      daysPerSeason: cfg.tuning.daysPerSeason,
+      seasonsPerYear: cfg.tuning.seasonsPerYear,
+      availableSpeeds: cfg.tuning.availableSpeeds,
+    });
+    const hub = new ProtocolHub({
+      sim,
+      world,
+      clock,
+      mode: 'construction',
+      onReset: (opts) => {
+        calls.push(`reset:${opts?.seed ?? '-'}`);
+      },
+    });
+    const c = new MemorySink('c');
+    hub.connect(c);
+    expect(hub.mode).toBe('construction');
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.sim.reset',
+      seq: 1,
+      simTime: 0,
+      reqId: 'r1',
+      payload: { seed: 'fresh-1' },
+    });
+    expect(c.last('res.ok')?.reqId).toBe('r1');
+    expect(hub.mode).toBe('normal');
+    expect(calls).toEqual(['reset:fresh-1']);
   });
 
   it('cmd.world.toggleDoor abre e fecha e notifica geometria', () => {

@@ -18,7 +18,7 @@
     "test": "npm run test --workspace=@sim/core",
     "test:watch": "npm run test:watch --workspace=@sim/core",
     "typecheck": "npm run typecheck --workspace=@sim/core",
-    "sim": "npm run sim --workspace=@sim/core",
+    "sim": "npm run sim --workspace=@sim/core --",
     "check": "npm run verify && npm run types -- --check && npm run typecheck && npm run test"
   },
   "devDependencies": {

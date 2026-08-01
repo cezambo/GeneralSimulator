@@ -92,12 +92,23 @@ describe('Demo de incêndio V1 (zero LLM)', () => {
     // Põe a cadeira sobre o foco.
     chair.pos = { x: 2.5, y: 2.5 };
     s.ignite(2, 2);
+    // Garante ignição do móvel: a matriz pode falhar o sorteio, e orgânico
+    // em contato também pode abafar — o aceite é queima + perda de integridade.
+    const chairT = s.bridge.objectTarget(chair);
+    s.substrate.invoke('ignite', chairT, { simTime: s.clock.simTime, world: s.bridge }, {
+      intensity: 70,
+    });
+    s.bridge.commit();
     for (let i = 0; i < 12; i += 1) s.tick();
     const after = s.sim.state.objects[CHAIR_ID];
-    // Ou queima (estados) ou já foi consumida (removida).
+    // Consumida, ainda em chama, ou apagou por O₂/fumaça depois de ter queimado
+    // (integridade caiu / ficou smoky).
     if (after) {
-      expect(after.states?.some((st) => st.type === 'burning')).toBe(true);
       expect(after.integrity ?? 100).toBeLessThan(100);
+      const rastrou =
+        after.states?.some((st) => st.type === 'burning' && st.intensity > 0) ||
+        after.states?.some((st) => st.type === 'smoky' && st.intensity > 0);
+      expect(rastrou).toBe(true);
     } else {
       expect(after).toBeUndefined();
     }
