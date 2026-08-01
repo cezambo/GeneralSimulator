@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assemblePerceptionReport,
   assertNoLeaks,
+  describeTileLook,
   estimateTokens,
   PerceptionLeak,
   PerceptionPipeline,
@@ -259,5 +260,53 @@ describe('contexto de pensamento (C-002)', () => {
     const r = assembleThoughtContext([rotina, ...opcionais], 500);
     expect(r.includedIds).not.toContain('auto');
     expect(r.includedIds).toContain('rotina');
+  });
+});
+
+describe('inspeção de tile (look)', () => {
+  it('traduz estado emergente sem intensidade crua', () => {
+    const look = describeTileLook({
+      type: 'floor',
+      materialId: 'pinho',
+      integrity: 55,
+      temperature: 90,
+      states: [
+        { type: 'wet', intensity: 80 },
+        { type: 'smoky', intensity: 40 },
+      ],
+      objects: [{ defId: 'cadeira_madeira' }],
+    });
+    expect(look).toContain('chão de pinho');
+    expect(look).toContain('bem danificado');
+    expect(look).toContain('quente');
+    expect(look).toContain('encharcado');
+    expect(look).toContain('fumegante');
+    expect(look).toContain('uma cadeira madeira');
+    expect(look).not.toMatch(/wet:\d+/);
+    expect(look).not.toMatch(/\d+%/);
+  });
+
+  it('porta abre/fecha e chama forte', () => {
+    const look = describeTileLook({
+      type: 'door',
+      materialId: 'madeira',
+      state: { isOpen: true },
+      states: [{ type: 'burning', intensity: 90 }],
+      temperature: 280,
+    });
+    expect(look).toContain('porta de madeira (aberta)');
+    expect(look).toContain('em chamas');
+    expect(look).toContain('ardente');
+  });
+
+  it('tile intacto e frio omite ruído', () => {
+    const look = describeTileLook({
+      type: 'wall',
+      materialId: 'pedra',
+      integrity: 100,
+      temperature: 20,
+      states: [],
+    });
+    expect(look).toBe('parede de pedra');
   });
 });

@@ -25,6 +25,7 @@ const TUNING: SubstrateTuning = {
   maxActiveTargets: 512,
   thermalEquilibriumTolerance: 0.5,
   maxCascadeStepsPerTick: 4,
+  burnIntegrityLossPerTick: 4,
 };
 
 function material(id: string, over: Partial<Material> = {}): Material {
@@ -107,6 +108,15 @@ const REGRA_AGUA_APAGA: ReactionRule = {
   effect: 'extinguish',
   chance: 1,
   porque: 'Água apaga fogo.',
+};
+
+const REGRA_AGUA_APAGA_SOAK: ReactionRule = {
+  id: 'water-douses-fire-soak',
+  when: 'continuous',
+  in: ['burning', 'wet'],
+  effect: 'extinguish',
+  chance: 1,
+  porque: 'Tile encharcado em chamas apaga no mesmo lugar.',
 };
 
 describe('vocabulário fechado de efeitos (R-015)', () => {
@@ -315,6 +325,17 @@ describe('temperatura esparsa (R-008, R-009)', () => {
     s.activate(m);
     s.tick({ simTime: 0, world: new FakeWorld() });
     expect(m.states.some((st) => st.type === 'burning')).toBe(true);
+  });
+
+  it('madeira molhada não auto-acende só por temperatura', () => {
+    const s = makeSubstrate([]);
+    const m = alvo('m', 'madeira', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 90 }],
+    });
+    s.activate(m);
+    s.tick({ simTime: 0, world: new FakeWorld() });
+    expect(m.states.some((st) => st.type === 'burning')).toBe(false);
   });
 
   it('temperatura fixa é imune à convergência', () => {
@@ -625,6 +646,21 @@ describe('estados e decaimento (R-004)', () => {
     const molhado = alvo('p', 'agua', { states: [{ type: 'wet', intensity: 90 }] });
     s.contact(tocha, molhado, { simTime: 0, world: w });
     expect(molhado.states.some((x) => x.type === 'smoky')).toBe(true);
+  });
+
+  it('água no mesmo tile apaga fogo por contínua (soak)', () => {
+    const s = makeSubstrate([REGRA_AGUA_APAGA_SOAK]);
+    const w = new FakeWorld();
+    const t = alvo('t', 'madeira', {
+      states: [
+        { type: 'burning', intensity: 90 },
+        { type: 'wet', intensity: 90 },
+      ],
+    });
+    s.activate(t);
+    s.tick({ simTime: 0, world: w });
+    expect(t.states.some((x) => x.type === 'burning')).toBe(false);
+    expect(t.states.some((x) => x.type === 'smoky')).toBe(true);
   });
 });
 

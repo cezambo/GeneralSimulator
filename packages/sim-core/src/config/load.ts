@@ -16,6 +16,7 @@ import { InjuryMatrix } from '../body/injury.js';
 import { validateDomain } from '../schema/index.js';
 import { MaterialCatalog } from '../substrate/target.js';
 import { ReactionMatrix, type ReactionRule } from '../substrate/matrix.js';
+import { EffectCatalog, type EffectDefinition } from '../substrate/effects.js';
 import type { Material, ObjectDef } from '../types/domain.js';
 import { configPath } from './paths.js';
 
@@ -32,6 +33,11 @@ export interface TuningConfig {
   readonly interactionRangeMeters: number;
   readonly baseSpeedMetersPerSecond: number;
   readonly minSpeedFactor: number;
+  readonly stateDecayPerTick: number;
+  readonly maxActiveTargets: number;
+  readonly thermalEquilibriumTolerance: number;
+  readonly maxCascadeStepsPerTick: number;
+  readonly burnIntegrityLossPerTick: number;
   readonly raw: Readonly<Record<string, unknown>>;
 }
 
@@ -43,6 +49,7 @@ export interface ModelPresetsFile {
 export interface SimConfig {
   readonly materials: MaterialCatalog;
   readonly reactions: ReactionMatrix;
+  readonly effects: EffectCatalog;
   readonly body: BodyPlan;
   readonly conditions: ConditionCatalog;
   readonly injury: InjuryMatrix;
@@ -112,6 +119,7 @@ export function loadConfig(names?: {
   assertInjuryConditions(injury, conditions);
 
   const reactions = loadReactions(reactionsRaw, catalog);
+  const effects = loadEffects(reactionsRaw);
   const objects = loadObjects(objectsRaw, catalog);
   const tuning = loadTuning(tuningRaw);
   const models = loadModels(modelsRaw);
@@ -129,6 +137,7 @@ export function loadConfig(names?: {
   return {
     materials: catalog,
     reactions,
+    effects,
     body,
     conditions,
     injury,
@@ -249,12 +258,21 @@ function loadReactions(raw: unknown, materials: MaterialCatalog): ReactionMatrix
   return new ReactionMatrix(rules, materials);
 }
 
+function loadEffects(raw: unknown): EffectCatalog {
+  const root = stripComments(raw) as { effects?: Record<string, EffectDefinition> };
+  if (!root.effects || typeof root.effects !== 'object') {
+    throw new ConfigError('reactions: objeto "effects" ausente');
+  }
+  return new EffectCatalog(root.effects);
+}
+
 function loadTuning(raw: unknown): TuningConfig {
   const root = stripComments(raw) as Record<string, unknown>;
   const tempo = (root['tempo'] ?? {}) as Record<string, unknown>;
   const mundo = (root['mundo'] ?? {}) as Record<string, unknown>;
   const percepcao = (root['percepcao'] ?? {}) as Record<string, unknown>;
   const movimento = (root['movimento'] ?? {}) as Record<string, unknown>;
+  const substrato = (root['substrato'] ?? {}) as Record<string, unknown>;
 
   const metersPerTile = num(mundo, 'metrosPorTile', 0.5);
   if (metersPerTile <= 0) throw new ConfigError('tuning.mundo.metrosPorTile deve ser positivo');
@@ -277,6 +295,11 @@ function loadTuning(raw: unknown): TuningConfig {
     interactionRangeMeters: num(percepcao, 'alcanceInteracaoMetros', 1.5),
     baseSpeedMetersPerSecond: num(movimento, 'velocidadeBaseMetrosPorSegundo', 1.4),
     minSpeedFactor: num(movimento, 'fatorVelocidadeMinimoPorMobilidade', 0.15),
+    stateDecayPerTick: num(substrato, 'decaimentoEstadoTransientePorTick', 0.02),
+    maxActiveTargets: num(substrato, 'maxTilesAtivosSimultaneos', 512),
+    thermalEquilibriumTolerance: num(substrato, 'toleranciaEquilibrioTermico', 0.5),
+    maxCascadeStepsPerTick: num(substrato, 'maxPassosDeCascataPorTick', 4),
+    burnIntegrityLossPerTick: num(substrato, 'perdaIntegridadeQueimaPorTick', 4),
     raw: root,
   };
 }

@@ -115,11 +115,11 @@ O painel web assina tudo. O cliente Godot assina só o que tem representação v
 ```
 cmd.sim.setSpeed      { speed: 0 | 1 | 2 | 4 | 8 }   // 0 = pausado
 cmd.sim.setMode       { mode: "normal" | "construction" }
-cmd.sim.save          { slot: string }
-cmd.sim.load          { slot: string }
+cmd.sim.save          { slot: string }   // default "demo"; escreve saves/<slot>.json
+cmd.sim.load          { slot: string }   // restaura e manda world.snapshot
 ```
 
-Entrar em modo construção pausa automaticamente (requisito do PDF).
+Entrar em modo construção pausa automaticamente (requisito do PDF). Save/load usam `Simulation.serialize` (X-003); diretório configurável com `SIM_SAVE_DIR`.
 
 ### 5.2 Manipulação direta
 
@@ -137,10 +137,14 @@ Arrastar não é o cliente movendo nada. Ele pede; o núcleo valida e responde c
 cmd.build.paintTile   { tileType, materialId, cells: [{x,y}] }
 cmd.build.placeObject { objectDefId, pos, rotation }
 cmd.build.remove      { target: "tile" | "object", cells | objectId }
-cmd.build.rotate      { objectId, degrees }
+cmd.build.moveObject  { objectId | cells, pos: {x,y} }
+cmd.build.rotate      { objectId | cells, degrees, delta?: boolean }  // delta default true
 cmd.build.undo        { }
 cmd.build.redo        { }
 cmd.build.createCustomItem { name, description, category, materialId }
+
+cmd.tool.apply        { effect: "wet" | "extinguish", cells: [{x,y}] }  // GM em tempo real (modo normal)
+cmd.world.toggleDoor  { x, y }  // abre/fecha porta; revalida path (modo normal)
 ```
 
 O histórico de undo vive no núcleo, não no cliente. É a única forma de manter consistência quando o mesmo mundo é editado por comando e por LLM.

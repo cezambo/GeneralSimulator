@@ -22,5 +22,6 @@ export * from './config/index.js';
 export * from './objects/index.js';
 export * from './cognition/context.js';
 export * from './protocol/index.js';
+export * from './persist/index.js';
 export { validateDomain, validateLlmOutput, definitionOf } from './schema/index.js';
 export * from './types/domain.js';

@@ -65,6 +65,14 @@
       "porque": "Agua apaga fogo e produz vapor."
     },
     {
+      "id": "water-douses-fire-soak",
+      "when": "continuous",
+      "in": ["burning", "wet"],
+      "effect": "extinguish",
+      "chance": 1.0,
+      "porque": "Tile em chamas encharcado apaga no mesmo lugar — a agua local sufoca a chama e deixa fumaca."
+    },
+    {
       "id": "organic-smothers-fire",
       "when": "contact",
       "in": ["burning", "#organic"],

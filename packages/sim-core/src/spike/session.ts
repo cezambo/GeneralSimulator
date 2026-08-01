@@ -35,7 +35,14 @@ import {
 } from '../spatial/index.js';
 import { SimClock } from '../world/clock.js';
 import { World } from '../world/grid.js';
-import { buildSpikeRoom, CHAIR_ID, loadSpikeAgents, SPIKE_GRID } from './room.js';
+import {
+  buildSpikeRoom,
+  CHAIR_ID,
+  loadSpikeAgents,
+  SPIKE_GRID,
+  SPIKE_HEIGHT,
+  SPIKE_WIDTH,
+} from './room.js';
 import { SpikeStubProvider } from './stub-provider.js';
 
 const THOUGHT_HOURS = new Set([8, 12, 16, 20]);
@@ -302,8 +309,8 @@ async function thinkOnce(ctx: {
     const start = { gridId: SPIKE_GRID, x: Math.floor(mover.x), y: Math.floor(mover.y) };
     const goal = {
       gridId: SPIKE_GRID,
-      x: Math.max(1, Math.min(3, Math.floor(dest.x))),
-      y: Math.max(1, Math.min(3, Math.floor(dest.y))),
+      x: Math.max(1, Math.min(SPIKE_WIDTH - 2, Math.floor(dest.x))),
+      y: Math.max(1, Math.min(SPIKE_HEIGHT - 2, Math.floor(dest.y))),
     };
     const path = findPath(world, start, goal);
     if (path.found) {
@@ -343,7 +350,7 @@ async function thinkOnce(ctx: {
     intent: decision.intentDescription,
     agentSnapshot: `${agent.name} em (${mover.x.toFixed(1)},${mover.y.toFixed(1)})`,
     targetSnapshot: decision.targetLabel ?? decision.targetId ?? 'nenhum',
-    worldSnapshot: 'sala 5x5 com cadeira',
+    worldSnapshot: `sala ${SPIKE_WIDTH}x${SPIKE_HEIGHT} com cadeira`,
     userInstructions: 'nenhuma',
     substrateSnapshot: 'estável',
     matrixSummary: 'sem reação ativa',
