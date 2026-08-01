@@ -119,9 +119,16 @@ export class EffectCatalog {
 
     const removidos: string[] = [];
     for (const tipo of def.remove ?? []) {
-      const antes = t.states.length;
-      t.states = t.states.filter((s) => s.type !== tipo);
-      if (t.states.length !== antes) removidos.push(tipo);
+      // Em lugar: o bridge partilha o array com o overlay. Trocar a referência
+      // faria o próximo targetAt do vizinho restaurar o array velho.
+      let tirou = false;
+      for (let i = t.states.length - 1; i >= 0; i--) {
+        if (t.states[i]!.type === tipo) {
+          t.states.splice(i, 1);
+          tirou = true;
+        }
+      }
+      if (tirou) removidos.push(tipo);
     }
 
     const adicionados: string[] = [];

@@ -337,10 +337,25 @@ export class Substrate {
     // reativar o alvo o manteria no laço para sempre.
     if (!resultado.changed) return false;
 
+    // Água e extinção tiram calor do tile. Sem isto, limiar de ignição (R-009)
+    // reacende no mesmo tick em que a contínua apagou — sintoma: molhou e o
+    // fogo "não apaga", só o wet decai.
+    if (effect === 'extinguish' || effect === 'smother' || effect === 'wet') {
+      this.#dumpHeat(target, ctx, effect === 'wet' ? 0.55 : 0.25);
+    }
+
     this.activate(target);
     this.#log(ctx.simTime, effect, target, cause);
     this.#cascade(target, ctx, 1);
     return true;
+  }
+
+  /** Reduz excesso de temperatura em direção ao ambiente (fator = fração que resta). */
+  #dumpHeat(target: ReactiveTarget, ctx: TickContext, remain: number): void {
+    if (target.temperature === undefined) return;
+    const ambiente = ctx.world.ambientTemperature(target);
+    if (target.temperature <= ambiente) return;
+    target.temperature = ambiente + (target.temperature - ambiente) * remain;
   }
 
   /**
@@ -401,8 +416,21 @@ export class Substrate {
 
       if (material.thermal?.fixedTemperature === undefined && alvo.temperature !== undefined) {
         const ambiente = ctx.world.ambientTemperature(alvo);
-        const calorEspecifico = material.numeric.specificHeat ?? 1;
-        alvo.temperature += (ambiente - alvo.temperature) / calorEspecifico;
+        // Catálogo de jogo usa calor específico ~1–10; materials.json traz
+        // números tipo DF/SI (~200–4000). Escala só os grandes para o esfriamento
+        // pós-fogo ser legível sem alterar os fixtures dos testes.
+        const calorEspecifico = thermalDivisor(material.numeric.specificHeat ?? 1);
+        let passo = (ambiente - alvo.temperature) / calorEspecifico;
+        // Sem chama local, relaxa mais depressa — o calor residual não deve
+        // parecer um forno eterno depois que o fogo apagou.
+        if (!hasState(alvo, 'burning')) passo *= 3;
+        if (hasState(alvo, 'wet')) passo *= 1.5;
+        const antes = alvo.temperature;
+        alvo.temperature += passo;
+        // Nunca atravessa o ambiente (senão 20.3 com boost vira 19.4 e nunca sai).
+        if ((antes > ambiente && alvo.temperature < ambiente) || (antes < ambiente && alvo.temperature > ambiente)) {
+          alvo.temperature = ambiente;
+        }
         if (Math.abs(alvo.temperature - ambiente) <= this.#o.tuning.thermalEquilibriumTolerance) {
           // Volta a ser o ambiente. É o que tira o alvo do laço térmico.
           delete alvo.temperature;
@@ -416,7 +444,11 @@ export class Substrate {
       const intensidade = alvo.states.find((s) => s.type === 'burning')!.intensity;
       for (const vizinho of ctx.world.neighborsOf(alvo)) {
         const ambiente = ctx.world.ambientTemperature(vizinho);
-        vizinho.temperature = (vizinho.temperature ?? ambiente) + intensidade / 10;
+        // Teto por tick evita rampa térmica irrealista quando vários vizinhos
+        // queimam (e o bridge deixa a soma acumular de verdade).
+        const ganho = intensidade / 12;
+        const atual = vizinho.temperature ?? ambiente;
+        vizinho.temperature = Math.min(atual + ganho, ambiente + 280);
         this.activate(vizinho);
       }
     }
@@ -436,7 +468,14 @@ export class Substrate {
     const limiares = this.#o.materials.get(target.materialId).thermal;
     if (!limiares) return false;
 
-    if (limiares.ignitePoint !== undefined && t >= limiares.ignitePoint && !hasState(target, 'burning')) {
+    // Molhado não auto-acende por limiar: a matriz já pune ignição com wet
+    // (R-012); o caminho térmico tem de respeitar a mesma intuição.
+    if (
+      limiares.ignitePoint !== undefined &&
+      t >= limiares.ignitePoint &&
+      !hasState(target, 'burning') &&
+      !hasState(target, 'wet')
+    ) {
       return this.#applyEffect('ignite', target, ctx, { kind: 'time', ref: 'ignitePoint' });
     }
     if (limiares.meltPoint !== undefined && t >= limiares.meltPoint && hasState(target, 'frozen')) {
@@ -451,15 +490,16 @@ export class Substrate {
   #decayPass(alvos: readonly ReactiveTarget[]): void {
     const decaimento = this.#o.tuning.stateDecayPerTick * 100;
     for (const alvo of alvos) {
-      for (const estado of alvo.states) {
+      for (let i = alvo.states.length - 1; i >= 0; i--) {
+        const estado = alvo.states[i]!;
         if (estado.remainingTicks !== undefined) {
           estado.remainingTicks = Math.max(0, estado.remainingTicks - 1);
           if (estado.remainingTicks === 0) estado.intensity = 0;
         } else {
           estado.intensity = Math.max(0, estado.intensity - decaimento);
         }
+        if (estado.intensity <= 0) alvo.states.splice(i, 1);
       }
-      alvo.states = alvo.states.filter((s) => s.intensity > 0);
     }
   }
 
@@ -489,7 +529,9 @@ export class Substrate {
         this.#log(ctx.simTime, 'transmute', alvo, { kind: 'time', ref: `burnsTo:${de}` });
       }
       // Chama morre no residuo; sobra fumaça breve.
-      alvo.states = alvo.states.filter((s) => s.type !== 'burning');
+      for (let i = alvo.states.length - 1; i >= 0; i--) {
+        if (alvo.states[i]!.type === 'burning') alvo.states.splice(i, 1);
+      }
       if (!alvo.states.some((s) => s.type === 'smoky')) {
         alvo.states.push({ type: 'smoky', intensity: 40 });
       }
@@ -523,4 +565,10 @@ export class Substrate {
       ...(target.x !== undefined && target.y !== undefined ? { pos: { x: target.x, y: target.y } } : {}),
     });
   }
+}
+
+/** Divisor de convergência térmica. Ver comentário em #thermalPass. */
+function thermalDivisor(specificHeat: number): number {
+  if (specificHeat > 50) return Math.max(1, specificHeat / 100);
+  return Math.max(0.01, specificHeat);
 }

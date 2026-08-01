@@ -40,4 +40,24 @@ describe('Demo de incêndio V1 (zero LLM)', () => {
     expect(['carvao', 'cinza', 'lascas']).toContain(cell.materialId);
     expect(s.world.blocksMovementAt(SPIKE_GRID, 3, 3)).toBe(false);
   });
+
+  it('água apaga fogo mesmo com vizinho em chama (bridge não desfaz extinguish)', () => {
+    const s = createFireSession({ seed: 'wet-nbr', ticks: 1 });
+    const a = s.bridge.targetAt(SPIKE_GRID, 2, 2);
+    const b = s.bridge.targetAt(SPIKE_GRID, 3, 2);
+    const ctx = { simTime: s.clock.simTime, world: s.bridge };
+    s.substrate.invoke('ignite', a, ctx, { intensity: 80 });
+    s.substrate.invoke('ignite', b, ctx, { intensity: 80 });
+    s.bridge.commit();
+    for (let i = 0; i < 25; i += 1) s.tick();
+
+    const alvo = s.bridge.targetAt(SPIKE_GRID, 2, 2);
+    s.substrate.invoke('wet', alvo, { simTime: s.clock.simTime, world: s.bridge }, { intensity: 90 });
+    s.substrate.tick({ simTime: s.clock.simTime, world: s.bridge });
+    s.bridge.commit();
+
+    const o = s.sim.overlayAt(SPIKE_GRID, 2, 2);
+    expect(o?.states?.some((st) => st.type === 'burning')).toBe(false);
+    expect(o?.states?.some((st) => st.type === 'smoky' || st.type === 'wet')).toBe(true);
+  });
 });

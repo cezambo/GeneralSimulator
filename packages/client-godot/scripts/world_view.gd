@@ -186,14 +186,17 @@ func _upsert_tile(cell: Dictionary) -> void:
 		_tile_nodes[key] = poly
 
 	poly.color = WorldScale.tile_color(tile_type, burning, material_id)
+	# wet = encharcado no tile (não é volume/fluxo de líquido — isso é V2).
 	if wet and not burning:
-		poly.color = poly.color.lerp(Color("3a6ea5"), 0.55)
+		var wet_i := clampf(_state_intensity(states, "wet") / 100.0, 0.35, 1.0)
+		poly.color = poly.color.lerp(Color("2f6f9e"), 0.4 + 0.35 * wet_i)
+	# smoky = névoa de estado no tile, não camada de gás (R-023).
 	if smoky and not burning:
-		poly.color = poly.color.lerp(Color("6a6a70"), 0.35)
+		poly.color = poly.color.lerp(Color("5c5c62"), 0.28)
 	if tile_type == "door" and bool(state.get("isOpen", false)) and not burning:
 		poly.color = WorldScale.tile_color("door", false, material_id).lightened(0.2)
 		if wet:
-			poly.color = poly.color.lerp(Color("3a6ea5"), 0.4)
+			poly.color = poly.color.lerp(Color("2f6f9e"), 0.4)
 	if cell.has("integrity") and not burning:
 		var integ := clampf(float(cell.get("integrity", 100.0)) / 100.0, 0.0, 1.0)
 		poly.color = poly.color.darkened((1.0 - integ) * 0.55)
@@ -240,8 +243,9 @@ func _set_smoke_haze(key: String, x: int, y: int, intensity: float) -> void:
 			haze.z_index = 2
 			tiles_root.add_child(haze)
 			_smoke_nodes[key] = haze
-		var a := clampf(intensity / 100.0, 0.15, 0.55)
-		haze.color = Color(0.55, 0.55, 0.58, a)
+		# Névoa acinzentada-amarronzada (fuligem), não "gás" volumétrico.
+		var a := clampf(intensity / 100.0, 0.18, 0.62)
+		haze.color = Color(0.42, 0.4, 0.38, a)
 		haze.visible = true
 	elif _smoke_nodes.has(key):
 		(_smoke_nodes[key] as Polygon2D).visible = false

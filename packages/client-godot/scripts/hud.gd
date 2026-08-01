@@ -127,7 +127,7 @@ func _refresh_help() -> void:
 		help_label.text = "C·sair · B/N parede · F/R chão/porta · E apagar · T cadeira · M mover · . girar · X remover · Z/Y undo/redo"
 		set_selection(_selection_text)
 	else:
-		help_label.text = "Clique: sel./andar · porta · G água · Q apagar fogo · F6 salvar · F7 carregar · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
+		help_label.text = "Clique: sel./andar · porta · G molhar tile (apaga fogo; sem fluxo) · Q apagar · F6/F7 save/load · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
 		set_selection(_selection_text)
 
 
@@ -156,9 +156,9 @@ func _tool_label(tool_id: String) -> String:
 func _sandbox_label(tool_id: String) -> String:
 	match tool_id:
 		"wet":
-			return "água (molha / apaga fogo)"
+			return "molhar tile (apaga fogo no lugar; sem líquido V2)"
 		"extinguish":
-			return "apagar fogo"
+			return "apagar fogo (fumaça residual)"
 		_:
 			return tool_id
 

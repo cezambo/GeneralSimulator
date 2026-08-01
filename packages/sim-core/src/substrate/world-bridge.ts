@@ -51,11 +51,17 @@ export class TileReactiveBridge {
       };
       this.#targets.set(id, t);
     } else {
+      // Material denso pode mudar por fora (construção); estado/temp/integridade
+      // do proxy são a fonte da verdade até commit. Reatribuir a partir do
+      // overlay no meio do tick desfaz `states = filter(...)` de extinguish
+      // quando um vizinho chama neighborsOf → targetAt — e a água "só evapora".
       t.materialId = tile.materialId;
-      t.states = overlay.states;
-      t.integrity = overlay.integrity;
-      if (overlay.temperature !== undefined) t.temperature = overlay.temperature;
-      else delete t.temperature;
+      if (t.states !== overlay.states) {
+        // Após commit, ou se o overlay foi trocado, reaferra o array vivo.
+        // Não sobrescrever o conteúdo do proxy com uma fotografia velha.
+        overlay.states = t.states;
+      }
+      if (t.integrity !== undefined) overlay.integrity = t.integrity;
     }
     return t;
   }

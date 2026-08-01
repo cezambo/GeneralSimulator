@@ -327,6 +327,17 @@ describe('temperatura esparsa (R-008, R-009)', () => {
     expect(m.states.some((st) => st.type === 'burning')).toBe(true);
   });
 
+  it('madeira molhada não auto-acende só por temperatura', () => {
+    const s = makeSubstrate([]);
+    const m = alvo('m', 'madeira', {
+      temperature: 400,
+      states: [{ type: 'wet', intensity: 90 }],
+    });
+    s.activate(m);
+    s.tick({ simTime: 0, world: new FakeWorld() });
+    expect(m.states.some((st) => st.type === 'burning')).toBe(false);
+  });
+
   it('temperatura fixa é imune à convergência', () => {
     const materiais = new MaterialCatalog([
       ...FIXTURE_MATERIALS.all(),
