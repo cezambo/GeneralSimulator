@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { loadConfig } from '../config/index.js';
+import { startLiveServe, type LiveServeHandle } from '../demo/live-serve.js';
 import { SimClock } from '../world/clock.js';
 import { buildSpikeRoom, loadSpikeAgents } from '../spike/room.js';
 import {
@@ -10,6 +11,7 @@ import {
   parseEnvelope,
   ProtocolError,
   startProtocolServer,
+  type ToolEffectId,
 } from './index.js';
 
 function hubComSala() {
@@ -118,7 +120,7 @@ describe('ProtocolHub (X-007)', () => {
     expect(clock.paused).toBe(true);
   });
 
-  it('req.agent.detail devolve o agente ou NOT_FOUND', () => {
+  it('req.agent.detail devolve o agente + percepção ou NOT_FOUND', () => {
     const { hub } = hubComSala();
     const c = new MemorySink('c');
     hub.connect(c);
@@ -131,7 +133,14 @@ describe('ProtocolHub (X-007)', () => {
       reqId: 'r-ag',
       payload: { agentId: 'ag_lia' },
     });
-    expect(c.last('res.agent.detail')?.reqId).toBe('r-ag');
+    const detail = c.last('res.agent.detail')!;
+    expect(detail.reqId).toBe('r-ag');
+    const detailPayload = detail.payload as {
+      agent: { id: string };
+      perception: { agentId: string; report: string; included: unknown[] };
+    };
+    expect(detailPayload.agent.id).toBe('ag_lia');
+    expect(detailPayload.perception.agentId).toBe('ag_lia');
 
     c.clear();
     hub.handleRaw('c', {
@@ -145,6 +154,52 @@ describe('ProtocolHub (X-007)', () => {
     const err = c.last('res.error')!;
     expect(err.reqId).toBe('r-miss');
     expect((err.payload as { code: string }).code).toBe('NOT_FOUND');
+  });
+
+  it('req.agent.perception devolve fatos quando há fogo e agente no cone', () => {
+    const { hub, sim, world } = hubComSala();
+    const lia = sim.state.agents['ag_lia']!;
+    const rui = sim.state.agents['ag_rui']!;
+    lia.pos = { x: 2.5, y: 2.5 };
+    lia.rotation = 90;
+    lia.vision = { angle: 120, range: 8 };
+    rui.pos = { x: 2.5, y: 5.5 };
+    rui.rotation = 270;
+    const g = world.mainGridId;
+    sim.overlayAt(g, 2, 4, true).states = [{ type: 'burning', intensity: 75 }];
+    sim.overlayAt(g, 2, 4, true).temperature = 350;
+
+    const c = new MemorySink('c');
+    hub.connect(c);
+    c.clear();
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'req.agent.perception',
+      seq: 1,
+      simTime: 0,
+      reqId: 'r-perc',
+      payload: { agentId: 'ag_lia' },
+    });
+    const res = c.last('res.agent.perception')!;
+    expect(res.reqId).toBe('r-perc');
+    const p = res.payload as {
+      agentId: string;
+      facingDeg: number;
+      vision: { angle: number; range: number };
+      ranges: { visionTiles: number; visionMeters: number; hearingMeters: number };
+      report: string;
+      included: { text: string; salienceTier: number; sense: string }[];
+      notable: { kind: string }[];
+      visible: { agents: { id: string }[]; objects: unknown[] };
+    };
+    expect(p.agentId).toBe('ag_lia');
+    expect(p.facingDeg).toBe(90);
+    expect(p.vision.range).toBe(8);
+    expect(p.included.length).toBeGreaterThan(0);
+    expect(p.report.length).toBeGreaterThan(0);
+    expect(p.notable.some((n) => n.kind === 'burning')).toBe(true);
+    expect(p.visible.agents.some((a) => a.id === 'ag_rui')).toBe(true);
+    expect(p.report).toMatch(/chamas|queimando/i);
   });
 
   it('cmd.build.paintTile e undo só em construção', () => {
@@ -374,6 +429,34 @@ describe('ProtocolHub (X-007)', () => {
       tiles: { states?: { type: string; intensity: number }[] }[];
     };
     expect(lightDelta.tiles[0]!.states).toEqual([{ type: 'wet', intensity: 15 }]);
+
+    const accepted: ToolEffectId[] = ['extinguish', 'ignite', 'smoke', 'dry'];
+    for (let i = 0; i < accepted.length; i += 1) {
+      const effect = accepted[i]!;
+      c.clear();
+      hub.handleRaw('c', {
+        v: 1,
+        type: 'cmd.tool.apply',
+        seq: 6 + i,
+        simTime: 0,
+        reqId: `fx-${effect}`,
+        payload: { effect, cells: [{ x: 2, y: 2 }], intensity: 50 },
+      });
+      expect(applied).toEqual({ effect, cells: [{ x: 2, y: 2 }], intensity: 50 });
+      expect(c.last('res.ok')?.reqId).toBe(`fx-${effect}`);
+      expect(c.last('res.error')).toBeUndefined();
+    }
+
+    c.clear();
+    hub.handleRaw('c', {
+      v: 1,
+      type: 'cmd.tool.apply',
+      seq: 20,
+      simTime: 0,
+      reqId: 'badFx',
+      payload: { effect: 'teleport', cells: [{ x: 1, y: 1 }] },
+    });
+    expect(c.last('res.error')?.payload).toMatchObject({ code: 'BAD_EFFECT' });
   });
 
   it('cmd.sim.save e load chamam handlers', () => {
@@ -572,6 +655,147 @@ describe('servidor WebSocket', () => {
       await server.close();
     }
   });
+});
+
+describe('live-serve cmd.tool.apply', () => {
+  let handle: LiveServeHandle | undefined;
+
+  afterEach(async () => {
+    if (handle) {
+      await handle.close();
+      handle = undefined;
+    }
+  });
+
+  it('ignite, smoke, wet e extinguish alteram estados na célula', async () => {
+    handle = await startLiveServe({ port: 0, fire: false, seed: 'proto-tools', tickMs: 40 });
+    const url = `ws://127.0.0.1:${handle.port}`;
+
+    const result = await new Promise<{
+      ignited: boolean;
+      smoky: boolean;
+      wet: boolean;
+      extinguished: boolean;
+    }>((resolve, reject) => {
+      const ws = new WebSocket(url);
+      let seq = 0;
+      let phase:
+        | 'boot'
+        | 'ignite'
+        | 'smoke'
+        | 'wet'
+        | 'extinguish'
+        | 'done' = 'boot';
+      const out = {
+        ignited: false,
+        smoky: false,
+        wet: false,
+        extinguished: false,
+      };
+      const timer = setTimeout(() => {
+        ws.close();
+        reject(new Error(`timeout tools phase=${phase}`));
+      }, 12000);
+
+      const send = (type: string, payload: Record<string, unknown>, reqId?: string) => {
+        seq += 1;
+        ws.send(
+          JSON.stringify({
+            v: 1,
+            type,
+            seq,
+            simTime: 0,
+            payload,
+            ...(reqId ? { reqId } : {}),
+          }),
+        );
+      };
+
+      const cellAt = (
+        tiles: { x: number; y: number; states?: { type: string; intensity: number }[] }[] | undefined,
+        x: number,
+        y: number,
+      ) => tiles?.find((t) => t.x === x && t.y === y);
+
+      const has = (
+        tiles: { x: number; y: number; states?: { type: string; intensity: number }[] }[] | undefined,
+        x: number,
+        y: number,
+        type: string,
+      ) => Boolean(cellAt(tiles, x, y)?.states?.some((s) => s.type === type && s.intensity > 0));
+
+      ws.on('message', (data) => {
+        const env = JSON.parse(data.toString()) as {
+          type: string;
+          reqId?: string;
+          payload: {
+            tiles?: { x: number; y: number; states?: { type: string; intensity: number }[] }[];
+            code?: string;
+          };
+        };
+
+        if (env.type === 'world.snapshot' && phase === 'boot') {
+          // Célula longe do foco demo (1,1): chão livre.
+          send('cmd.tool.apply', { effect: 'ignite', cells: [{ x: 4, y: 4 }], intensity: 70 }, 'ig1');
+          phase = 'ignite';
+          return;
+        }
+
+        if (env.type === 'world.delta' && phase === 'ignite') {
+          if (!has(env.payload.tiles, 4, 4, 'burning')) return;
+          out.ignited = true;
+          send('cmd.tool.apply', { effect: 'smoke', cells: [{ x: 5, y: 5 }], intensity: 55 }, 'sm1');
+          phase = 'smoke';
+          return;
+        }
+
+        if (env.type === 'world.delta' && phase === 'smoke') {
+          if (!has(env.payload.tiles, 5, 5, 'smoky')) return;
+          out.smoky = true;
+          send('cmd.tool.apply', { effect: 'wet', cells: [{ x: 4, y: 4 }] }, 'w1');
+          phase = 'wet';
+          return;
+        }
+
+        if (env.type === 'world.delta' && phase === 'wet') {
+          const burning = has(env.payload.tiles, 4, 4, 'burning');
+          const wet = has(env.payload.tiles, 4, 4, 'wet');
+          // wet + settleContinuous pode apagar no mesmo clique.
+          if (!wet && burning) return;
+          out.wet = wet || !burning;
+          send(
+            'cmd.tool.apply',
+            { effect: 'extinguish', cells: [{ x: 4, y: 4 }], intensity: 80 },
+            'ex1',
+          );
+          phase = 'extinguish';
+          return;
+        }
+
+        if (env.type === 'world.delta' && phase === 'extinguish') {
+          const burning = has(env.payload.tiles, 4, 4, 'burning');
+          if (burning) return;
+          out.extinguished = true;
+          phase = 'done';
+          clearTimeout(timer);
+          ws.close();
+          resolve(out);
+        }
+
+        if (env.type === 'res.error') {
+          clearTimeout(timer);
+          ws.close();
+          reject(new Error(`res.error ${env.reqId}: ${env.payload.code}`));
+        }
+      });
+      ws.on('error', reject);
+    });
+
+    expect(result.ignited).toBe(true);
+    expect(result.smoky).toBe(true);
+    expect(result.wet).toBe(true);
+    expect(result.extinguished).toBe(true);
+  }, 20000);
 });
 
 function onceSnapshot(url: string): Promise<import('./types.js').Envelope> {

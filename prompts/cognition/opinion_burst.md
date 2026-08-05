@@ -59,4 +59,4 @@ Retorne JSON schema `opinion_burst_response`. Dispara `cognition.goal_revise` do
 ## Notas de teste
 
 - Mudanças bruscas sem personalidade flexível → revisar threshold ou buffer size.
-
+

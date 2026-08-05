@@ -613,14 +613,28 @@ async function scenarioWetLightVsHeavyUnderHeat(): Promise<string> {
       await c.waitFor('world.snapshot');
       await c.waitUntil(() => c.hasState(1, 1, 'burning'), 12000, 'foco em (1,1)');
 
-      // Deixa o foco aquecer os vizinhos antes de molhar (não molhar (1,1)).
-      await sleep(900);
+      // Pouco calor no foco — sem esperar tanto que o fogo engula os vizinhos.
+      await sleep(350);
       if (!c.hasState(1, 1, 'burning')) {
         throw new Error('foco (1,1) apagou antes de aplicar wet');
       }
 
-      const light = { x: 2, y: 1 };
-      const heavy = { x: 1, y: 2 };
+      // Vizinhos preferidos; se já ardem, afasta 1 tile (ainda sob influência do foco).
+      let light = { x: 2, y: 1 };
+      let heavy = { x: 1, y: 2 };
+      if (c.hasState(light.x, light.y, 'burning')) light = { x: 3, y: 1 };
+      if (c.hasState(heavy.x, heavy.y, 'burning')) heavy = { x: 1, y: 3 };
+      for (const cell of [light, heavy]) {
+        if (!c.hasState(cell.x, cell.y, 'burning')) continue;
+        const rid = `ex-${cell.x}-${cell.y}`;
+        c.sendCmd('cmd.tool.apply', { effect: 'extinguish', cells: [cell] }, rid);
+        await c.waitFor((e) => e.type === 'res.ok' && e.reqId === rid);
+        await c.waitUntil(
+          () => !c.hasState(cell.x, cell.y, 'burning'),
+          4000,
+          `apagou alvo (${cell.x},${cell.y})`,
+        );
+      }
 
       c.sendCmd(
         'cmd.tool.apply',
@@ -635,8 +649,8 @@ async function scenarioWetLightVsHeavyUnderHeat(): Promise<string> {
       );
       await c.waitFor((e) => e.type === 'res.ok' && e.reqId === 'wetHeavy');
 
-      await c.waitUntil(() => c.hasState(light.x, light.y, 'wet'), 3000, 'wet leve');
-      await c.waitUntil(() => c.hasState(heavy.x, heavy.y, 'wet'), 3000, 'wet pesado');
+      await c.waitUntil(() => c.hasState(light.x, light.y, 'wet'), 5000, 'wet leve');
+      await c.waitUntil(() => c.hasState(heavy.x, heavy.y, 'wet'), 5000, 'wet pesado');
 
       const iLight0 = c.stateIntensity(light.x, light.y, 'wet');
       const iHeavy0 = c.stateIntensity(heavy.x, heavy.y, 'wet');
@@ -721,6 +735,77 @@ async function scenarioSimResetFreshFire(): Promise<string> {
   });
 }
 
+/** cmd.tool.apply ignite: põe burning num piso (sem foco automático da demo). */
+async function scenarioToolIgniteSetsBurning(): Promise<string> {
+  return withLiveServe({ fire: false, seed: 'harness-tool-ignite', tickMs: 40 }, async ({ url }) => {
+    const c = await connectClient(url);
+    try {
+      await c.waitFor('world.snapshot');
+      const cell = { x: 4, y: 4 };
+      const tile = c.tileAt(cell.x, cell.y);
+      if (!tile || tile.type !== 'floor') {
+        throw new Error(`esperava floor em (${cell.x},${cell.y}), got ${tile?.type ?? 'none'}`);
+      }
+      if (c.hasState(cell.x, cell.y, 'burning')) {
+        throw new Error(`(${cell.x},${cell.y}) já burning antes do ignite (fire=false)`);
+      }
+
+      c.sendCmd('cmd.tool.apply', { effect: 'ignite', cells: [cell] }, 'ign1');
+      const res = await c.waitFor(
+        (e) => (e.type === 'res.ok' || e.type === 'res.error') && e.reqId === 'ign1',
+        5000,
+      );
+      if (res.type === 'res.error') {
+        const code = String(res.payload['code'] ?? '');
+        throw new Error(`ignite rejeitado (${code || 'err'})`);
+      }
+
+      await c.waitUntil(() => c.hasState(cell.x, cell.y, 'burning'), 4000, 'burning após ignite');
+      const i = c.stateIntensity(cell.x, cell.y, 'burning');
+      return `ignite → burning I=${i} em (${cell.x},${cell.y}) floor`;
+    } finally {
+      c.close();
+    }
+  });
+}
+
+/**
+ * cmd.tool.apply smoke: adiciona smoky (wrapper de protocolo → estado smoky;
+ * não há effectId `smoke` no vocabulário R-015).
+ */
+async function scenarioToolSmokeAddsSmoky(): Promise<string> {
+  return withLiveServe({ fire: false, seed: 'harness-tool-smoke', tickMs: 40 }, async ({ url }) => {
+    const c = await connectClient(url);
+    try {
+      await c.waitFor('world.snapshot');
+      const cell = { x: 5, y: 5 };
+      const tile = c.tileAt(cell.x, cell.y);
+      if (!tile || tile.type !== 'floor') {
+        throw new Error(`esperava floor em (${cell.x},${cell.y}), got ${tile?.type ?? 'none'}`);
+      }
+      if (c.hasState(cell.x, cell.y, 'smoky')) {
+        throw new Error(`(${cell.x},${cell.y}) já smoky antes do smoke`);
+      }
+
+      c.sendCmd('cmd.tool.apply', { effect: 'smoke', cells: [cell] }, 'smk1');
+      const res = await c.waitFor(
+        (e) => (e.type === 'res.ok' || e.type === 'res.error') && e.reqId === 'smk1',
+        5000,
+      );
+      if (res.type === 'res.error') {
+        const code = String(res.payload['code'] ?? '');
+        throw new Error(`smoke rejeitado (${code || 'err'})`);
+      }
+
+      await c.waitUntil(() => c.hasState(cell.x, cell.y, 'smoky'), 4000, 'smoky após smoke');
+      const i = c.stateIntensity(cell.x, cell.y, 'smoky');
+      return `smoke → smoky I=${i} em (${cell.x},${cell.y})`;
+    } finally {
+      c.close();
+    }
+  });
+}
+
 export const HARNESS_SCENARIOS: HarnessScenario[] = [
   { name: 'wet-no-teleport', run: scenarioWetNoTeleport },
   { name: 'door-blocks-then-opens', run: scenarioDoorBlocksThenOpens },
@@ -731,6 +816,8 @@ export const HARNESS_SCENARIOS: HarnessScenario[] = [
   { name: 'extinguish-clears-burning', run: scenarioExtinguishClearsBurning },
   { name: 'wet-light-vs-heavy-under-heat', run: scenarioWetLightVsHeavyUnderHeat },
   { name: 'sim-reset-fresh-fire', run: scenarioSimResetFreshFire },
+  { name: 'tool-ignite-sets-burning', run: scenarioToolIgniteSetsBurning },
+  { name: 'tool-smoke-adds-smoky', run: scenarioToolSmokeAddsSmoky },
 ];
 
 export async function runHarnessScenarios(

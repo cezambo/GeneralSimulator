@@ -187,11 +187,22 @@ export async function startLiveServe(opts?: {
 
   const saveDir = process.env['SIM_SAVE_DIR'] ?? join(process.cwd(), 'saves');
 
+  const percepcaoRaw = (cfg.tuning.raw['percepcao'] ?? {}) as Record<string, unknown>;
   const hub = new ProtocolHub({
     sim,
     world,
     clock,
     objects: cfg.objects,
+    visionTuning: {
+      coneAngleDeg: cfg.tuning.coneAngleDeg,
+      visionRangeMeters: cfg.tuning.visionRangeMeters,
+      hearingRangeMeters: cfg.tuning.hearingRangeMeters,
+      interactionRangeMeters: cfg.tuning.interactionRangeMeters,
+    },
+    perceptionBudget: {
+      maxTokens: Number(percepcaoRaw['orcamentoTokensRelatoPercepcao'] ?? 350),
+      maxFacts: Number(percepcaoRaw['maxFatosNoRelato'] ?? 18),
+    },
     motionOf: (id) => {
       const m = movers.get(id);
       return m ? motionFromMover(m, clock.simTime) : undefined;
@@ -491,22 +502,24 @@ export async function startLiveServe(opts?: {
     intensity?: number,
   ): WorldDeltaPayload {
     const ctx = { simTime: clock.simTime, world: bridge };
-    // Default histórico: wet ~90 (soak). Intensity explícita cobre wet e extinguish.
+    // Defaults: wet ~90 (soak); smoke → smoky ~40 (como extinguish.aplica); resto = catálogo.
     const invokeOpts =
       intensity !== undefined
         ? { intensity }
         : effect === 'wet'
           ? { intensity: 90 }
-          : {};
+          : effect === 'smoke'
+            ? { intensity: 40 }
+            : {};
     const touched: ReturnType<typeof bridge.targetAt>[] = [];
     for (const c of cells) {
       if (!world.inBounds(SPIKE_GRID, c.x, c.y)) continue;
       const t = bridge.targetAt(SPIKE_GRID, c.x, c.y);
-      substrate.invoke(effect, t, ctx, invokeOpts);
+      applyEffectOnTarget(effect, t, ctx, invokeOpts);
       touched.push(t);
-      // Móvel na mesma célula também molha/apaga (R-007 / ocupantes).
+      // Móvel na mesma célula também recebe o efeito (R-007 / ocupantes).
       for (const occ of bridge.occupantsOf(t)) {
-        substrate.invoke(effect, occ, ctx, invokeOpts);
+        applyEffectOnTarget(effect, occ, ctx, invokeOpts);
         touched.push(occ);
       }
     }
@@ -526,6 +539,37 @@ export async function startLiveServe(opts?: {
       ...(committed.objectsUpsert.length > 0 ? { objectsUpsert: committed.objectsUpsert } : {}),
       ...(committed.objectsRemove.length > 0 ? { objectsRemove: committed.objectsRemove } : {}),
     };
+  }
+
+  /**
+   * `smoke` não está no vocabulário R-015 — wrapper que aplica `smoky` e ativa
+   * o alvo. `wet` / `extinguish` / `ignite` / `dry` vão direto ao catálogo via invoke.
+   */
+  function applyEffectOnTarget(
+    effect: ToolEffectId,
+    target: ReturnType<typeof bridge.targetAt>,
+    ctx: { simTime: number; world: typeof bridge },
+    opts: { intensity?: number },
+  ): void {
+    if (effect === 'smoke') {
+      emitSmoky(target, opts.intensity ?? 40);
+      substrate.activate(target);
+      return;
+    }
+    substrate.invoke(effect, target, ctx, opts);
+  }
+
+  function emitSmoky(
+    target: ReturnType<typeof bridge.targetAt>,
+    amount: number,
+  ): void {
+    if (amount <= 0) return;
+    const smoky = target.states.find((s) => s.type === 'smoky');
+    if (smoky) {
+      smoky.intensity = Math.min(100, Math.max(smoky.intensity, amount));
+    } else {
+      target.states.push({ type: 'smoky', intensity: Math.min(100, amount) });
+    }
   }
 
   function stepMovers(minutes: number): void {

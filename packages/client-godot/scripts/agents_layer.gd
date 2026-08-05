@@ -71,6 +71,13 @@ func get_pawn(agent_id: String) -> AgentPawn:
 	return _pawns[agent_id] as AgentPawn
 
 
+func get_all_ids() -> PackedStringArray:
+	var ids: PackedStringArray = []
+	for id in _pawns.keys():
+		ids.append(String(id))
+	return ids
+
+
 func _upsert(data: Dictionary) -> void:
 	var id := String(data.get("id", ""))
 	if id == "":

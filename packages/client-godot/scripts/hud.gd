@@ -13,12 +13,15 @@ signal build_rotate_requested
 signal sandbox_tool_changed(tool_id: String)
 signal save_requested
 signal load_requested
+signal agent_perception_closed
 
 @onready var status_label: Label = $Margin/VBox/Status
 @onready var clock_label: Label = $Margin/VBox/Clock
 @onready var help_label: Label = $Margin/VBox/Help
 @onready var select_label: Label = $Margin/VBox/Select
 @onready var inspect_label: Label = $Margin/VBox/Inspect
+
+const AgentPerceptionPanelScript := preload("res://scripts/agent_perception_panel.gd")
 
 var _vision_on: bool = true
 var _connected: bool = false
@@ -38,6 +41,7 @@ var _selection_text: String = "Nenhum agente selecionado"
 var _help_open: bool = false
 var _help_panel: PanelContainer
 var _construction_panel: ConstructionPanel
+var _perception_panel: AgentPerceptionPanel
 ## Stub de contexto (construção): dica junto ao cursor, sem roubar o Dir. = apagar.
 var _context_stub: PanelContainer
 var _context_label: Label
@@ -46,6 +50,7 @@ var _context_label: Label
 func _ready() -> void:
 	_build_help_overlay()
 	_build_construction_panel()
+	_build_perception_panel()
 	_build_context_stub()
 	_refresh_help()
 	if select_label:
@@ -88,7 +93,7 @@ func set_selection(text: String) -> void:
 	_refresh_select_label()
 
 
-## Feedback de aplicação RT (G/Q): atualiza a linha de seleção sem estragar o texto do agente.
+## Feedback de aplicação RT (menu Dir. / G/Q): atualiza a linha de seleção sem estragar o texto do agente.
 func note_sandbox_apply(x: int, y: int) -> void:
 	_last_sandbox_cell = Vector2i(x, y)
 	_refresh_select_label()
@@ -104,6 +109,7 @@ func set_construction(on: bool) -> void:
 	if on:
 		_sandbox_tool = ""
 		_last_sandbox_cell = Vector2i(-1, -1)
+		hide_agent_perception()
 	if _construction_panel:
 		_construction_panel.show_panel(on)
 		if on:
@@ -118,6 +124,40 @@ func set_construction(on: bool) -> void:
 	else:
 		clock_label.text = clock_label.text.replace(" · CONSTRUÇÃO", "")
 	_refresh_select_label()
+
+
+func show_agent_perception(agent_id: String, display_name: String = "") -> void:
+	if _construction or agent_id == "" or _perception_panel == null:
+		return
+	_perception_panel.show_for(agent_id, display_name)
+	call_deferred("_place_perception_panel")
+
+
+func hide_agent_perception() -> void:
+	if _perception_panel:
+		_perception_panel.hide_panel()
+
+
+func apply_agent_detail(data: Dictionary) -> void:
+	if _perception_panel == null or not _perception_panel.visible:
+		return
+	_perception_panel.apply_detail(data)
+	call_deferred("_place_perception_panel")
+
+
+func set_agent_perception_loading(on: bool = true) -> void:
+	if _perception_panel and _perception_panel.visible:
+		_perception_panel.set_loading(on)
+
+
+func is_agent_perception_open() -> bool:
+	return _perception_panel != null and _perception_panel.is_open()
+
+
+func perception_agent_id() -> String:
+	if _perception_panel == null:
+		return ""
+	return _perception_panel.current_agent_id()
 
 
 func is_construction() -> bool:
@@ -163,8 +203,8 @@ func _refresh_select_label() -> void:
 func _sandbox_status_line() -> String:
 	var tool := _sandbox_short(_sandbox_tool)
 	if _last_sandbox_cell.x < 0:
-		return "Ativa: %s — clique no tile · Dir. cancela" % tool
-	return "Ativa: %s · última célula (%d,%d)" % [
+		return "Ativa: %s — clique no tile · Esc ou G/Q cancela · Dir. = menu" % tool
+	return "Ativa: %s · (%d,%d) · Esc/G/Q cancela · Dir. = menu" % [
 		tool, _last_sandbox_cell.x, _last_sandbox_cell.y
 	]
 
@@ -173,7 +213,7 @@ func _refresh_help() -> void:
 	if _construction:
 		help_label.text = "H/F1 ajuda · C sair · painel Construção (materiais / estruturas / mobília)"
 	else:
-		help_label.text = "H/F1 ajuda · Clique: sel./andar · porta · G água · Q extinguir · F6/F7 save/load · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
+		help_label.text = "H/F1 ajuda · Clique: sel./andar · porta · Dir./F2 menu tile · G/Q atalhos (Esc cancela) · F6/F7 save/load · C construir · Espaço pausa · 1–4 vel · V cone · WASD"
 	_refresh_select_label()
 
 
@@ -196,6 +236,18 @@ func _build_construction_panel() -> void:
 	call_deferred("_place_construction_panel")
 
 
+func _build_perception_panel() -> void:
+	_perception_panel = AgentPerceptionPanelScript.new() as AgentPerceptionPanel
+	_perception_panel.name = "AgentPerceptionPanel"
+	_perception_panel.custom_minimum_size = Vector2(300, 120)
+	_perception_panel.closed.connect(func() -> void:
+		agent_perception_closed.emit()
+	)
+	add_child(_perception_panel)
+	get_viewport().size_changed.connect(_place_perception_panel)
+	call_deferred("_place_perception_panel")
+
+
 func _place_construction_panel() -> void:
 	if _construction_panel == null:
 		return
@@ -204,6 +256,20 @@ func _place_construction_panel() -> void:
 	if sz.x < 8.0:
 		sz = _construction_panel.get_combined_minimum_size()
 	_construction_panel.position = Vector2(vp.x - sz.x - float(UiTheme.MARGIN_EDGE), 12.0)
+
+
+func _place_perception_panel() -> void:
+	if _perception_panel == null or not _perception_panel.visible:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var margin := float(UiTheme.MARGIN_EDGE)
+	var y := float(UiTheme.HUD_STACK_CLEARANCE)
+	# Largura/altura máximas: cabe no ecrã; texto longo rola no painel.
+	var max_w := minf(340.0, maxf(240.0, vp.x - margin * 2.0))
+	var max_h := maxf(180.0, vp.y - y - margin)
+	_perception_panel.apply_viewport_bounds(max_w, max_h)
+	var x := vp.x - max_w - margin
+	_perception_panel.position = Vector2(maxf(margin, x), y)
 
 
 func _build_context_stub() -> void:
@@ -289,9 +355,10 @@ Geral
   1–4 — velocidade (1, 2, 5, 20)
   WASD / setas — pan · V — cone de visão
   Clique — sel./andar · porta abrir/fechar
-  G — água (molhar tile; apaga fogo no lugar)
-  Q — extinguir fogo (fumaça residual)
-  Dir. — cancela ferramenta RT activa
+  Dir. / F2 / Menu — menu do tile no cursor (molhar, extinguir, fogo, fumaça, secar, inspecionar, porta)
+  G — atalho: água (molhar tile; apaga fogo no lugar)
+  Q — atalho: extinguir fogo (fumaça residual)
+  Esc ou G/Q de novo — cancela a ferramenta G/Q (Dir. abre o menu, não cancela)
   F6 / F7 — salvar / carregar slot demo
   C — entrar / sair construção
 

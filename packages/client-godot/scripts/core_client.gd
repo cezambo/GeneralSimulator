@@ -14,8 +14,13 @@ signal snapshot_received(payload: Dictionary)
 signal agents_updated(payload: Dictionary)
 signal clock_updated(payload: Dictionary)
 signal delta_received(payload: Dictionary)
+signal agent_detail_received(payload: Dictionary)
+signal agent_perception_received(payload: Dictionary)
 signal protocol_error(payload: Dictionary)
 signal status_changed(text: String)
+
+var _detail_req_seq: int = 0
+var _perception_req_seq: int = 0
 
 const STATUS_FILE := "res://.local/core-connection.json"
 const LOG_FILE := "res://.local/core-connection.log"
@@ -108,6 +113,28 @@ func set_mode(mode: String) -> void:
 
 func move_agent(agent_id: String, x: int, y: int) -> void:
 	send_command("cmd.agent.move", {"agentId": agent_id, "x": x, "y": y})
+
+
+func request_agent_detail(agent_id: String) -> void:
+	if agent_id == "" or not is_core_connected():
+		return
+	_detail_req_seq += 1
+	send_command(
+		"req.agent.detail",
+		{"agentId": agent_id},
+		"ag-detail-%d" % _detail_req_seq
+	)
+
+
+func request_agent_perception(agent_id: String) -> void:
+	if agent_id == "" or not is_core_connected():
+		return
+	_perception_req_seq += 1
+	send_command(
+		"req.agent.perception",
+		{"agentId": agent_id},
+		"ag-perc-%d" % _perception_req_seq
+	)
 
 
 func paint_tiles(tile_type: String, material_id: String, cells: Array) -> void:
@@ -327,6 +354,10 @@ func _handle_text(text: String) -> void:
 			agents_updated.emit(payload)
 		"clock.update":
 			clock_updated.emit(payload)
+		"res.agent.detail":
+			agent_detail_received.emit(payload)
+		"res.agent.perception":
+			agent_perception_received.emit(payload)
 		"res.error":
 			protocol_error.emit(payload)
 		_:

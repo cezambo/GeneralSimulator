@@ -5,7 +5,13 @@
  * não depende de porta real, e o servidor WebSocket só adapta o transporte.
  */
 
+import {
+  buildAgentPerceptionPayload,
+  DEFAULT_PERCEPTION_BUDGET,
+  type ReportBudget,
+} from '../perception/index.js';
 import type { Simulation } from '../state/index.js';
+import { DEFAULT_VISION_TUNING, type VisionTuning } from '../spatial/vision.js';
 import type { ObjectDef } from '../types/domain.js';
 import type { World } from '../world/grid.js';
 import type { SimClock } from '../world/clock.js';
@@ -38,8 +44,14 @@ export type AgentMoveHandler = (
   goal: { x: number; y: number },
 ) => { ok: true } | { ok: false; code: string; message: string };
 
-/** Ferramentas GM em tempo real (água / apagar fogo). */
-export type ToolEffectId = 'wet' | 'extinguish';
+/** Ferramentas GM em tempo real (água / apagar / acender / fumaça / secar). */
+export type ToolEffectId = 'wet' | 'extinguish' | 'ignite' | 'smoke' | 'dry';
+
+const TOOL_EFFECTS = new Set<string>(['wet', 'extinguish', 'ignite', 'smoke', 'dry']);
+
+export function isToolEffectId(id: string): id is ToolEffectId {
+  return TOOL_EFFECTS.has(id);
+}
 
 export type ToolApplyHandler = (
   effect: ToolEffectId,
@@ -73,6 +85,10 @@ export interface ProtocolHubOptions {
   readonly onLoad?: SaveLoadHandler;
   /** Reinicia a sala demo sem derrubar o WebSocket. */
   readonly onReset?: ResetHandler;
+  /** Orçamento do relato em `req.agent.perception` / detail. */
+  readonly perceptionBudget?: ReportBudget;
+  /** Cone / alcance padrão quando o agente não declara visão própria. */
+  readonly visionTuning?: VisionTuning;
 }
 
 export class ProtocolHub {
@@ -88,6 +104,8 @@ export class ProtocolHub {
   readonly #onLoad: SaveLoadHandler | undefined;
   readonly #onReset: ResetHandler | undefined;
   readonly #objects: ReadonlyMap<string, ObjectDef> | undefined;
+  readonly #perceptionBudget: ReportBudget;
+  readonly #visionTuning: VisionTuning;
   #build: BuildHistory;
   readonly #clients = new Map<string, ProtocolSink>();
   #seq = 0;
@@ -107,6 +125,8 @@ export class ProtocolHub {
     this.#onLoad = opts.onLoad;
     this.#onReset = opts.onReset;
     this.#objects = opts.objects;
+    this.#perceptionBudget = opts.perceptionBudget ?? DEFAULT_PERCEPTION_BUDGET;
+    this.#visionTuning = opts.visionTuning ?? DEFAULT_VISION_TUNING;
     this.#build = new BuildHistory(opts.sim, opts.world, opts.objects);
   }
 
@@ -430,7 +450,7 @@ export class ProtocolHub {
           throw new ProtocolError('WRONG_MODE', 'ferramentas de substrato só em modo normal');
         }
         const effect = String(p['effect'] ?? '');
-        if (effect !== 'wet' && effect !== 'extinguish') {
+        if (!isToolEffectId(effect)) {
           throw new ProtocolError('BAD_EFFECT', `efeito de ferramenta inválido: ${effect}`);
         }
         const cellsRaw = Array.isArray(p['cells']) ? p['cells'] : [];
@@ -539,12 +559,29 @@ export class ProtocolHub {
         if (!agent) {
           throw new ProtocolError('NOT_FOUND', `agente "${agentId}" não encontrado`);
         }
-        this.#sendTo(client, 'res.agent.detail', agent, env.reqId);
+        const perception = this.#perceptionOf(agentId);
+        this.#sendTo(client, 'res.agent.detail', { agent, perception }, env.reqId);
+        return;
+      }
+      case 'req.agent.perception': {
+        const agentId = String(p['agentId'] ?? '');
+        if (!this.#sim.state.agents[agentId]) {
+          throw new ProtocolError('NOT_FOUND', `agente "${agentId}" não encontrado`);
+        }
+        this.#sendTo(client, 'res.agent.perception', this.#perceptionOf(agentId), env.reqId);
         return;
       }
       default:
         throw new ProtocolError('UNKNOWN_TYPE', `tipo não suportado neste núcleo: ${env.type}`);
     }
+  }
+
+  #perceptionOf(agentId: string) {
+    return buildAgentPerceptionPayload(this.#sim, this.#world, agentId, {
+      budget: this.#perceptionBudget,
+      tuning: this.#visionTuning,
+      gridId: this.#world.mainGridId,
+    });
   }
 
   #sendTo(client: ProtocolSink, type: string, payload: unknown, reqId?: string): void {

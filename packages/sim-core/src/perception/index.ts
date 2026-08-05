@@ -1,10 +1,31 @@
+import type { Simulation } from '../state/index.js';
+import type { VisionTuning } from '../spatial/vision.js';
+import { DEFAULT_VISION_TUNING } from '../spatial/vision.js';
 import type { PerceptibleFact } from '../types/domain.js';
+import type { World } from '../world/grid.js';
+import {
+  scanWorldForAgent,
+  type AgentPerceptionPayload,
+} from './world-scan.js';
 
 export {
   describeTileLook,
   type TileLookInput,
   type TileLookState,
 } from './tile-look.js';
+
+export {
+  scanWorldForAgent,
+  type AgentPerceptionPayload,
+  type NotableKind,
+  type NotableStateSummary,
+  type PerceptionScanResult,
+  type SmellHook,
+  type TemperatureHook,
+  type VisibleAgentSummary,
+  type VisibleObjectSummary,
+  type VisibleTileSummary,
+} from './world-scan.js';
 
 /**
  * Montagem do relato de percepção. A-031, A-032, A-033.
@@ -23,6 +44,11 @@ export interface ReportBudget {
   /** `percepcao.maxFatosNoRelato`. */
   readonly maxFacts: number;
 }
+
+export const DEFAULT_PERCEPTION_BUDGET: ReportBudget = {
+  maxTokens: 350,
+  maxFacts: 18,
+};
 
 export interface PerceptionReport {
   readonly text: string;
@@ -201,6 +227,89 @@ export interface PerceptionContext {
   readonly agentId: string;
   readonly gridId: string;
   readonly simTime: number;
+  /** Necessário para colhedores de mundo (`world-scan`). */
+  readonly sim?: Simulation;
+  readonly world?: World;
+  readonly visionTuning?: VisionTuning;
+}
+
+/** Colhedor de produção: varre cone/LoS/audição no mundo vivo. */
+export function createWorldScanContributor(
+  tuning: VisionTuning = DEFAULT_VISION_TUNING,
+): PerceptionContributor {
+  return {
+    name: 'world-scan',
+    collect(ctx: PerceptionContext): PerceptibleFact[] {
+      if (!ctx.sim || !ctx.world) return [];
+      const agent = ctx.sim.state.agents[ctx.agentId];
+      if (!agent) return [];
+      return [
+        ...scanWorldForAgent({
+          sim: ctx.sim,
+          world: ctx.world,
+          agent,
+          gridId: ctx.gridId,
+          tuning: ctx.visionTuning ?? tuning,
+        }).facts,
+      ];
+    },
+  };
+}
+
+/** Pipeline com o colhedor de mundo registado. */
+export function createDefaultPerceptionPipeline(
+  tuning: VisionTuning = DEFAULT_VISION_TUNING,
+): PerceptionPipeline {
+  return new PerceptionPipeline().register(createWorldScanContributor(tuning));
+}
+
+/**
+ * Relato + resumo estruturado para UI (`res.agent.perception`).
+ * Usa o scan de mundo directamente (mesmo colhedor) e monta o orçamento.
+ */
+export function buildAgentPerceptionPayload(
+  sim: Simulation,
+  world: World,
+  agentId: string,
+  opts?: {
+    budget?: ReportBudget;
+    tuning?: VisionTuning;
+    gridId?: string;
+  },
+): AgentPerceptionPayload {
+  const agent = sim.state.agents[agentId];
+  if (!agent) {
+    throw new Error(`agente "${agentId}" não encontrado`);
+  }
+  const gridId = opts?.gridId ?? world.mainGridId;
+  const budget = opts?.budget ?? DEFAULT_PERCEPTION_BUDGET;
+  const scan = scanWorldForAgent({
+    sim,
+    world,
+    agent,
+    gridId,
+    ...(opts?.tuning !== undefined ? { tuning: opts.tuning } : {}),
+  });
+  const report = assemblePerceptionReport(scan.facts, budget);
+  assertNoLeaks(report.text, report.included);
+  return {
+    agentId: scan.agentId,
+    facingDeg: scan.facingDeg,
+    vision: scan.vision,
+    ranges: scan.ranges,
+    report: report.text,
+    estimatedTokens: report.estimatedTokens,
+    included: report.included,
+    droppedCount: report.dropped.length,
+    visible: {
+      tiles: scan.visibleTiles,
+      agents: scan.visibleAgents,
+      objects: scan.visibleObjects,
+    },
+    notable: scan.notable,
+    temperature: scan.temperature,
+    smell: scan.smell,
+  };
 }
 
 export class PerceptionPipeline {
